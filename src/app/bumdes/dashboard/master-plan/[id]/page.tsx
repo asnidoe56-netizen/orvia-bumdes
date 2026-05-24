@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
+import { submitBusinessPlanToFacilitatorAction } from "./actions";
 
 type BusinessPlanCapitalFlow = {
   business_plan_id: string;
@@ -403,6 +404,38 @@ export default async function BumdesMasterPlanDetailPage({ params }: PageProps) 
               dan tetap punya jejak tanggung jawab.
             </p>
 
+            {plan.can_submit_to_facilitator ? (
+              <form
+                action={submitBusinessPlanToFacilitatorAction}
+                className="mt-5 rounded-2xl bg-white/10 p-4"
+              >
+                <input
+                  type="hidden"
+                  name="business_plan_id"
+                  value={plan.business_plan_id}
+                />
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-white">
+                    Catatan untuk Pendamping Kecamatan
+                  </span>
+                  <textarea
+                    name="notes"
+                    rows={3}
+                    placeholder="Opsional. Contoh: Mohon review kelayakan RAB dan kesiapan unit."
+                    className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                  />
+                </label>
+
+                <button
+                  type="submit"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-400"
+                >
+                  Ajukan Review Pendamping
+                </button>
+              </form>
+            ) : null}
+
             <div className="mt-5 grid gap-2 text-sm">
               <div className="flex items-center justify-between rounded-2xl bg-white/10 px-3 py-2">
                 <span>Sisa untuk dicairkan</span>
@@ -505,4 +538,5 @@ export default async function BumdesMasterPlanDetailPage({ params }: PageProps) 
     </div>
   );
 }
+
 
