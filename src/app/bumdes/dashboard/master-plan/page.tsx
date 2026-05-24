@@ -4,6 +4,7 @@
   FileCheck2,
   Landmark,
 } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -244,9 +245,12 @@ export default async function BumdesMasterPlanPage() {
                     {formatRupiah(plan.allocated_capital_amount)}
                   </td>
                   <td className="px-4 py-4">
-                    <Button type="button" variant="secondary">
+                    <Link
+                      href={`/bumdes/dashboard/master-plan/${plan.business_plan_id}`}
+                      className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                    >
                       {getNextAction(plan)}
-                    </Button>
+                    </Link>
                   </td>
                 </tr>
               ))
@@ -256,3 +260,4 @@ export default async function BumdesMasterPlanPage() {
     </div>
   );
 }
+
