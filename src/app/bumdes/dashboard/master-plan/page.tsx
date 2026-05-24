@@ -125,10 +125,13 @@ export default async function BumdesMasterPlanPage() {
         title="Master Plan / Proposal Modal"
         description="Kelola perencanaan usaha, RAB, review Pendamping Kecamatan, pengajuan ke desa, pencairan dana, dan alokasi modal ke unit usaha."
         action={
-          <Button type="button">
+          <Link
+            href="/bumdes/dashboard/master-plan/new"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+          >
             <ClipboardList className="h-4 w-4" />
             Buat Proposal
-          </Button>
+          </Link>
         }
       />
 
@@ -260,4 +263,5 @@ export default async function BumdesMasterPlanPage() {
     </div>
   );
 }
+
 
