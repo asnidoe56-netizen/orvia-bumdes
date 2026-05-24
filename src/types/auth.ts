@@ -6,6 +6,7 @@
   | "operator_unit"
   | "viewer_unit"
   | "pengawas"
+  | "pendamping_kecamatan"
   | "pendamping"
   | "dinas_pmd"
   | "inspektorat"
@@ -19,3 +20,4 @@ export type LoginContext = {
   redirect_path: string;
   full_name?: string | null;
 };
+

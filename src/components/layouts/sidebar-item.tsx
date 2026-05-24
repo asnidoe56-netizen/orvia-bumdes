@@ -46,6 +46,7 @@ const iconMap: Record<string, LucideIcon> = {
   Laporan: FileText,
 
   Audit: ShieldCheck,
+  "Review Proposal": ClipboardCheck,
   "Progress BUMDes": TrendingUp,
   Compliance: ClipboardCheck,
   "Regional Performance": BarChart3,
@@ -89,3 +90,4 @@ export function SidebarItem({ href, label }: SidebarItemProps) {
     </Link>
   );
 }
+

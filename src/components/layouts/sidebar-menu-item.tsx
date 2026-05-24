@@ -55,6 +55,7 @@ const iconMap: Record<string, LucideIcon> = {
 
   Audit: ShieldCheck,
   Pendampingan: UsersRound,
+  "Review Proposal": ClipboardCheck,
   "Progress BUMDes": TrendingUp,
   "Temuan Audit": ShieldCheck,
   Kepatuhan: ClipboardCheck,
@@ -178,4 +179,5 @@ export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
     </Link>
   );
 }
+
 

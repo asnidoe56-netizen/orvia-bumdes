@@ -8,6 +8,7 @@ export const roleRedirectMap: Record<AppRole, string> = {
   operator_unit: "/unit/dashboard",
   viewer_unit: "/unit/dashboard",
   pengawas: "/pengawas/dashboard",
+  pendamping_kecamatan: "/pendamping/dashboard",
   pendamping: "/pendamping/dashboard",
   dinas_pmd: "/dinas-pmd/dashboard",
   inspektorat: "/inspektorat/dashboard",
@@ -18,3 +19,4 @@ export function getFallbackRedirectPath(role?: AppRole | null) {
   if (!role) return "/login";
   return roleRedirectMap[role] ?? "/login";
 }
+

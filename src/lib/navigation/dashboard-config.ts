@@ -37,6 +37,7 @@ export const pengawasNav: NavItem[] = [
 
 export const pendampingNav: NavItem[] = [
   { label: "Pendampingan", href: "/pendamping/dashboard" },
+  { label: "Review Proposal", href: "/pendamping/dashboard/business-plans" },
   { label: "Progress BUMDes", href: "/pendamping/dashboard/bumdes-progress" },
 ];
 
@@ -54,4 +55,5 @@ export const bupatiNav: NavItem[] = [
   { label: "Executive Summary", href: "/bupati/dashboard" },
   { label: "Kinerja Daerah", href: "/bupati/dashboard/regional-performance" },
 ];
+
 
