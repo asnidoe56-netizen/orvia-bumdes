@@ -1,5 +1,6 @@
 ﻿import { redirect } from "next/navigation";
 import { getLoginContext } from "@/lib/auth/get-login-context";
+import { getFallbackRedirectPath } from "@/lib/navigation/role-routes";
 
 export default async function AuthRedirectPage() {
   const context = await getLoginContext();
@@ -8,5 +9,11 @@ export default async function AuthRedirectPage() {
     redirect("/login");
   }
 
-  redirect(context.redirect_path);
+  const fallbackPath = getFallbackRedirectPath(context.role);
+  const targetPath =
+    context.redirect_path && context.redirect_path !== "/login"
+      ? context.redirect_path
+      : fallbackPath;
+
+  redirect(targetPath);
 }
