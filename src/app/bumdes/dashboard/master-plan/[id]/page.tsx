@@ -20,13 +20,20 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
-import { submitBusinessPlanToFacilitatorAction } from "./actions";
+import {
+  postCapitalDisbursementAction,
+  postUnitCapitalAllocationAction,
+  recordVillageDecisionAction,
+  submitBusinessPlanToFacilitatorAction,
+  submitBusinessPlanToVillageAction,
+} from "./actions";
 
 type BusinessPlanCapitalFlow = {
   business_plan_id: string;
   plan_no: string;
   title: string;
   nama_unit: string | null;
+  unit_id: string | null;
   status: string;
   status_label: string;
   requested_capital_amount: number | string | null;
@@ -40,11 +47,44 @@ type BusinessPlanCapitalFlow = {
   can_submit_to_village: boolean | null;
   can_record_disbursement: boolean | null;
   can_allocate_to_unit: boolean | null;
+  latest_capital_disbursement_id: string | null;
+  latest_unit_capital_allocation_id: string | null;
   created_at: string | null;
 };
 
 type TimelineRow = Record<string, string | number | boolean | null>;
+type CashBankAccount = {
+  id: string;
+  account_code: string | null;
+  account_name: string | null;
+  account_kind: string | null;
+};
 
+type EquityAccount = {
+  id: string;
+  equity_code: string | null;
+  equity_name: string | null;
+  equity_type: string | null;
+};
+
+type CapitalDisbursementOption = {
+  option_type: "cash_bank" | "equity";
+  id: string;
+  code: string | null;
+  name: string | null;
+  kind: string | null;
+};
+
+
+type UnitCapitalAllocationOption = {
+  option_type: "source_cash_bank" | "target_cash_bank" | "source_equity" | "target_equity";
+  id: string;
+  code: string | null;
+  name: string | null;
+  kind: string | null;
+  unit_id: string | null;
+  current_balance: number | string | null;
+};
 type PageProps = {
   params: Promise<{
     id: string;
@@ -144,6 +184,7 @@ function getProgressMessage(status: string) {
 function getNextAction(plan: BusinessPlanCapitalFlow) {
   if (plan.can_submit_to_facilitator) return "Ajukan Review Pendamping";
   if (plan.can_submit_to_village) return "Ajukan ke Desa";
+  if (plan.status === "submitted_to_village") return "Catat Keputusan Desa";
   if (plan.can_record_disbursement) return "Catat Dana Cair";
   if (plan.can_allocate_to_unit) return "Alokasikan Modal ke Unit";
   if (plan.can_edit) return "Lanjutkan Draft";
@@ -214,6 +255,59 @@ export default async function BumdesMasterPlanDetailPage({ params }: PageProps) 
     .eq("business_plan_id", id);
 
   const timelineRows = (timelineData ?? []) as TimelineRow[];
+  const { data: capitalDisbursementOptionsData } = await supabase.rpc(
+    "get_capital_disbursement_options",
+    {
+      p_business_plan_id: plan.business_plan_id,
+    }
+  );
+
+  const capitalDisbursementOptions =
+    (capitalDisbursementOptionsData ?? []) as CapitalDisbursementOption[];
+
+  const cashBankAccounts = capitalDisbursementOptions
+    .filter((option) => option.option_type === "cash_bank")
+    .map((option) => ({
+      id: option.id,
+      account_code: option.code,
+      account_name: option.name,
+      account_kind: option.kind,
+    })) as CashBankAccount[];
+
+  const equityAccounts = capitalDisbursementOptions
+    .filter((option) => option.option_type === "equity")
+    .map((option) => ({
+      id: option.id,
+      equity_code: option.code,
+      equity_name: option.name,
+      equity_type: option.kind,
+    })) as EquityAccount[];
+  const { data: unitCapitalAllocationOptionsData } = await supabase.rpc(
+    "get_unit_capital_allocation_options",
+    {
+      p_business_plan_id: plan.business_plan_id,
+    }
+  );
+
+  const unitCapitalAllocationOptions =
+    (unitCapitalAllocationOptionsData ?? []) as UnitCapitalAllocationOption[];
+
+  const sourceCashBankAccounts = unitCapitalAllocationOptions.filter(
+    (option) => option.option_type === "source_cash_bank"
+  );
+
+  const targetCashBankAccounts = unitCapitalAllocationOptions.filter(
+    (option) => option.option_type === "target_cash_bank"
+  );
+
+  const sourceEquityAccounts = unitCapitalAllocationOptions.filter(
+    (option) => option.option_type === "source_equity"
+  );
+
+  const targetEquityAccounts = unitCapitalAllocationOptions.filter(
+    (option) => option.option_type === "target_equity"
+  );
+
   const progress = getProgressPercent(plan.status);
 
   const moneyCards = [
@@ -436,7 +530,361 @@ export default async function BumdesMasterPlanDetailPage({ params }: PageProps) 
               </form>
             ) : null}
 
+            {plan.can_submit_to_village ? (
+              <form
+                action={submitBusinessPlanToVillageAction}
+                className="mt-5 rounded-2xl bg-white/10 p-4"
+              >
+                <input
+                  type="hidden"
+                  name="business_plan_id"
+                  value={plan.business_plan_id}
+                />
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-white">
+                    Catatan Pengajuan ke Desa
+                  </span>
+                  <textarea
+                    name="notes"
+                    rows={3}
+                    placeholder="Opsional. Contoh: Proposal diajukan ke desa setelah dinyatakan layak oleh Pendamping Kecamatan."
+                    className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                  />
+                </label>
+
+                <button
+                  type="submit"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-400"
+                >
+                  Ajukan ke Desa
+                </button>
+              </form>
+            ) : null}
+
+            {plan.status === "submitted_to_village" ? (
+              <form
+                action={recordVillageDecisionAction}
+                className="mt-5 rounded-2xl bg-white/10 p-4"
+              >
+                <input
+                  type="hidden"
+                  name="business_plan_id"
+                  value={plan.business_plan_id}
+                />
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-white">
+                    Keputusan Desa
+                  </span>
+                  <select
+                    name="decision"
+                    required
+                    defaultValue="approved"
+                    className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                  >
+                    <option value="approved">Disetujui Desa</option>
+                    <option value="rejected">Ditolak Desa</option>
+                  </select>
+                </label>
+
+                <label className="mt-4 block">
+                  <span className="mb-2 block text-sm font-bold text-white">
+                    Nominal Disetujui
+                  </span>
+                  <input
+                    type="number"
+                    name="approved_capital_amount"
+                    min="0"
+                    step="1000"
+                    defaultValue={toNumber(plan.requested_capital_amount)}
+                    className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                  />
+                  <p className="mt-2 text-xs leading-5 text-slate-300">
+                    Jika ditolak, nominal akan otomatis dianggap Rp0 oleh engine.
+                  </p>
+                </label>
+
+                <label className="mt-4 block">
+                  <span className="mb-2 block text-sm font-bold text-white">
+                    Catatan Keputusan Desa
+                  </span>
+                  <textarea
+                    name="decision_notes"
+                    rows={4}
+                    required
+                    placeholder="Contoh: Disetujui berdasarkan hasil musyawarah desa setelah review Pendamping Kecamatan."
+                    className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                  />
+                </label>
+
+                <button
+                  type="submit"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-amber-400 px-5 py-3 text-sm font-black text-slate-950 shadow-sm transition hover:bg-amber-300"
+                >
+                  Simpan Keputusan Desa
+                </button>
+              </form>
+            ) : null}
+
+            {plan.can_record_disbursement ? (
+              <form
+                action={postCapitalDisbursementAction}
+                className="mt-5 rounded-2xl bg-white/10 p-4"
+              >
+                <input
+                  type="hidden"
+                  name="business_plan_id"
+                  value={plan.business_plan_id}
+                />
+
+                <div className="grid gap-4">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">
+                      Nomor Pencairan
+                    </span>
+                    <input
+                      type="text"
+                      name="disbursement_no"
+                      required
+                      defaultValue={`CAIR-${plan.plan_no}`}
+                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">
+                      Tanggal Pencairan
+                    </span>
+                    <input
+                      type="date"
+                      name="disbursement_date"
+                      required
+                      defaultValue={new Date().toISOString().slice(0, 10)}
+                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">
+                      Akun Kas/Bank Tujuan
+                    </span>
+                    <select
+                      name="cash_bank_account_id"
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                    >
+                      <option value="">Pilih akun kas/bank pusat</option>
+                      {cashBankAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.account_code} - {account.account_name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">
+                      Akun Modal
+                    </span>
+                    <select
+                      name="equity_account_id"
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                    >
+                      <option value="">Pilih akun modal</option>
+                      {equityAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.equity_code} - {account.equity_name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>                  <div className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">
+                      Jumlah Dana Cair
+                    </span>
+
+                    <div className="rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-black text-slate-900">
+                      {formatRupiah(plan.remaining_to_disburse)}
+                    </div>
+
+                    <input
+                      type="hidden"
+                      name="amount"
+                      value={toNumber(plan.remaining_to_disburse)}
+                    />
+
+                    <p className="mt-2 text-xs leading-5 text-slate-300">
+                      Nilai ini mengikuti sisa dana cair dari engine database dan tidak diinput manual.
+                    </p>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">
+                      Nomor Dokumen Sumber
+                    </span>
+                    <input
+                      type="text"
+                      name="source_document_no"
+                      placeholder="Opsional. Contoh: SP2D/2026/05/001"
+                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">
+                      Tanggal Dokumen Sumber
+                    </span>
+                    <input
+                      type="date"
+                      name="source_document_date"
+                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">
+                      Catatan Pencairan
+                    </span>
+                    <textarea
+                      name="description"
+                      rows={4}
+                      placeholder="Opsional. Contoh: Dana penyertaan modal desa diterima ke rekening BUMDes pusat."
+                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                    />
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-400"
+                >
+                  Posting Dana Cair
+                </button>
+              </form>
+            ) : null}
             <div className="mt-5 grid gap-2 text-sm">
+            {plan.can_allocate_to_unit && plan.latest_capital_disbursement_id && plan.unit_id ? (
+              <form
+                action={postUnitCapitalAllocationAction}
+                className="mt-5 rounded-2xl bg-white/10 p-4"
+              >
+                <input type="hidden" name="business_plan_id" value={plan.business_plan_id} />
+                <input type="hidden" name="capital_disbursement_id" value={plan.latest_capital_disbursement_id} />
+                <input type="hidden" name="unit_id" value={plan.unit_id} />
+                <input type="hidden" name="amount" value={toNumber(plan.remaining_to_allocate)} />
+
+                <div className="grid gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-200">
+                      Tahap Akhir
+                    </p>
+                    <h3 className="mt-1 text-lg font-black text-white">
+                      Alokasikan Modal ke Unit
+                    </h3>
+                    <p className="mt-1 text-sm leading-6 text-slate-200">
+                      Dana yang sudah cair dari desa akan dipindahkan dari BUMDes pusat ke unit tujuan.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/10 p-3 text-sm text-white">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Unit Tujuan</span>
+                      <strong>{plan.nama_unit ?? "Unit proposal"}</strong>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <span>Nilai Alokasi</span>
+                      <strong>{formatRupiah(plan.remaining_to_allocate)}</strong>
+                    </div>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">Nomor Alokasi</span>
+                    <input
+                      type="text"
+                      name="allocation_no"
+                      required
+                      defaultValue={`ALOK-${plan.plan_no}`}
+                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">Tanggal Alokasi</span>
+                    <input
+                      type="date"
+                      name="allocation_date"
+                      required
+                      defaultValue={new Date().toISOString().slice(0, 10)}
+                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">Kas/Bank Sumber Pusat</span>
+                    <select name="source_cash_bank_account_id" required className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20">
+                      <option value="">Pilih kas/bank pusat</option>
+                      {sourceCashBankAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.code} - {account.name} | Saldo {formatRupiah(account.current_balance)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">Kas/Bank Tujuan Unit</span>
+                    <select name="target_cash_bank_account_id" required className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20">
+                      <option value="">Pilih kas/bank unit</option>
+                      {targetCashBankAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.code} - {account.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">Modal Sumber Pusat</span>
+                    <select name="source_equity_account_id" required className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20">
+                      <option value="">Pilih modal pusat</option>
+                      {sourceEquityAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.code} - {account.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">Modal Tujuan Unit</span>
+                    <select name="target_equity_account_id" required className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20">
+                      <option value="">Pilih modal unit</option>
+                      {targetEquityAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.code} - {account.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold text-white">Catatan</span>
+                    <textarea
+                      name="description"
+                      rows={3}
+                      defaultValue={`Alokasi modal dari BUMDes pusat ke ${plan.nama_unit ?? "unit"} untuk proposal ${plan.plan_no}`}
+                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                    />
+                  </label>
+
+                  <button type="submit" className="rounded-xl bg-emerald-400 px-4 py-3 text-sm font-black text-emerald-950 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-300">
+                    Posting Alokasi Modal ke Unit
+                  </button>
+                </div>
+              </form>
+            ) : null}
+
               <div className="flex items-center justify-between rounded-2xl bg-white/10 px-3 py-2">
                 <span>Sisa untuk dicairkan</span>
                 <strong>{formatRupiah(plan.remaining_to_disburse)}</strong>
@@ -538,5 +986,17 @@ export default async function BumdesMasterPlanDetailPage({ params }: PageProps) 
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
