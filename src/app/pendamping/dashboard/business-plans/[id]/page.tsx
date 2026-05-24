@@ -55,6 +55,19 @@ type TimelineRow = {
   created_at?: string | null;
 };
 
+type BudgetLine = {
+  id: string;
+  line_no: number;
+  category: string;
+  description: string;
+  quantity: number | string;
+  unit_of_measure: string;
+  unit_cost: number | string;
+  total_amount: number | string;
+  calculated_total_amount?: number | string | null;
+  notes?: string | null;
+};
+
 function toNumber(value: number | string | null | undefined) {
   if (value === null || value === undefined) return 0;
   const parsed = Number(value);
@@ -66,6 +79,12 @@ function formatRupiah(value: number | string | null | undefined) {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0,
+  }).format(toNumber(value));
+}
+
+function formatDecimal(value: number | string | null | undefined) {
+  return new Intl.NumberFormat("id-ID", {
+    maximumFractionDigits: 2,
   }).format(toNumber(value));
 }
 
@@ -126,7 +145,18 @@ export default async function PendampingBusinessPlanReviewDetailPage({
     notFound();
   }
 
-  const plan = planData as BusinessPlanDetail;
+  const { data: narrativeData } = await supabase
+    .from("business_plans")
+    .select(
+      "background, objectives, market_analysis, operational_plan, risk_analysis, expected_benefits"
+    )
+    .eq("id", id)
+    .single();
+
+  const plan = {
+    ...(planData as BusinessPlanDetail),
+    ...(narrativeData ?? {}),
+  } as BusinessPlanDetail;
 
   const { data: timelineData } = await supabase
     .from("v_business_plan_governance_timeline")
@@ -135,6 +165,26 @@ export default async function PendampingBusinessPlanReviewDetailPage({
     .order("created_at", { ascending: true });
 
   const timelineRows = (timelineData ?? []) as TimelineRow[];
+
+  const { data: budgetData } = await supabase
+    .from("v_business_plan_budget_lines")
+    .select(
+      "id, line_no, category, description, quantity, unit_of_measure, unit_cost, total_amount, calculated_total_amount, notes"
+    )
+    .eq("business_plan_id", id)
+    .order("line_no", { ascending: true });
+
+  const budgetRows = (budgetData ?? []) as BudgetLine[];
+  const budgetTotal = budgetRows.reduce(
+    (total, item) =>
+      total +
+      (toNumber(item.calculated_total_amount) > 0
+        ? toNumber(item.calculated_total_amount)
+        : toNumber(item.total_amount) > 0
+          ? toNumber(item.total_amount)
+          : toNumber(item.quantity) * toNumber(item.unit_cost)),
+    0
+  );
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 pb-8">
@@ -356,6 +406,72 @@ export default async function PendampingBusinessPlanReviewDetailPage({
 
       <Card>
         <CardHeader
+          title="RAB / Rencana Anggaran Biaya"
+          description="Rincian angka proposal yang menjadi dasar penilaian kewajaran modal."
+          action={
+            <Badge variant="info">
+              Total {formatRupiah(budgetTotal)}
+            </Badge>
+          }
+        />
+
+        <DataTable
+          columns={[
+            "No",
+            "Kategori",
+            "Uraian",
+            "Jumlah",
+            "Satuan",
+            "Harga Satuan",
+            "Total",
+            "Catatan",
+          ]}
+          emptyText="Belum ada rincian RAB untuk proposal ini."
+        >
+          {budgetRows.length > 0
+            ? budgetRows.map((item) => {
+                const lineTotal =
+                  toNumber(item.calculated_total_amount) > 0
+                    ? toNumber(item.calculated_total_amount)
+                    : toNumber(item.total_amount) > 0
+                      ? toNumber(item.total_amount)
+                      : toNumber(item.quantity) * toNumber(item.unit_cost);
+
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-4 font-bold text-slate-950">
+                      {item.line_no}
+                    </td>
+                    <td className="px-4 py-4 font-semibold text-slate-800">
+                      {item.category}
+                    </td>
+                    <td className="px-4 py-4 text-slate-700">
+                      {item.description}
+                    </td>
+                    <td className="px-4 py-4 text-right font-semibold text-slate-700">
+                      {formatDecimal(item.quantity)}
+                    </td>
+                    <td className="px-4 py-4 text-slate-600">
+                      {item.unit_of_measure}
+                    </td>
+                    <td className="px-4 py-4 text-right font-semibold text-slate-700">
+                      {formatRupiah(item.unit_cost)}
+                    </td>
+                    <td className="px-4 py-4 text-right font-black text-slate-950">
+                      {formatRupiah(lineTotal)}
+                    </td>
+                    <td className="px-4 py-4 text-slate-600">
+                      {item.notes ?? "-"}
+                    </td>
+                  </tr>
+                );
+              })
+            : null}
+        </DataTable>
+      </Card>
+
+      <Card>
+        <CardHeader
           title="Timeline Governance"
           description="Jejak status dan tanggung jawab proposal."
           action={<History className="h-5 w-5 text-slate-500" />}
@@ -394,3 +510,6 @@ export default async function PendampingBusinessPlanReviewDetailPage({
     </div>
   );
 }
+
+
+
