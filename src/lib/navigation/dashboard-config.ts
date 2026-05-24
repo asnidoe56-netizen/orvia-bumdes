@@ -1,0 +1,57 @@
+﻿export type NavItem = {
+  label: string;
+  href?: string;
+  children?: NavItem[];
+};
+
+export const platformNav: NavItem[] = [
+  { label: "Ringkasan Platform", href: "/platform/dashboard" },
+  { label: "Registrasi BUMDes", href: "/platform/dashboard/registrations" },
+  { label: "Data BUMDes", href: "/platform/dashboard/bumdes" },
+  { label: "Users & Role", href: "/platform/dashboard/users" },
+  { label: "Governance", href: "/platform/dashboard/governance" },
+];
+
+export const bumdesNav: NavItem[] = [
+  { label: "Ringkasan BUMDes", href: "/bumdes/dashboard" },
+  { label: "Master Plan", href: "/bumdes/dashboard/master-plan" },
+  { label: "Unit Usaha", href: "/bumdes/dashboard/units" },
+  { label: "Pengguna", href: "/bumdes/dashboard/users" },
+  { label: "Laporan Konsolidasi", href: "/bumdes/dashboard/reports" },
+  { label: "Monitoring", href: "/bumdes/dashboard/monitoring" },
+];
+
+export const unitNav: NavItem[] = [
+  { label: "Ringkasan Unit", href: "/unit/dashboard" },
+  { label: "Master Data", href: "/unit/dashboard/master-data" },
+  { label: "Pembelian", href: "/unit/dashboard/purchasing" },
+  { label: "Penjualan", href: "/unit/dashboard/sales" },
+  { label: "Kas & Bank", href: "/unit/dashboard/cash-bank" },
+  { label: "Laporan", href: "/unit/dashboard/reports" },
+];
+
+export const pengawasNav: NavItem[] = [
+  { label: "Audit", href: "/pengawas/dashboard" },
+  { label: "Laporan", href: "/pengawas/dashboard/reports" },
+];
+
+export const pendampingNav: NavItem[] = [
+  { label: "Pendampingan", href: "/pendamping/dashboard" },
+  { label: "Progress BUMDes", href: "/pendamping/dashboard/bumdes-progress" },
+];
+
+export const dinasPmdNav: NavItem[] = [
+  { label: "Monitoring", href: "/dinas-pmd/dashboard" },
+  { label: "Laporan", href: "/dinas-pmd/dashboard/reports" },
+];
+
+export const inspektoratNav: NavItem[] = [
+  { label: "Temuan Audit", href: "/inspektorat/dashboard" },
+  { label: "Kepatuhan", href: "/inspektorat/dashboard/compliance" },
+];
+
+export const bupatiNav: NavItem[] = [
+  { label: "Executive Summary", href: "/bupati/dashboard" },
+  { label: "Kinerja Daerah", href: "/bupati/dashboard/regional-performance" },
+];
+

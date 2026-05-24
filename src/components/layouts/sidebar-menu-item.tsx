@@ -1,0 +1,181 @@
+﻿"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Activity,
+  BarChart3,
+  Building2,
+  ChevronDown,
+  ClipboardCheck,
+  ClipboardList,
+  Database,
+  FileText,
+  LayoutDashboard,
+  Package,
+  ShieldCheck,
+  ShoppingCart,
+  Store,
+  TrendingUp,
+  Truck,
+  UsersRound,
+  WalletCards,
+  type LucideIcon,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import type { NavItem } from "@/lib/navigation/dashboard-config";
+
+type SidebarMenuItemProps = {
+  item: NavItem;
+};
+
+const iconMap: Record<string, LucideIcon> = {
+  "Ringkasan Platform": LayoutDashboard,
+  "Registrasi BUMDes": ClipboardList,
+  "Data BUMDes": Building2,
+  "Users & Role": UsersRound,
+  Governance: ShieldCheck,
+
+  "Ringkasan BUMDes": LayoutDashboard,
+  "Master Plan": ClipboardList,
+  "Unit Usaha": Store,
+  Pengguna: UsersRound,
+  "Laporan Konsolidasi": BarChart3,
+  Monitoring: Activity,
+
+  "Ringkasan Unit": LayoutDashboard,
+  "Master Data": Database,
+  "Persediaan Barang": Package,
+  Supplier: Truck,
+  Customer: UsersRound,
+  Pembelian: ClipboardCheck,
+  Penjualan: ShoppingCart,
+  "Kas & Bank": WalletCards,
+  Laporan: FileText,
+
+  Audit: ShieldCheck,
+  Pendampingan: UsersRound,
+  "Progress BUMDes": TrendingUp,
+  "Temuan Audit": ShieldCheck,
+  Kepatuhan: ClipboardCheck,
+  "Executive Summary": BarChart3,
+  "Kinerja Daerah": TrendingUp,
+};
+
+function isRootDashboardPath(href: string) {
+  return href.endsWith("/dashboard");
+}
+
+function isPathActive(pathname: string, href?: string) {
+  if (!href) return false;
+
+  return isRootDashboardPath(href)
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
+  const pathname = usePathname();
+
+  const hasChildren = Boolean(item.children?.length);
+
+  const isChildActive = useMemo(() => {
+    return item.children?.some((child) => isPathActive(pathname, child.href)) ?? false;
+  }, [item.children, pathname]);
+
+  const [open, setOpen] = useState(isChildActive);
+
+  const Icon = iconMap[item.label] ?? LayoutDashboard;
+
+  if (hasChildren) {
+    return (
+      <div className="space-y-1">
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          className={[
+            "group flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-semibold transition",
+            isChildActive
+              ? "bg-emerald-50 text-emerald-800 shadow-sm"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-950",
+          ].join(" ")}
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <span
+              className={[
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition",
+                isChildActive
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-500 group-hover:bg-emerald-50 group-hover:text-emerald-700",
+              ].join(" ")}
+            >
+              <Icon className="h-4 w-4" />
+            </span>
+
+            <span className="truncate">{item.label}</span>
+          </span>
+
+          <ChevronDown
+            className={[
+              "h-4 w-4 shrink-0 transition",
+              open ? "rotate-180" : "",
+            ].join(" ")}
+          />
+        </button>
+
+        {open ? (
+          <div className="ml-4 space-y-1 border-l border-slate-200 pl-3">
+            {item.children?.map((child) => {
+              const childActive = isPathActive(pathname, child.href);
+              const ChildIcon = iconMap[child.label] ?? LayoutDashboard;
+
+              return (
+                <Link
+                  key={child.href ?? child.label}
+                  href={child.href ?? "#"}
+                  className={[
+                    "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition",
+                    childActive
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-950",
+                  ].join(" ")}
+                >
+                  <ChildIcon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{child.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  const isActive = isPathActive(pathname, item.href);
+
+  return (
+    <Link
+      href={item.href ?? "#"}
+      className={[
+        "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition",
+        isActive
+          ? "bg-emerald-50 text-emerald-800 shadow-sm"
+          : "text-slate-600 hover:bg-slate-50 hover:text-slate-950",
+      ].join(" ")}
+    >
+      <span
+        className={[
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition",
+          isActive
+            ? "bg-emerald-600 text-white shadow-sm"
+            : "bg-slate-100 text-slate-500 group-hover:bg-emerald-50 group-hover:text-emerald-700",
+        ].join(" ")}
+      >
+        <Icon className="h-4 w-4" />
+      </span>
+
+      <span className="truncate">{item.label}</span>
+    </Link>
+  );
+}
+
