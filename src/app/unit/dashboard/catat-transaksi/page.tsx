@@ -7,7 +7,7 @@ import {
   Wallet,
 } from "lucide-react";
 
-const transactionCards = [
+const purchaseCards = [
   {
     title: "Beli Tunai",
     description:
@@ -23,6 +23,56 @@ const transactionCards = [
     icon: CreditCard,
   },
 ];
+
+const salesCards = [
+  {
+    title: "Jual Tunai",
+    description:
+      "Catat penjualan barang yang langsung dibayar oleh pelanggan.",
+    href: "/unit/dashboard/catat-transaksi/jual-tunai",
+    icon: Wallet,
+  },
+  {
+    title: "Jual Kredit",
+    description:
+      "Catat penjualan barang kepada pelanggan dengan pembayaran belakangan.",
+    href: "/unit/dashboard/catat-transaksi/jual-kredit",
+    icon: CreditCard,
+  },
+];
+
+function TransactionCard({
+  title,
+  description,
+  href,
+  icon: Icon,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  icon: typeof Wallet;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+          <Icon className="h-6 w-6" />
+        </div>
+
+        <div className="rounded-full bg-slate-50 p-2 text-slate-400 transition group-hover:bg-emerald-50 group-hover:text-emerald-700">
+          <ArrowRight className="h-4 w-4" />
+        </div>
+      </div>
+
+      <h3 className="mt-5 text-lg font-bold text-slate-950">{title}</h3>
+
+      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+    </Link>
+  );
+}
 
 export default function CatatTransaksiPage() {
   return (
@@ -51,36 +101,35 @@ export default function CatatTransaksiPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        {transactionCards.map((card) => {
-          const Icon = card.icon;
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-base font-bold text-slate-950">Pembelian</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Catat barang masuk dari supplier, baik dibayar tunai maupun kredit.
+          </p>
+        </div>
 
-          return (
-            <Link
-              key={card.href}
-              href={card.href}
-              className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                  <Icon className="h-6 w-6" />
-                </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {purchaseCards.map((card) => (
+            <TransactionCard key={card.href} {...card} />
+          ))}
+        </div>
+      </section>
 
-                <div className="rounded-full bg-slate-50 p-2 text-slate-400 transition group-hover:bg-emerald-50 group-hover:text-emerald-700">
-                  <ArrowRight className="h-4 w-4" />
-                </div>
-              </div>
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-base font-bold text-slate-950">Penjualan</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Fondasi menu penjualan sudah disiapkan. Isi form akan dihubungkan
+            setelah engine penjualan diverifikasi.
+          </p>
+        </div>
 
-              <h2 className="mt-5 text-lg font-bold text-slate-950">
-                {card.title}
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                {card.description}
-              </p>
-            </Link>
-          );
-        })}
+        <div className="grid gap-4 md:grid-cols-2">
+          {salesCards.map((card) => (
+            <TransactionCard key={card.href} {...card} />
+          ))}
+        </div>
       </section>
 
       <section className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-5">
@@ -91,12 +140,12 @@ export default function CatatTransaksiPage() {
 
           <div>
             <h2 className="text-sm font-bold text-slate-950">
-              Tahap awal: transaksi pembelian
+              Fondasi transaksi harian
             </h2>
             <p className="mt-1 text-sm leading-6 text-slate-600">
-              Saat ini card yang diaktifkan adalah Beli Tunai dan Beli Kredit.
-              Jenis transaksi lain bisa ditambahkan bertahap setelah engine
-              database-nya selesai diverifikasi.
+              Pembelian tunai dan kredit sudah aktif. Penjualan tunai dan
+              kredit sudah disiapkan sebagai fondasi frontend agar selanjutnya
+              tinggal dihubungkan ke engine penjualan yang sudah diverifikasi.
             </p>
           </div>
         </div>
