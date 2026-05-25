@@ -1,4 +1,4 @@
-﻿export type NavItem = {
+export type NavItem = {
   label: string;
   href?: string;
   children?: NavItem[];
@@ -24,6 +24,7 @@ export const bumdesNav: NavItem[] = [
 export const unitNav: NavItem[] = [
   { label: "Ringkasan Unit", href: "/unit/dashboard" },
   { label: "Master Data", href: "/unit/dashboard/master-data" },
+  { label: "Catat Transaksi", href: "/unit/dashboard/catat-transaksi" },
   { label: "Pembelian", href: "/unit/dashboard/purchasing" },
   { label: "Penjualan", href: "/unit/dashboard/sales" },
   { label: "Kas & Bank", href: "/unit/dashboard/cash-bank" },
@@ -55,5 +56,6 @@ export const bupatiNav: NavItem[] = [
   { label: "Executive Summary", href: "/bupati/dashboard" },
   { label: "Kinerja Daerah", href: "/bupati/dashboard/regional-performance" },
 ];
+
 
 
