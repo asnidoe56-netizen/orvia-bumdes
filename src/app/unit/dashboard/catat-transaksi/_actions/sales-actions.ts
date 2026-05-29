@@ -89,6 +89,25 @@ export async function createAndPostSalesInvoice(formData: FormData) {
 
   const supabase = await createClient();
 
+  const { data: unitCostData, error: unitCostError } = await supabase.rpc(
+    "get_inventory_unit_cost",
+    {
+      p_item_id: itemId,
+    }
+  );
+
+  if (unitCostError) {
+    throw new Error(
+      unitCostError.message || "Harga pokok barang belum tersedia."
+    );
+  }
+
+  const unitCost = Number(unitCostData);
+
+  if (Number.isNaN(unitCost) || unitCost <= 0) {
+    throw new Error("Harga pokok barang belum tersedia atau tidak valid.");
+  }
+
   const { error } = await supabase.rpc("create_and_post_sales_invoice", {
     p_tenant_id: context.tenant_id,
     p_unit_id: context.unit_id,
@@ -105,7 +124,7 @@ export async function createAndPostSalesInvoice(formData: FormData) {
         unit_price: unitPrice,
         discount_amount: discountAmount,
         tax_amount: taxAmount,
-        unit_cost: 0,
+        unit_cost: unitCost,
         description,
       },
     ],
@@ -124,3 +143,4 @@ export async function createAndPostSalesInvoice(formData: FormData) {
 
   redirect("/unit/dashboard/catat-transaksi");
 }
+

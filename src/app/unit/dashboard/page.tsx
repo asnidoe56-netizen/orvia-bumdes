@@ -1,12 +1,10 @@
 ﻿import {
   Activity,
   BadgeCheck,
-  Building2,
   Coins,
   Package,
   ShieldCheck,
   Store,
-  WalletCards,
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -301,3 +299,4 @@ export default async function UnitDashboardPage() {
     </div>
   );
 }
+

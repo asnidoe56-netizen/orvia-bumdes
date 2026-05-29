@@ -7,7 +7,7 @@ export default function LandingPage() {
         <header className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-400">
-              ERP BUMDes
+              ORVIA-BUMDes
             </p>
             <h1 className="mt-1 text-xl font-bold">Core Global Governance Engine</h1>
           </div>

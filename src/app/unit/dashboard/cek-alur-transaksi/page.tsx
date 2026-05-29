@@ -1,12 +1,18 @@
 ﻿import {
   AlertTriangle,
+  Boxes,
+  Calculator,
   CheckCircle2,
   CircleDollarSign,
   ClipboardCheck,
+  Landmark,
   PackageCheck,
   ReceiptText,
   SearchCheck,
   ShoppingBag,
+  TrendingDown,
+  WalletCards,
+  type LucideIcon,
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -59,9 +65,75 @@ type SalesFlowAudit = {
   total_credit: number | string;
   journal_diff: number | string;
   has_cash_debit: boolean;
+  has_receivable_debit: boolean;
   has_sales_credit: boolean;
   has_cogs_debit: boolean;
   has_inventory_credit: boolean;
+  audit_result: string;
+  audit_notes: string[] | null;
+  created_at: string;
+};
+
+type CapitalExpenditureFlowAudit = {
+  capital_expenditure_id: string;
+  transaction_no: string;
+  transaction_date: string;
+  payment_type: string;
+  due_date: string | null;
+  status: string;
+  total_amount: number | string;
+  paid_amount: number | string;
+  category_code: string | null;
+  category_name: string | null;
+  asset_account_code: string | null;
+  asset_account_name: string | null;
+  liability_account_code: string | null;
+  liability_account_name: string | null;
+  journal_no: string | null;
+  journal_status: string | null;
+  cash_bank_transaction_no: string | null;
+  cash_bank_transaction_type: string | null;
+  cash_bank_transaction_status: string | null;
+  line_count: number;
+  fixed_asset_count: number;
+  total_debit: number | string;
+  total_credit: number | string;
+  has_asset_debit: boolean;
+  has_cash_credit: boolean;
+  has_liability_credit: boolean;
+  cash_bank_transaction_count: number;
+  audit_result: string;
+  audit_notes: string[] | null;
+  created_at: string;
+};
+
+type FixedAssetDepreciationFlowAudit = {
+  depreciation_id: string;
+  fixed_asset_id: string;
+  asset_code: string;
+  asset_name: string;
+  acquisition_cost: number | string;
+  residual_value: number | string;
+  useful_life_months: number;
+  asset_status: string;
+  period_year: number;
+  period_month: number;
+  depreciation_date: string;
+  depreciation_amount: number | string;
+  accumulated_depreciation_amount: number | string;
+  book_value_after: number | string;
+  depreciation_status: string;
+  journal_no: string | null;
+  journal_status: string | null;
+  depreciation_expense_account_code: string | null;
+  depreciation_expense_account_name: string | null;
+  accumulated_depreciation_account_code: string | null;
+  accumulated_depreciation_account_name: string | null;
+  total_debit: number | string;
+  total_credit: number | string;
+  journal_diff: number | string;
+  has_expense_debit: boolean;
+  has_accumulated_credit: boolean;
   audit_result: string;
   audit_notes: string[] | null;
   created_at: string;
@@ -89,9 +161,8 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function getResultLabel(value: string) {
-  if (value === "PASS") return "Lengkap";
-  return "Perlu dicek";
+function formatPeriod(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, "0")}`;
 }
 
 function getStepState(ok: boolean) {
@@ -125,7 +196,7 @@ function StepCard({
 }: {
   label: string;
   detail: string;
-  icon: typeof ReceiptText;
+  icon: LucideIcon;
   ok: boolean;
 }) {
   return (
@@ -284,10 +355,21 @@ function SalesAuditCard({ audit }: { audit: SalesFlowAudit }) {
   const hasStockOut =
     Number(audit.movement_count ?? 0) > 0 &&
     Number(audit.total_qty_out ?? 0) === Number(audit.total_quantity ?? 0);
-  const hasCashReceipt =
-    audit.cash_transaction_type === "receipt" &&
-    audit.cash_tx_status === "posted" &&
-    Number(audit.cash_tx_count ?? 0) > 0;
+  const isCreditSale = audit.payment_type === "credit";
+  const hasReceivable = Boolean(audit.has_receivable_debit);
+  const hasCashReceipt = isCreditSale
+    ? hasReceivable && Number(audit.cash_tx_count ?? 0) === 0
+    : audit.cash_transaction_type === "receipt" &&
+      audit.cash_tx_status === "posted" &&
+      Number(audit.cash_tx_count ?? 0) > 0;
+  const cashOrReceivableLabel = isCreditSale ? "Piutang" : "Kas Masuk";
+  const cashOrReceivableDetail = isCreditSale
+    ? hasCashReceipt
+      ? "Piutang penjualan kredit terbentuk"
+      : "Piutang belum lengkap"
+    : hasCashReceipt
+      ? `${audit.cash_tx_count} receipt posted`
+      : "Belum lengkap";
   const hasBalancedRecord =
     audit.journal_status === "posted" && Number(audit.journal_diff ?? 0) === 0;
 
@@ -329,7 +411,7 @@ function SalesAuditCard({ audit }: { audit: SalesFlowAudit }) {
         <StepCard label="Transaksi" detail={getStepState(hasInvoice)} icon={ReceiptText} ok={hasInvoice} />
         <StepCard label="Barang" detail={`${audit.line_count} baris, total ${Number(audit.total_quantity ?? 0)} barang`} icon={ShoppingBag} ok={hasItems} />
         <StepCard label="Stok Keluar" detail={hasStockOut ? "sales_delivery lengkap" : "Belum lengkap"} icon={PackageCheck} ok={hasStockOut} />
-        <StepCard label="Kas Masuk" detail={hasCashReceipt ? `${audit.cash_tx_count} receipt posted` : "Belum lengkap"} icon={CircleDollarSign} ok={hasCashReceipt} />
+        <StepCard label={cashOrReceivableLabel} detail={cashOrReceivableDetail} icon={CircleDollarSign} ok={hasCashReceipt} />
         <StepCard label="Pencatatan" detail={Number(audit.journal_diff ?? 0) === 0 ? "Seimbang" : "Tidak seimbang"} icon={ClipboardCheck} ok={hasBalancedRecord} />
       </div>
 
@@ -345,10 +427,204 @@ function SalesAuditCard({ audit }: { audit: SalesFlowAudit }) {
 
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Kas Masuk
+            {isCreditSale ? "Piutang" : "Kas Masuk"}
           </p>
           <p className="mt-1 text-sm font-bold text-slate-900">
-            Receipt {formatRupiah(audit.paid_amount)}
+            {isCreditSale
+              ? `Piutang ${formatRupiah(audit.total_amount)}`
+              : `Receipt ${formatRupiah(audit.paid_amount)}`}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Pencatatan Keuangan
+          </p>
+          <p className="mt-1 text-sm font-bold text-slate-900">
+            Debit {formatRupiah(audit.total_debit)} - Kredit {formatRupiah(audit.total_credit)}
+          </p>
+        </div>
+      </div>
+
+      {!isPass ? <NotesBox notes={notes} /> : null}
+    </article>
+  );
+}
+
+function CapitalExpenditureAuditCard({
+  audit,
+}: {
+  audit: CapitalExpenditureFlowAudit;
+}) {
+  const isPass = audit.audit_result === "PASS";
+  const notes = audit.audit_notes ?? [];
+  const isCredit = audit.payment_type === "credit";
+  const journalDiff =
+    Number(audit.total_debit ?? 0) - Number(audit.total_credit ?? 0);
+
+  const hasTransaction = audit.status === "posted";
+  const hasAsset = Number(audit.fixed_asset_count ?? 0) > 0 && audit.has_asset_debit;
+  const hasPaymentOrLiability = isCredit
+    ? audit.has_liability_credit && Number(audit.paid_amount ?? 0) === 0
+    : audit.has_cash_credit &&
+      Number(audit.cash_bank_transaction_count ?? 0) > 0 &&
+      audit.cash_bank_transaction_status === "posted";
+  const hasJournal =
+    audit.journal_status === "posted" && Math.abs(journalDiff) < 0.01;
+
+  return (
+    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-950">
+              {audit.transaction_no}
+            </h2>
+
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+              Belanja Aset {formatPaymentType(audit.payment_type)}
+            </span>
+
+            <ResultBadge isPass={isPass} />
+          </div>
+
+          <p className="mt-1 text-sm text-slate-600">
+            {formatDate(audit.transaction_date)} - Kategori:{" "}
+            {audit.category_code && audit.category_name
+              ? `${audit.category_code} - ${audit.category_name}`
+              : "Tidak ada kategori"}
+          </p>
+        </div>
+
+        <div className="text-left lg:text-right">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Nilai Belanja Aset
+          </p>
+          <p className="mt-1 text-lg font-bold text-slate-950">
+            {formatRupiah(audit.total_amount)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-5">
+        <StepCard label="Transaksi" detail={getStepState(hasTransaction)} icon={ReceiptText} ok={hasTransaction} />
+        <StepCard label="Detail Aset" detail={`${audit.line_count} baris detail`} icon={Boxes} ok={Number(audit.line_count ?? 0) > 0} />
+        <StepCard label="Aset Terbentuk" detail={`${audit.fixed_asset_count} aset tetap`} icon={Landmark} ok={hasAsset} />
+        <StepCard label={isCredit ? "Utang" : "Kas Keluar"} detail={isCredit ? "Utang Belanja Modal tercatat" : `${audit.cash_bank_transaction_count} payment posted`} icon={CircleDollarSign} ok={hasPaymentOrLiability} />
+        <StepCard label="Pencatatan" detail={Math.abs(journalDiff) < 0.01 ? "Seimbang" : "Tidak seimbang"} icon={ClipboardCheck} ok={hasJournal} />
+      </div>
+
+      <div className="mt-5 grid gap-3 border-t border-slate-100 pt-4 md:grid-cols-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Akun Aset
+          </p>
+          <p className="mt-1 text-sm font-bold text-slate-900">
+            {audit.asset_account_code && audit.asset_account_name
+              ? `${audit.asset_account_code} - ${audit.asset_account_name}`
+              : "-"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {isCredit ? "Utang" : "Kas Keluar"}
+          </p>
+          <p className="mt-1 text-sm font-bold text-slate-900">
+            {isCredit
+              ? `${audit.liability_account_code ?? "-"} - ${audit.liability_account_name ?? "Utang Belanja Modal"}`
+              : `Payment ${formatRupiah(audit.paid_amount)}`}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Pencatatan Keuangan
+          </p>
+          <p className="mt-1 text-sm font-bold text-slate-900">
+            Debit {formatRupiah(audit.total_debit)} - Kredit {formatRupiah(audit.total_credit)}
+          </p>
+        </div>
+      </div>
+
+      {!isPass ? <NotesBox notes={notes} /> : null}
+    </article>
+  );
+}
+
+function FixedAssetDepreciationAuditCard({
+  audit,
+}: {
+  audit: FixedAssetDepreciationFlowAudit;
+}) {
+  const isPass = audit.audit_result === "PASS";
+  const notes = audit.audit_notes ?? [];
+  const hasDepreciation = audit.depreciation_status === "posted";
+  const hasExpense = audit.has_expense_debit;
+  const hasAccumulated = audit.has_accumulated_credit;
+  const hasBookValue =
+    Number(audit.book_value_after ?? 0) >= Number(audit.residual_value ?? 0);
+  const hasJournal =
+    audit.journal_status === "posted" && Number(audit.journal_diff ?? 0) === 0;
+
+  return (
+    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-950">
+              {audit.asset_name}
+            </h2>
+
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+              Penyusutan {formatPeriod(audit.period_year, audit.period_month)}
+            </span>
+
+            <ResultBadge isPass={isPass} />
+          </div>
+
+          <p className="mt-1 text-sm text-slate-600">
+            {formatDate(audit.depreciation_date)} - Kode aset:{" "}
+            {audit.asset_code}
+          </p>
+        </div>
+
+        <div className="text-left lg:text-right">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Nilai Penyusutan
+          </p>
+          <p className="mt-1 text-lg font-bold text-slate-950">
+            {formatRupiah(audit.depreciation_amount)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-5">
+        <StepCard label="Penyusutan" detail={getStepState(hasDepreciation)} icon={TrendingDown} ok={hasDepreciation} />
+        <StepCard label="Beban" detail={`${audit.depreciation_expense_account_code ?? "-"} debit`} icon={Calculator} ok={hasExpense} />
+        <StepCard label="Akumulasi" detail={`${audit.accumulated_depreciation_account_code ?? "-"} kredit`} icon={WalletCards} ok={hasAccumulated} />
+        <StepCard label="Nilai Buku" detail={formatRupiah(audit.book_value_after)} icon={Landmark} ok={hasBookValue} />
+        <StepCard label="Pencatatan" detail={Number(audit.journal_diff ?? 0) === 0 ? "Seimbang" : "Tidak seimbang"} icon={ClipboardCheck} ok={hasJournal} />
+      </div>
+
+      <div className="mt-5 grid gap-3 border-t border-slate-100 pt-4 md:grid-cols-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Beban Penyusutan
+          </p>
+          <p className="mt-1 text-sm font-bold text-slate-900">
+            {audit.depreciation_expense_account_code ?? "-"} -{" "}
+            {audit.depreciation_expense_account_name ?? "-"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Akumulasi Penyusutan
+          </p>
+          <p className="mt-1 text-sm font-bold text-slate-900">
+            {audit.accumulated_depreciation_account_code ?? "-"} -{" "}
+            {audit.accumulated_depreciation_account_name ?? "-"}
           </p>
         </div>
 
@@ -376,7 +652,12 @@ export default async function CekAlurTransaksiPage() {
 
   const supabase = await createClient();
 
-  const [purchaseResult, salesResult] = await Promise.all([
+  const [
+    purchaseResult,
+    salesResult,
+    capitalExpenditureResult,
+    depreciationResult,
+  ] = await Promise.all([
     supabase
       .from("v_purchase_invoice_flow_audit")
       .select(
@@ -390,7 +671,28 @@ export default async function CekAlurTransaksiPage() {
     supabase
       .from("v_sales_invoice_flow_audit")
       .select(
-        "sales_invoice_id, invoice_no, invoice_date, payment_type, invoice_status, customer_code, customer_name, total_amount, paid_amount, line_count, total_quantity, total_cogs, movement_count, total_qty_out, total_inventory_cost, cash_tx_count, cash_transaction_type, cash_tx_status, journal_status, total_debit, total_credit, journal_diff, has_cash_debit, has_sales_credit, has_cogs_debit, has_inventory_credit, audit_result, audit_notes, created_at"
+        "sales_invoice_id, invoice_no, invoice_date, payment_type, invoice_status, customer_code, customer_name, total_amount, paid_amount, line_count, total_quantity, total_cogs, movement_count, total_qty_out, total_inventory_cost, cash_tx_count, cash_transaction_type, cash_tx_status, journal_status, total_debit, total_credit, journal_diff, has_cash_debit, has_receivable_debit, has_sales_credit, has_cogs_debit, has_inventory_credit, audit_result, audit_notes, created_at"
+      )
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .order("created_at", { ascending: false })
+      .limit(15),
+
+    supabase
+      .from("v_capital_expenditure_flow_audit")
+      .select(
+        "capital_expenditure_id, transaction_no, transaction_date, payment_type, due_date, status, total_amount, paid_amount, category_code, category_name, asset_account_code, asset_account_name, liability_account_code, liability_account_name, journal_no, journal_status, cash_bank_transaction_no, cash_bank_transaction_type, cash_bank_transaction_status, line_count, fixed_asset_count, total_debit, total_credit, has_asset_debit, has_cash_credit, has_liability_credit, cash_bank_transaction_count, audit_result, audit_notes, created_at"
+      )
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .eq("status", "posted")
+      .order("created_at", { ascending: false })
+      .limit(15),
+
+    supabase
+      .from("v_fixed_asset_depreciation_flow_audit")
+      .select(
+        "depreciation_id, fixed_asset_id, asset_code, asset_name, acquisition_cost, residual_value, useful_life_months, asset_status, period_year, period_month, depreciation_date, depreciation_amount, accumulated_depreciation_amount, book_value_after, depreciation_status, journal_no, journal_status, depreciation_expense_account_code, depreciation_expense_account_name, accumulated_depreciation_account_code, accumulated_depreciation_account_name, total_debit, total_credit, journal_diff, has_expense_debit, has_accumulated_credit, audit_result, audit_notes, created_at"
       )
       .eq("tenant_id", context.tenant_id)
       .eq("unit_id", context.unit_id)
@@ -406,9 +708,27 @@ export default async function CekAlurTransaksiPage() {
     throw new Error(salesResult.error.message);
   }
 
+  if (capitalExpenditureResult.error) {
+    throw new Error(capitalExpenditureResult.error.message);
+  }
+
+  if (depreciationResult.error) {
+    throw new Error(depreciationResult.error.message);
+  }
+
   const purchaseAudits = (purchaseResult.data ?? []) as PurchaseFlowAudit[];
   const salesAudits = (salesResult.data ?? []) as SalesFlowAudit[];
-  const allAudits = [...purchaseAudits, ...salesAudits];
+  const capitalExpenditureAudits =
+    (capitalExpenditureResult.data ?? []) as CapitalExpenditureFlowAudit[];
+  const depreciationAudits =
+    (depreciationResult.data ?? []) as FixedAssetDepreciationFlowAudit[];
+
+  const allAudits = [
+    ...purchaseAudits,
+    ...salesAudits,
+    ...capitalExpenditureAudits,
+    ...depreciationAudits,
+  ];
 
   const passCount = allAudits.filter((audit) => audit.audit_result === "PASS").length;
   const checkCount = allAudits.filter((audit) => audit.audit_result !== "PASS").length;
@@ -428,7 +748,7 @@ export default async function CekAlurTransaksiPage() {
 
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
               Pantau apakah transaksi sudah lengkap diproses oleh engine database:
-              barang, stok, kas atau utang, dan pencatatan keuangan.
+              barang, stok, kas atau utang, aset tetap, penyusutan, dan pencatatan keuangan.
             </p>
           </div>
 
@@ -459,7 +779,7 @@ export default async function CekAlurTransaksiPage() {
         <div>
           <h2 className="text-base font-bold text-slate-950">Penjualan</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Mengecek penjualan tunai: kas masuk, stok keluar, HPP, pendapatan, dan jurnal.
+            Mengecek penjualan tunai dan kredit: kas masuk atau piutang, stok keluar, HPP, pendapatan, dan jurnal.
           </p>
         </div>
 
@@ -504,6 +824,63 @@ export default async function CekAlurTransaksiPage() {
           ))
         )}
       </section>
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-bold text-slate-950">Belanja Aset</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Mengecek Belanja Modal: aset tetap terbentuk, kas keluar atau utang tercatat, dan jurnal aset seimbang.
+          </p>
+        </div>
+
+        {capitalExpenditureAudits.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center">
+            <Boxes className="mx-auto h-10 w-10 text-slate-400" />
+            <h3 className="mt-3 text-lg font-bold text-slate-950">
+              Belum ada Belanja Aset
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Setelah unit mencatat Belanja Modal, hasil pengecekan alurnya akan muncul di sini.
+            </p>
+          </div>
+        ) : (
+          capitalExpenditureAudits.map((audit) => (
+            <CapitalExpenditureAuditCard
+              key={audit.capital_expenditure_id}
+              audit={audit}
+            />
+          ))
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-bold text-slate-950">Penyusutan Aset</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Mengecek penyusutan aset tetap: beban penyusutan, akumulasi penyusutan, nilai buku, dan jurnal seimbang.
+          </p>
+        </div>
+
+        {depreciationAudits.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center">
+            <TrendingDown className="mx-auto h-10 w-10 text-slate-400" />
+            <h3 className="mt-3 text-lg font-bold text-slate-950">
+              Belum ada penyusutan aset
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Setelah unit memproses penyusutan bulanan, hasil pengecekan alurnya akan muncul di sini.
+            </p>
+          </div>
+        ) : (
+          depreciationAudits.map((audit) => (
+            <FixedAssetDepreciationAuditCard
+              key={audit.depreciation_id}
+              audit={audit}
+            />
+          ))
+        )}
+      </section>
     </div>
   );
 }
+

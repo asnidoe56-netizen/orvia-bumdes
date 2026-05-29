@@ -11,6 +11,7 @@ import {
   ClipboardList,
   Database,
   FileText,
+  HandCoins,
   LayoutDashboard,
   Package,
   ShieldCheck,
@@ -32,6 +33,7 @@ type SidebarMenuItemProps = {
 const iconMap: Record<string, LucideIcon> = {
   "Ringkasan Platform": LayoutDashboard,
   "Registrasi BUMDes": ClipboardList,
+  "Registrasi Pendamping": UsersRound,
   "Data BUMDes": Building2,
   "Users & Role": UsersRound,
   Governance: ShieldCheck,
@@ -42,6 +44,7 @@ const iconMap: Record<string, LucideIcon> = {
   Pengguna: UsersRound,
   "Laporan Konsolidasi": BarChart3,
   Monitoring: Activity,
+  "Bagi Hasil": HandCoins,
 
   "Ringkasan Unit": LayoutDashboard,
   "Master Data": Database,
@@ -179,5 +182,7 @@ export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
     </Link>
   );
 }
+
+
 
 

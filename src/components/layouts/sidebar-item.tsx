@@ -28,6 +28,7 @@ type SidebarItemProps = {
 const iconMap: Record<string, LucideIcon> = {
   "Ringkasan Platform": LayoutDashboard,
   "Registrasi BUMDes": ClipboardList,
+  "Registrasi Pendamping": UsersRound,
   "Data BUMDes": Building2,
   "Users & Role": UsersRound,
   Governance: ShieldCheck,
@@ -90,4 +91,5 @@ export function SidebarItem({ href, label }: SidebarItemProps) {
     </Link>
   );
 }
+
 

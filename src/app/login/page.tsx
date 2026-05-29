@@ -6,7 +6,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-            ERP BUMDes
+            ORVIA BUMDes
           </p>
           <h1 className="mt-2 text-3xl font-bold text-slate-950">
             Masuk ke Sistem

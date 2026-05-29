@@ -1,8 +1,9 @@
-﻿import { PlusCircle, Store, UserRound, UsersRound } from "lucide-react";
+﻿import { KeyRound, PlusCircle, Store, UserRound, UsersRound } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createBusinessUnitWithAccess } from "./actions";
+import { UnitAccessPasswordFields } from "./unit-access-password-fields";
 
 type UnitTemplate = {
   id: string;
@@ -18,6 +19,23 @@ type BusinessUnit = {
   jenis_unit: string;
   status: string;
 };
+
+type UnitAccessCredential = {
+  id: string;
+  unit_id: string;
+  login_code: string;
+  email_virtual: string;
+  role: "manager_unit" | "operator_unit" | string;
+  access_status: string;
+  must_change_password: boolean;
+  generated_at: string;
+};
+
+function roleLabel(role: string) {
+  if (role === "manager_unit") return "Manager Unit";
+  if (role === "operator_unit") return "Operator Unit";
+  return role;
+}
 
 export default async function BumdesUnitsPage() {
   const context = await getLoginContext();
@@ -40,8 +58,29 @@ export default async function BumdesUnitsPage() {
     .eq("tenant_id", context.tenant_id)
     .order("created_at", { ascending: false });
 
+  const { data: credentials, error: credentialError } = await supabase
+    .from("unit_access_credentials")
+    .select(
+      "id, unit_id, login_code, email_virtual, role, access_status, must_change_password, generated_at"
+    )
+    .eq("tenant_id", context.tenant_id)
+    .order("generated_at", { ascending: true });
+
   const templateList = (templates ?? []) as UnitTemplate[];
   const unitList = (units ?? []) as BusinessUnit[];
+  const credentialList = (credentials ?? []) as UnitAccessCredential[];
+
+  const credentialsByUnit = credentialList.reduce<Record<string, UnitAccessCredential[]>>(
+    (acc, credential) => {
+      if (!acc[credential.unit_id]) {
+        acc[credential.unit_id] = [];
+      }
+
+      acc[credential.unit_id].push(credential);
+      return acc;
+    },
+    {}
+  );
 
   return (
     <div className="space-y-5">
@@ -53,14 +92,14 @@ export default async function BumdesUnitsPage() {
           Kelola Unit Usaha
         </h1>
         <p className="mt-1 max-w-3xl text-sm text-slate-600">
-          Buat unit usaha baru, pilih template unit, lalu generate akun Manager Unit
-          dan opsional akun Operator Unit.
+          Buat unit usaha baru, pilih template unit, lalu buat akun Manager Unit
+          dan opsional akun Operator Unit. Password diisi langsung oleh Direktur.
         </p>
       </section>
 
-      {templateError || unitError ? (
+      {templateError || unitError || credentialError ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-          {templateError?.message || unitError?.message}
+          {templateError?.message || unitError?.message || credentialError?.message}
         </div>
       ) : null}
 
@@ -175,6 +214,15 @@ export default async function BumdesUnitsPage() {
                   />
                 </label>
               </div>
+
+              <UnitAccessPasswordFields
+                className="mt-4"
+                passwordName="manager_password"
+                confirmPasswordName="manager_confirm_password"
+                passwordLabel="Password Manager *"
+                confirmPasswordLabel="Konfirmasi Password Manager *"
+                required
+              />
             </div>
 
             <div>
@@ -218,6 +266,18 @@ export default async function BumdesUnitsPage() {
                   />
                 </label>
               </div>
+
+              <UnitAccessPasswordFields
+                className="mt-4"
+                passwordName="operator_password"
+                confirmPasswordName="operator_confirm_password"
+                passwordLabel="Password Operator"
+                confirmPasswordLabel="Konfirmasi Password Operator"
+              />
+
+              <p className="mt-2 text-xs font-medium text-slate-500">
+                Password operator hanya wajib jika opsi “Buat operator sekarang” dicentang.
+              </p>
             </div>
 
             <div className="flex justify-end border-t border-slate-200 pt-5">
@@ -248,27 +308,108 @@ export default async function BumdesUnitsPage() {
 
           <div className="space-y-3">
             {unitList.length > 0 ? (
-              unitList.map((unit) => (
-                <div
-                  key={unit.id}
-                  className="rounded-2xl border border-slate-200 p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-bold text-slate-950">
-                        {unit.nama_unit}
-                      </p>
-                      <p className="mt-1 text-xs font-semibold text-slate-500">
-                        {unit.kode_unit} · {unit.jenis_unit}
-                      </p>
+              unitList.map((unit) => {
+                const unitCredentials = credentialsByUnit[unit.id] ?? [];
+
+                return (
+                  <div
+                    key={unit.id}
+                    className="rounded-2xl border border-slate-200 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-slate-950">
+                          {unit.nama_unit}
+                        </p>
+                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                          {unit.kode_unit} · {unit.jenis_unit}
+                        </p>
+                      </div>
+
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                        {unit.status}
+                      </span>
                     </div>
 
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                      {unit.status}
-                    </span>
+                    <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                      <div className="mb-3 flex items-center gap-2">
+                        <KeyRound className="h-4 w-4 text-emerald-700" />
+                        <p className="text-sm font-bold text-slate-800">
+                          Kredensial Akses Unit
+                        </p>
+                      </div>
+
+                      {unitCredentials.length > 0 ? (
+                        <div className="space-y-3">
+                          {unitCredentials.map((credential) => (
+                            <div
+                              key={credential.id}
+                              className="rounded-xl border border-slate-200 bg-white p-3"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-bold text-slate-950">
+                                    {roleLabel(credential.role)}
+                                  </p>
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    Dibuat{" "}
+                                    {new Date(
+                                      credential.generated_at
+                                    ).toLocaleString("id-ID", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </p>
+                                </div>
+
+                                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold uppercase text-emerald-700">
+                                  {credential.access_status}
+                                </span>
+                              </div>
+
+                              <div className="mt-3 grid gap-2 text-xs">
+                                <div>
+                                  <p className="font-semibold text-slate-500">
+                                    Email Login
+                                  </p>
+                                  <p className="break-all rounded-lg bg-slate-50 px-3 py-2 font-mono text-slate-800">
+                                    {credential.email_virtual}
+                                  </p>
+                                </div>
+
+                                <div>
+                                  <p className="font-semibold text-slate-500">
+                                    Login Code
+                                  </p>
+                                  <p className="break-all rounded-lg bg-slate-50 px-3 py-2 font-mono text-slate-800">
+                                    {credential.login_code}
+                                  </p>
+                                  <p className="mt-1 text-[11px] font-medium text-slate-500">
+                                    Login tetap memakai email dan password, bukan login code.
+                                  </p>
+                                </div>
+
+                                {credential.must_change_password ? (
+                                  <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
+                                    User wajib mengganti password saat akses awal.
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="rounded-xl border border-dashed border-slate-300 bg-white p-3 text-xs font-medium text-slate-500">
+                          Belum ada kredensial tercatat untuk unit ini.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
                 Belum ada unit usaha. Buat unit pertama dari form di sebelah kiri.

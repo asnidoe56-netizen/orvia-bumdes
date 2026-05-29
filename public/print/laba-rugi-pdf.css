@@ -1,0 +1,266 @@
+﻿@page {
+  size: A4;
+  margin: 12mm;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  color: #020617;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+body {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+button,
+nav,
+aside,
+header,
+.print-hidden,
+.print\:hidden {
+  display: none !important;
+}
+
+.print-document-root {
+  width: 100%;
+  margin: 0 auto;
+  background: #ffffff;
+}
+
+#laba-rugi-pdf-area,
+.erp-print-sheet {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.erp-print-card {
+  width: 100% !important;
+  margin: 0 0 12px 0 !important;
+  padding: 18px !important;
+  border: 1px solid #dbe3ef !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  page-break-inside: avoid;
+}
+
+.erp-print-soft-header {
+  margin: -18px -18px 16px -18px !important;
+  padding: 12px 18px !important;
+  border-bottom: 1px solid #bbf7d0 !important;
+  border-radius: 16px 16px 0 0 !important;
+  background: #dcfce7 !important;
+  color: #064e3b !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 6px;
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #020617;
+  text-align: center;
+}
+
+h2 {
+  margin-bottom: 6px;
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 800;
+  color: #020617;
+}
+
+h3 {
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 800;
+  color: #020617;
+}
+
+h4 {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+p {
+  margin-bottom: 6px;
+  color: #334155;
+}
+
+.text-center,
+[class*="text-center"] {
+  text-align: center !important;
+}
+
+.text-right,
+[class*="text-right"] {
+  text-align: right !important;
+}
+
+.font-bold,
+.font-semibold,
+[class*="font-bold"],
+[class*="font-semibold"],
+strong {
+  font-weight: 700 !important;
+}
+
+.uppercase,
+[class*="uppercase"] {
+  text-transform: uppercase !important;
+}
+
+.tracking-widest,
+[class*="tracking"] {
+  letter-spacing: 0.08em !important;
+}
+
+.grid,
+[class*="grid"] {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.grid-cols-3,
+[class*="grid-cols-3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.flex,
+[class*="flex"] {
+  display: flex !important;
+}
+
+.items-center,
+[class*="items-center"] {
+  align-items: center !important;
+}
+
+.justify-between,
+[class*="justify-between"] {
+  justify-content: space-between !important;
+}
+
+.rounded,
+.rounded-xl,
+.rounded-2xl,
+.rounded-3xl,
+[class*="rounded"] {
+  border-radius: 12px !important;
+}
+
+.border,
+[class*="border"] {
+  border-color: #e2e8f0 !important;
+}
+
+.text-emerald-600,
+.text-emerald-700,
+[class*="text-emerald"] {
+  color: #047857 !important;
+}
+
+.text-rose-600,
+.text-rose-700,
+.text-red-600,
+.text-red-700,
+[class*="text-rose"],
+[class*="text-red"] {
+  color: #be123c !important;
+}
+
+.bg-emerald-50,
+.bg-emerald-100,
+[class*="bg-emerald"] {
+  background: #dcfce7 !important;
+  border-color: #bbf7d0 !important;
+  color: #064e3b !important;
+}
+
+.bg-white,
+[class*="bg-white"] {
+  background: #ffffff !important;
+}
+
+.bg-slate-50,
+.bg-gray-50,
+[class*="bg-slate-50"],
+[class*="bg-gray-50"] {
+  background: #f8fafc !important;
+}
+
+[class*="divide-y"] > div,
+[class*="border-b"] {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+th,
+td {
+  padding: 7px 0;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+th {
+  color: #475569;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+td:last-child,
+th:last-child {
+  text-align: right;
+}
+
+@media print {
+  html,
+  body {
+    width: 210mm;
+    min-height: 297mm;
+  }
+
+  .erp-print-card {
+    page-break-inside: avoid;
+  }
+}

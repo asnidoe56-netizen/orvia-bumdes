@@ -4,11 +4,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getLoginContext } from "@/lib/auth/get-login-context";
-import { generateTemporaryPassword } from "@/lib/auth/generate-temporary-password";
 
 function makeLoginCode(prefix: string) {
   const random = Math.random().toString(36).slice(2, 8).toUpperCase();
   return `${prefix}-${Date.now()}-${random}`;
+}
+
+function clean(value: FormDataEntryValue | null) {
+  return String(value ?? "").trim();
 }
 
 async function createUnitUserAccess(params: {
@@ -17,17 +20,17 @@ async function createUnitUserAccess(params: {
   role: "manager_unit" | "operator_unit";
   fullName: string;
   email: string;
+  password: string;
   generatedBy: string;
   unitCode: string;
   unitName: string;
 }) {
   const admin = createAdminClient();
-  const temporaryPassword = generateTemporaryPassword();
 
   const { data: createdUser, error: createUserError } =
     await admin.auth.admin.createUser({
       email: params.email,
-      password: temporaryPassword,
+      password: params.password,
       email_confirm: true,
       user_metadata: {
         full_name: params.fullName,
@@ -39,19 +42,31 @@ async function createUnitUserAccess(params: {
     });
 
   if (createUserError || !createdUser.user) {
+    const message = createUserError?.message ?? "";
+
+    if (message.toLowerCase().includes("already been registered")) {
+      throw new Error(
+        `Email ${params.email} sudah terdaftar sebagai akun login. Gunakan email lain, atau reset password akun tersebut dari Supabase Auth.`
+      );
+    }
+
     throw new Error(
-      createUserError?.message ||
-        `Akun ${params.role} gagal dibuat.`
+      createUserError?.message || `Akun ${params.role} gagal dibuat.`
     );
   }
 
   await admin
     .from("profiles")
-    .update({
-      full_name: params.fullName,
-      default_tenant_id: params.tenantId,
-    })
-    .eq("id", createdUser.user.id);
+    .upsert(
+      {
+        id: createdUser.user.id,
+        full_name: params.fullName,
+        default_tenant_id: params.tenantId,
+      },
+      {
+        onConflict: "id",
+      }
+    );
 
   const { error: roleError } = await admin.from("user_roles").insert({
     user_id: createdUser.user.id,
@@ -61,6 +76,8 @@ async function createUnitUserAccess(params: {
   });
 
   if (roleError) {
+    await admin.auth.admin.deleteUser(createdUser.user.id);
+
     throw new Error(
       roleError.message || `Role ${params.role} gagal disimpan.`
     );
@@ -75,26 +92,19 @@ async function createUnitUserAccess(params: {
       login_code: makeLoginCode(`${params.unitCode}-${params.role}`),
       email_virtual: params.email,
       role: params.role,
-      must_change_password: true,
+      must_change_password: false,
       access_status: "active",
       generated_by: params.generatedBy,
     });
 
   if (credentialError) {
+    await admin.auth.admin.deleteUser(createdUser.user.id);
+
     throw new Error(
       credentialError.message ||
         `Credential akses ${params.role} gagal disimpan.`
     );
   }
-
-  console.log("AKSES UNIT BARU", {
-    unit: params.unitName,
-    role: params.role,
-    email: params.email,
-    temporaryPassword,
-    tenantId: params.tenantId,
-    unitId: params.unitId,
-  });
 }
 
 export async function createBusinessUnitWithAccess(formData: FormData) {
@@ -104,17 +114,25 @@ export async function createBusinessUnitWithAccess(formData: FormData) {
     throw new Error("Sesi login tidak valid.");
   }
 
-  const templateId = String(formData.get("template_id") ?? "");
-  const kodeUnit = String(formData.get("kode_unit") ?? "").trim().toUpperCase();
-  const namaUnit = String(formData.get("nama_unit") ?? "").trim();
-  const jenisUnit = String(formData.get("jenis_unit") ?? "").trim();
+  const templateId = clean(formData.get("template_id"));
+  const kodeUnit = clean(formData.get("kode_unit")).toUpperCase();
+  const namaUnit = clean(formData.get("nama_unit"));
+  const jenisUnit = clean(formData.get("jenis_unit"));
 
-  const managerName = String(formData.get("manager_name") ?? "").trim();
-  const managerEmail = String(formData.get("manager_email") ?? "").trim();
+  const managerName = clean(formData.get("manager_name"));
+  const managerEmail = clean(formData.get("manager_email")).toLowerCase();
+  const managerPassword = String(formData.get("manager_password") ?? "");
+  const managerConfirmPassword = String(
+    formData.get("manager_confirm_password") ?? ""
+  );
 
   const createOperator = String(formData.get("create_operator") ?? "") === "on";
-  const operatorName = String(formData.get("operator_name") ?? "").trim();
-  const operatorEmail = String(formData.get("operator_email") ?? "").trim();
+  const operatorName = clean(formData.get("operator_name"));
+  const operatorEmail = clean(formData.get("operator_email")).toLowerCase();
+  const operatorPassword = String(formData.get("operator_password") ?? "");
+  const operatorConfirmPassword = String(
+    formData.get("operator_confirm_password") ?? ""
+  );
 
   if (!templateId) throw new Error("Template unit wajib dipilih.");
   if (!kodeUnit) throw new Error("Kode unit wajib diisi.");
@@ -123,8 +141,32 @@ export async function createBusinessUnitWithAccess(formData: FormData) {
   if (!managerName) throw new Error("Nama Manager Unit wajib diisi.");
   if (!managerEmail) throw new Error("Email Manager Unit wajib diisi.");
 
-  if (createOperator && (!operatorName || !operatorEmail)) {
-    throw new Error("Nama dan email Operator Unit wajib diisi jika operator dibuat.");
+  if (managerPassword.length < 8) {
+    throw new Error("Password Manager Unit minimal 8 karakter.");
+  }
+
+  if (managerPassword !== managerConfirmPassword) {
+    throw new Error("Konfirmasi password Manager Unit tidak sama.");
+  }
+
+  if (createOperator) {
+    if (!operatorName || !operatorEmail) {
+      throw new Error(
+        "Nama dan email Operator Unit wajib diisi jika operator dibuat."
+      );
+    }
+
+    if (operatorPassword.length < 8) {
+      throw new Error("Password Operator Unit minimal 8 karakter.");
+    }
+
+    if (operatorPassword !== operatorConfirmPassword) {
+      throw new Error("Konfirmasi password Operator Unit tidak sama.");
+    }
+
+    if (operatorEmail === managerEmail) {
+      throw new Error("Email Operator Unit tidak boleh sama dengan Email Manager Unit.");
+    }
   }
 
   const supabase = await createClient();
@@ -150,6 +192,7 @@ export async function createBusinessUnitWithAccess(formData: FormData) {
     role: "manager_unit",
     fullName: managerName,
     email: managerEmail,
+    password: managerPassword,
     generatedBy: context.user_id,
     unitCode: kodeUnit,
     unitName: namaUnit,
@@ -162,6 +205,7 @@ export async function createBusinessUnitWithAccess(formData: FormData) {
       role: "operator_unit",
       fullName: operatorName,
       email: operatorEmail,
+      password: operatorPassword,
       generatedBy: context.user_id,
       unitCode: kodeUnit,
       unitName: namaUnit,

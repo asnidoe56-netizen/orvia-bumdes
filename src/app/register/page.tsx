@@ -1,5 +1,5 @@
 ﻿import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Landmark, UsersRound } from "lucide-react";
 import { BumdesRegistrationForm } from "@/components/register/bumdes-registration-form";
 
 export default function RegisterPage() {
@@ -14,12 +14,27 @@ export default function RegisterPage() {
           Kembali ke Login
         </Link>
 
-        <span className="rounded-full bg-emerald-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-emerald-700">
-          Registrasi Tenant BUMDes
-        </span>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link
+            href="/register/pendamping"
+            className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 shadow-sm transition hover:text-emerald-700"
+          >
+            <UsersRound className="h-3.5 w-3.5" />
+            Daftar Pendamping
+          </Link>
+
+          <Link
+            href="/register/bupati"
+            className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 shadow-sm transition hover:text-emerald-700"
+          >
+            <Landmark className="h-3.5 w-3.5" />
+            Daftar Bupati
+          </Link>
+        </div>
       </div>
 
       <BumdesRegistrationForm />
     </main>
   );
 }
+

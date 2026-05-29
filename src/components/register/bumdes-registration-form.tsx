@@ -1,10 +1,13 @@
 ﻿"use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   Building2,
   CheckCircle2,
+  Eye,
+  EyeOff,
   Loader2,
+  LockKeyhole,
   Mail,
   MapPin,
   Phone,
@@ -28,6 +31,9 @@ export function BumdesRegistrationForm() {
     initialState
   );
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   return (
     <div className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-6 flex items-start gap-3">
@@ -40,7 +46,8 @@ export function BumdesRegistrationForm() {
             Pendaftaran BUMDes
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Ajukan BUMDes baru untuk diverifikasi dan disetujui oleh platform.
+            Ajukan BUMDes baru untuk diverifikasi platform. Email dan password
+            pemohon akan menjadi akses direktur setelah disetujui.
           </p>
         </div>
       </div>
@@ -150,18 +157,19 @@ export function BumdesRegistrationForm() {
 
         <section>
           <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">
-            Data Pemohon
+            Data Pemohon / Calon Direktur
           </h2>
 
           <div className="grid gap-4 md:grid-cols-3">
             <label className="space-y-2">
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <UserRound className="h-4 w-4" />
-                Nama Pemohon
+                Nama Pemohon *
               </span>
               <Input
                 name="requester_name"
                 placeholder="Nama lengkap pemohon"
+                required
               />
             </label>
 
@@ -179,13 +187,86 @@ export function BumdesRegistrationForm() {
             <label className="space-y-2">
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <Mail className="h-4 w-4" />
-                Email Pemohon
+                Email Login Pemohon *
               </span>
               <Input
                 name="requester_email"
                 type="email"
                 placeholder="pemohon@email.com"
+                required
               />
+            </label>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="space-y-2">
+              <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <LockKeyhole className="h-4 w-4" />
+                Password Login *
+              </span>
+
+              <div className="relative">
+                <Input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Minimal 8 karakter"
+                  minLength={8}
+                  required
+                  className="pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-slate-500 transition hover:text-emerald-700"
+                  aria-label={showPassword ? "Sembunyikan password" : "Lihat password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-500">
+                Password ini dipakai untuk login setelah BUMDes disetujui.
+              </p>
+            </label>
+
+            <label className="space-y-2">
+              <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <LockKeyhole className="h-4 w-4" />
+                Konfirmasi Password *
+              </span>
+
+              <div className="relative">
+                <Input
+                  name="confirm_password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Ulangi password"
+                  minLength={8}
+                  required
+                  className="pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowConfirmPassword((current) => !current)
+                  }
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-slate-500 transition hover:text-emerald-700"
+                  aria-label={
+                    showConfirmPassword
+                      ? "Sembunyikan konfirmasi password"
+                      : "Lihat konfirmasi password"
+                  }
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </label>
           </div>
         </section>
