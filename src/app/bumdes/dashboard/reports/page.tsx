@@ -1,7 +1,6 @@
 ﻿import {
   Activity,
   BarChart3,
-  Building2,
   Download,
   Landmark,
   PiggyBank,
@@ -573,3 +572,4 @@ export default async function BumdesReportsPage() {
     </div>
   );
 }
+
