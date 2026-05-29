@@ -2,17 +2,31 @@
 import Link from "next/link";
 import { ArrowRight, Building2 } from "lucide-react";
 import { trustItems } from "@/components/public/landing-data";
-import type { PublicLandingItem } from "@/lib/public/landing-content";
+import type {
+  PublicLandingItem,
+  PublicLandingSection,
+} from "@/lib/public/landing-content";
 
 type HeroSectionProps = {
+  section?: PublicLandingSection;
   featureItems: PublicLandingItem[];
-  heroImageUrl?: string | null;
 };
 
-export function HeroSection({ featureItems, heroImageUrl }: HeroSectionProps) {
+export function HeroSection({ section, featureItems }: HeroSectionProps) {
   void featureItems;
 
-  const imageUrl = heroImageUrl || "/images/hero-bumdes-governance.png";
+  const imageUrl = section?.image_url || "/images/hero-bumdes-governance.png";
+  const eyebrow =
+    section?.eyebrow || "Sistem ERP multi-tenant untuk tata kelola BUMDes";
+  const title =
+    section?.title ||
+    "Satu platform untuk tenant, unit usaha, akuntansi, transaksi, audit, dan laporan.";
+  const description =
+    section?.subtitle ||
+    section?.body ||
+    "Dibangun dengan prinsip database-first sebagai sumber kebenaran. Frontend menjadi lapisan workflow dan UI, sementara posting, approval, permission, audit, dan governance berjalan melalui engine database.";
+  const primaryCtaLabel = section?.cta_label || "Masuk ke Dashboard";
+  const primaryCtaHref = section?.cta_href || "/login";
 
   return (
     <section id="beranda" className="relative overflow-hidden pt-20">
@@ -24,29 +38,29 @@ export function HeroSection({ featureItems, heroImageUrl }: HeroSectionProps) {
         <section className="relative z-10">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800">
             <span className="h-2 w-2 rounded-full bg-emerald-600" />
-            Sistem ERP multi-tenant untuk tata kelola BUMDes
+            {eyebrow}
           </div>
 
           <h1 className="mt-7 max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-            Satu platform untuk <span className="text-emerald-700">tenant</span>,
-            unit usaha, <span className="text-emerald-700">akuntansi</span>,
-            transaksi, <span className="text-emerald-700">audit</span>, dan{" "}
-            <span className="text-emerald-700">laporan</span>.
+            {title}
           </h1>
 
           <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
-            Dibangun dengan prinsip database-first sebagai sumber kebenaran.
-            Frontend menjadi lapisan workflow dan UI, sementara posting,
-            approval, permission, audit, dan governance berjalan melalui engine
-            database.
+            {description}
           </p>
+
+          {section?.body && section?.subtitle ? (
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-500">
+              {section.body}
+            </p>
+          ) : null}
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/login"
+              href={primaryCtaHref}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-4 text-sm font-black text-white shadow-xl shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-800"
             >
-              Masuk ke Dashboard
+              {primaryCtaLabel}
               <ArrowRight className="h-4 w-4" />
             </Link>
 
@@ -78,7 +92,7 @@ export function HeroSection({ featureItems, heroImageUrl }: HeroSectionProps) {
           <div className="absolute -right-20 top-64 hidden h-40 w-40 rounded-full bg-orange-100/90 lg:block" />
           <div className="absolute bottom-20 right-4 hidden h-32 w-32 bg-[radial-gradient(circle,#cbd5e1_1px,transparent_1px)] [background-size:14px_14px] opacity-35 lg:block" />
 
-          <div className="relative h-[360px] w-full sm:h-[430px] lg:absolute lg:right-[-96px] lg:top-[-80px] lg:h-[455px] lg:w-[820px] xl:right-[-230px] xl:h-[470px] xl:w-[900px]">
+          <div className="relative h-[360px] w-full sm:h-[430px] lg:absolute lg:right-[-96px] lg:top-[-40px] lg:h-[455px] lg:w-[820px] xl:right-[-230px] xl:h-[470px] xl:w-[900px]">
             <Image
               src={imageUrl}
               alt="Visual forum laporan dan dashboard kesehatan keuangan BUMDes"

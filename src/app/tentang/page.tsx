@@ -52,7 +52,7 @@ export default async function TentangPage() {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-white text-slate-950">
-      <PublicNavbar />
+      <PublicNavbar siteSettings={landingContent.siteSettings} />
 
       <section className="relative isolate overflow-hidden px-4 pb-20 pt-36 sm:px-6 lg:px-8">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_34%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]" />
@@ -237,3 +237,4 @@ export default async function TentangPage() {
     </main>
   );
 }
+

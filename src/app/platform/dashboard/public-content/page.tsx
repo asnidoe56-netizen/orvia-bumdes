@@ -1,5 +1,5 @@
 ﻿import Link from "next/link";
-import { FileText, Globe2, Newspaper, Rows3 } from "lucide-react";
+import { FileText, Globe2, Newspaper, Palette, Rows3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -111,6 +111,22 @@ export default async function PlatformPublicContentPage() {
           icon={<FileText className="h-5 w-5" />}
         />
       </div>
+
+      <Card className="mb-5 border-emerald-100 bg-emerald-50">
+        <CardHeader
+          title="Branding Publik"
+          description="Atur logo, nama brand, identitas produk, penggagas, dan tombol navbar publik."
+          action={
+            <Link
+              href="/platform/dashboard/public-content/branding"
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-800"
+            >
+              <Palette className="h-4 w-4" />
+              Atur Branding
+            </Link>
+          }
+        />
+      </Card>
 
       {hasError ? (
         <Card className="mb-5 border-orange-200 bg-orange-50">
@@ -316,6 +332,7 @@ export default async function PlatformPublicContentPage() {
     </div>
   );
 }
+
 
 
 

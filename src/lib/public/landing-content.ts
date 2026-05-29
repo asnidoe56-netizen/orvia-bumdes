@@ -1,4 +1,5 @@
-﻿import { createClient } from "@/lib/supabase/server";
+﻿import { unstable_noStore as noStore } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
 
 export type PublicLandingSection = {
   id: string;
@@ -42,13 +43,53 @@ export type PublicNewsPost = {
   popup_position: string;
 };
 
+export type PublicSiteSettings = {
+  id: string;
+  setting_key: string;
+  brand_name: string;
+  brand_subtitle: string;
+  product_name: string;
+  product_tagline: string | null;
+  initiator_name: string | null;
+  initiator_label: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
+  primary_cta_label: string;
+  primary_cta_href: string;
+  secondary_cta_label: string;
+  secondary_cta_href: string;
+  is_active: boolean;
+  updated_at: string | null;
+};
+
 export type PublicLandingContent = {
   sections: PublicLandingSection[];
   items: PublicLandingItem[];
   newsPosts: PublicNewsPost[];
+  siteSettings: PublicSiteSettings;
+};
+
+const fallbackSiteSettings: PublicSiteSettings = {
+  id: "fallback-site-settings",
+  setting_key: "default",
+  brand_name: "ORVIA-BUMDES",
+  brand_subtitle: "Core Global Governance Engine",
+  product_name: "ORVIA-BUMDES OS 1.0",
+  product_tagline: "Sistem operasi tata kelola, akuntansi, dan laporan BUMDes.",
+  initiator_name: "Ruang Inovasi Digital Daerah",
+  initiator_label: "Sebuah inisiatif dari",
+  logo_url: null,
+  favicon_url: null,
+  primary_cta_label: "Signup",
+  primary_cta_href: "/register",
+  secondary_cta_label: "Login",
+  secondary_cta_href: "/login",
+  is_active: true,
+  updated_at: null,
 };
 
 const fallbackContent: PublicLandingContent = {
+  siteSettings: fallbackSiteSettings,
   sections: [
     {
       id: "fallback-aplikasi",
@@ -155,8 +196,20 @@ const fallbackContent: PublicLandingContent = {
 };
 
 export async function getPublicLandingContent(): Promise<PublicLandingContent> {
+  noStore();
+
   try {
     const supabase = await createClient();
+
+    const siteSettingsResult = await supabase
+      .from("v_public_site_settings")
+      .select(
+        "id, setting_key, brand_name, brand_subtitle, product_name, product_tagline, initiator_name, initiator_label, logo_url, favicon_url, primary_cta_label, primary_cta_href, secondary_cta_label, secondary_cta_href, is_active, updated_at",
+      )
+      .maybeSingle();
+
+    const siteSettings =
+      siteSettingsResult.data ?? fallbackContent.siteSettings;
 
     const [sectionsResult, itemsResult, newsResult] = await Promise.all([
       supabase
@@ -182,7 +235,10 @@ export async function getPublicLandingContent(): Promise<PublicLandingContent> {
     ]);
 
     if (sectionsResult.error || itemsResult.error || newsResult.error) {
-      return fallbackContent;
+      return {
+        ...fallbackContent,
+        siteSettings,
+      };
     }
 
     const sections = sectionsResult.data ?? [];
@@ -190,6 +246,7 @@ export async function getPublicLandingContent(): Promise<PublicLandingContent> {
     const newsPosts = newsResult.data ?? [];
 
     return {
+      siteSettings,
       sections: sections.length > 0 ? sections : fallbackContent.sections,
       items: items.length > 0 ? items : fallbackContent.items,
       newsPosts: newsPosts.length > 0 ? newsPosts : fallbackContent.newsPosts,
@@ -198,4 +255,6 @@ export async function getPublicLandingContent(): Promise<PublicLandingContent> {
     return fallbackContent;
   }
 }
+
+
 

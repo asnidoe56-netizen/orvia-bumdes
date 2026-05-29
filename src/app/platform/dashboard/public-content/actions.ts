@@ -29,6 +29,13 @@ function getBoolean(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
 
+function getSafeFileName(fileName: string) {
+  return fileName
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, "-")
+    .replace(/-+/g, "-");
+}
+
 export async function updatePublicContentSection(formData: FormData) {
   const id = getString(formData, "id");
 
@@ -178,9 +185,113 @@ export async function updatePublicNewsPost(formData: FormData) {
 
   redirect("/platform/dashboard/public-content");
 }
+export async function updatePublicSiteSettings(formData: FormData) {
+  const supabase = await createClient();
 
+  const brandName = getString(formData, "brand_name");
+  const brandSubtitle = getString(formData, "brand_subtitle");
+  const productName = getString(formData, "product_name");
+  const primaryCtaLabel = getString(formData, "primary_cta_label");
+  const primaryCtaHref = getString(formData, "primary_cta_href");
+  const secondaryCtaLabel = getString(formData, "secondary_cta_label");
+  const secondaryCtaHref = getString(formData, "secondary_cta_href");
 
+  if (!brandName) {
+    throw new Error("Nama brand wajib diisi.");
+  }
 
+  if (!brandSubtitle) {
+    throw new Error("Subjudul brand wajib diisi.");
+  }
 
+  if (!productName) {
+    throw new Error("Nama produk wajib diisi.");
+  }
 
+  if (!primaryCtaLabel || !primaryCtaHref) {
+    throw new Error("Tombol utama wajib memiliki label dan link.");
+  }
 
+  if (!secondaryCtaLabel || !secondaryCtaHref) {
+    throw new Error("Tombol sekunder wajib memiliki label dan link.");
+  }
+
+  const logoFile = formData.get("logo_file");
+  const shouldClearLogo = formData.get("clear_logo_url") === "1";
+  let finalLogoUrl = shouldClearLogo ? null : getNullableString(formData, "logo_url");
+
+  if (!shouldClearLogo && logoFile instanceof File && logoFile.size > 0) {
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/svg+xml",
+    ];
+
+    if (!allowedTypes.includes(logoFile.type)) {
+      throw new Error("Format logo harus JPG, PNG, WEBP, GIF, atau SVG.");
+    }
+
+    if (logoFile.size > 2 * 1024 * 1024) {
+      throw new Error("Ukuran logo maksimal 2MB.");
+    }
+
+    const safeFileName = getSafeFileName(logoFile.name);
+    const uploadPath = `branding/logo-${Date.now()}-${safeFileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("public-content")
+      .upload(uploadPath, logoFile, {
+        cacheControl: "3600",
+        contentType: logoFile.type,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      throw new Error(`Upload logo gagal: ${uploadError.message}`);
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("public-content")
+      .getPublicUrl(uploadPath);
+
+    finalLogoUrl = publicUrlData.publicUrl;
+  }
+
+  const { error } = await supabase.from("public_site_settings").upsert(
+    {
+      setting_key: "default",
+      brand_name: brandName,
+      brand_subtitle: brandSubtitle,
+      product_name: productName,
+      product_tagline: getNullableString(formData, "product_tagline"),
+      initiator_name: getNullableString(formData, "initiator_name"),
+      initiator_label: getNullableString(formData, "initiator_label"),
+      logo_url: finalLogoUrl,
+      favicon_url: getNullableString(formData, "favicon_url"),
+      primary_cta_label: primaryCtaLabel,
+      primary_cta_href: primaryCtaHref,
+      secondary_cta_label: secondaryCtaLabel,
+      secondary_cta_href: secondaryCtaHref,
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "setting_key",
+    },
+  );
+
+  if (error) {
+    throw new Error(error.message || "Gagal menyimpan pengaturan branding publik.");
+  }
+
+  revalidatePath("/");
+  revalidatePath("/aplikasi");
+  revalidatePath("/manajemen");
+  revalidatePath("/tentang");
+  revalidatePath("/platform/dashboard/public-content");
+  revalidatePath("/platform/dashboard/public-content/branding");
+
+  redirect("/platform/dashboard/public-content/branding");
+}

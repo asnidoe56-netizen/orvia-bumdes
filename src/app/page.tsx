@@ -18,11 +18,8 @@ export default async function LandingPage() {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-white text-slate-950">
-      <PublicNavbar />
-      <HeroSection
-        featureItems={landingContent.items}
-        heroImageUrl={heroSection?.image_url ?? null}
-      />
+      <PublicNavbar siteSettings={landingContent.siteSettings} />
+      <HeroSection section={heroSection} featureItems={landingContent.items} />
       <PhilosophyStrip />
       <PublicContentPreview
         sections={landingContent.sections}
@@ -33,5 +30,4 @@ export default async function LandingPage() {
     </main>
   );
 }
-
 
