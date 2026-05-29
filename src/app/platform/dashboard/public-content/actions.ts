@@ -295,3 +295,100 @@ export async function updatePublicSiteSettings(formData: FormData) {
 
   redirect("/platform/dashboard/public-content/branding");
 }
+
+export async function updatePublicSectionWithImage(formData: FormData) {
+  const id = getString(formData, "id");
+
+  if (!id) {
+    throw new Error("ID section tidak ditemukan.");
+  }
+
+  const title = getString(formData, "title");
+
+  if (!title) {
+    throw new Error("Judul section wajib diisi.");
+  }
+
+  const supabase = await createClient();
+
+  const imageFile = formData.get("image_file");
+  const shouldClearImage = formData.get("clear_image_url") === "1";
+
+  let finalImageUrl = shouldClearImage ? null : getNullableString(formData, "image_url");
+
+  if (!shouldClearImage && imageFile instanceof File && imageFile.size > 0) {
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/svg+xml",
+    ];
+
+    if (!allowedTypes.includes(imageFile.type)) {
+      throw new Error("Format gambar harus JPG, PNG, WEBP, GIF, atau SVG.");
+    }
+
+    if (imageFile.size > 4 * 1024 * 1024) {
+      throw new Error("Ukuran gambar maksimal 4MB.");
+    }
+
+    const safeFileName = getSafeFileName(imageFile.name);
+    const uploadPath = `sections/section-${id}-${Date.now()}-${safeFileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("public-content")
+      .upload(uploadPath, imageFile, {
+        cacheControl: "3600",
+        contentType: imageFile.type,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      throw new Error(`Upload gambar section gagal: ${uploadError.message}`);
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("public-content")
+      .getPublicUrl(uploadPath);
+
+    finalImageUrl = publicUrlData.publicUrl;
+  }
+
+  let ctaLabel = getNullableString(formData, "cta_label");
+  let ctaHref = getNullableString(formData, "cta_href");
+
+  if ((ctaLabel && !ctaHref) || (!ctaLabel && ctaHref)) {
+    ctaLabel = null;
+    ctaHref = null;
+  }
+
+  const { error } = await supabase
+    .from("public_content_sections")
+    .update({
+      section_label: getString(formData, "section_label"),
+      eyebrow: getNullableString(formData, "eyebrow"),
+      title,
+      subtitle: getNullableString(formData, "subtitle"),
+      body: getNullableString(formData, "body"),
+      cta_label: ctaLabel,
+      cta_href: ctaHref,
+      image_url: finalImageUrl,
+      display_order: getInteger(formData, "display_order"),
+      is_published: getBoolean(formData, "is_published"),
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message || "Gagal menyimpan section publik.");
+  }
+
+  revalidatePath("/");
+  revalidatePath("/aplikasi");
+  revalidatePath("/manajemen");
+  revalidatePath("/tentang");
+  revalidatePath("/platform/dashboard/public-content");
+  revalidatePath(`/platform/dashboard/public-content/sections/${id}/edit`);
+
+  redirect("/platform/dashboard/public-content");
+}
