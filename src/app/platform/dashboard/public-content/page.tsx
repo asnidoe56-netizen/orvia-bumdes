@@ -1,4 +1,5 @@
-﻿import { FileText, Globe2, Newspaper, Rows3 } from "lucide-react";
+﻿import Link from "next/link";
+import { FileText, Globe2, Newspaper, Rows3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -19,6 +20,7 @@ type PublicItemRow = {
   item_key: string | null;
   title: string;
   icon_key: string | null;
+  link_href: string | null;
   display_order: number;
 };
 
@@ -53,7 +55,7 @@ export default async function PlatformPublicContentPage() {
 
     supabase
       .from("v_public_landing_items")
-      .select("id, section_key, item_key, title, icon_key, display_order")
+      .select("id, section_key, item_key, title, icon_key, link_href, display_order")
       .order("display_order", { ascending: true }),
 
     supabase
@@ -137,6 +139,7 @@ export default async function PlatformPublicContentPage() {
                   <th className="px-3 py-3 font-black">Label</th>
                   <th className="px-3 py-3 font-black">Judul</th>
                   <th className="px-3 py-3 font-black">Status</th>
+                  <th className="px-3 py-3 font-black">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -158,11 +161,19 @@ export default async function PlatformPublicContentPage() {
                       <td className="px-3 py-3">
                         <Badge variant="success">Published</Badge>
                       </td>
+                      <td className="px-3 py-3">
+                        <Link
+                          href={`/platform/dashboard/public-content/sections/${section.id}/edit`}
+                          className="inline-flex rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100"
+                        >
+                          Edit
+                        </Link>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-slate-500">
+                    <td colSpan={8} className="px-3 py-8 text-center text-slate-500">
                       Belum ada section publik.
                     </td>
                   </tr>
@@ -175,8 +186,8 @@ export default async function PlatformPublicContentPage() {
         <Card>
           <CardHeader
             title="Berita Publik"
-            description="Posting berita/pengumuman yang tampil di landing page."
-            action={<Badge variant="success">Published</Badge>}
+            description="Posting berita/pengumuman yang tampil di landing page dan popup publik."
+            action={<Badge variant="success">Editable</Badge>}
           />
 
           <div className="space-y-3 px-5 pb-5">
@@ -207,6 +218,15 @@ export default async function PlatformPublicContentPage() {
                     <span>•</span>
                     <span>{formatDate(post.published_at)}</span>
                   </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <Link
+                      href={`/platform/dashboard/public-content/news/${post.id}/edit`}
+                      className="inline-flex rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100"
+                    >
+                      Edit Berita
+                    </Link>
+                  </div>
                 </div>
               ))
             ) : (
@@ -220,9 +240,9 @@ export default async function PlatformPublicContentPage() {
 
       <Card className="mt-5">
         <CardHeader
-          title="Item Konten Aplikasi"
-          description="Item/card fitur yang digunakan oleh landing page, terutama section Aplikasi."
-          action={<Badge variant="success">Read Only</Badge>}
+          title="Daftar Aplikasi Publik"
+          description="Atur nama aplikasi, deskripsi, icon, tombol, dan link domain yang tampil di halaman /aplikasi."
+          action={<Badge variant="success">Editable</Badge>}
         />
 
         <div className="min-w-0 overflow-x-auto px-5 pb-5">
@@ -234,7 +254,9 @@ export default async function PlatformPublicContentPage() {
                 <th className="px-3 py-3 font-black">Item Key</th>
                 <th className="px-3 py-3 font-black">Judul</th>
                 <th className="px-3 py-3 font-black">Icon</th>
+                <th className="px-3 py-3 font-black">Link</th>
                 <th className="px-3 py-3 font-black">Status</th>
+                <th className="px-3 py-3 font-black">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -256,14 +278,33 @@ export default async function PlatformPublicContentPage() {
                     <td className="px-3 py-3 text-slate-600">
                       {item.icon_key ?? "-"}
                     </td>
+                    <td className="px-3 py-3 text-slate-600">
+                      {item.link_href ? (
+                        <span className="line-clamp-1 max-w-[220px] text-xs font-bold text-emerald-700">
+                          {item.link_href}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-slate-400">
+                          Belum diatur
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-3">
                       <Badge variant="success">Published</Badge>
+                    </td>
+                    <td className="px-3 py-3">
+                      <Link
+                        href={`/platform/dashboard/public-content/items/${item.id}/edit`}
+                        className="inline-flex rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100"
+                      >
+                        Edit Aplikasi
+                      </Link>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={8} className="px-3 py-8 text-center text-slate-500">
                     Belum ada item konten.
                   </td>
                 </tr>
@@ -275,3 +316,7 @@ export default async function PlatformPublicContentPage() {
     </div>
   );
 }
+
+
+
+

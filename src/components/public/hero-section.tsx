@@ -1,38 +1,27 @@
-﻿import Link from "next/link";
-import {
-  ArrowRight,
-  Building2,
-  LayoutDashboard,
-  ShieldCheck,
-  UsersRound,
-  type LucideIcon,
-} from "lucide-react";
+﻿import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, Building2 } from "lucide-react";
 import { trustItems } from "@/components/public/landing-data";
 import type { PublicLandingItem } from "@/lib/public/landing-content";
 
-const iconMap: Record<string, LucideIcon> = {
-  users: UsersRound,
-  dashboard: LayoutDashboard,
-  shield: ShieldCheck,
-};
-
 type HeroSectionProps = {
   featureItems: PublicLandingItem[];
+  heroImageUrl?: string | null;
 };
 
-export function HeroSection({ featureItems }: HeroSectionProps) {
-  const visibleFeatureItems = featureItems.filter(
-    (item) => item.section_key === "aplikasi",
-  );
+export function HeroSection({ featureItems, heroImageUrl }: HeroSectionProps) {
+  void featureItems;
+
+  const imageUrl = heroImageUrl || "/images/hero-bumdes-governance.png";
 
   return (
     <section id="beranda" className="relative overflow-hidden pt-20">
       <div className="absolute right-0 top-20 h-72 w-72 rounded-full bg-emerald-100/70 blur-3xl" />
-      <div className="absolute bottom-0 left-1/2 h-80 w-80 rounded-full bg-orange-100/80 blur-3xl" />
+      <div className="absolute bottom-0 left-1/2 h-80 w-80 rounded-full bg-orange-100/70 blur-3xl" />
       <div className="absolute right-16 top-48 hidden h-44 w-44 rounded-full border border-emerald-100 lg:block" />
 
-      <div className="relative mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.08fr_0.92fr] lg:px-8 lg:py-20">
-        <section>
+      <div className="relative mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.86fr_1.14fr] lg:px-8 lg:py-20">
+        <section className="relative z-10">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800">
             <span className="h-2 w-2 rounded-full bg-emerald-600" />
             Sistem ERP multi-tenant untuk tata kelola BUMDes
@@ -60,6 +49,7 @@ export function HeroSection({ featureItems }: HeroSectionProps) {
               Masuk ke Dashboard
               <ArrowRight className="h-4 w-4" />
             </Link>
+
             <Link
               href="/register"
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-white px-6 py-4 text-sm font-black text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-orange-50"
@@ -83,44 +73,21 @@ export function HeroSection({ featureItems }: HeroSectionProps) {
           </div>
         </section>
 
-        <section className="relative">
-          <div className="absolute -right-4 top-10 h-48 w-48 rounded-full bg-orange-100 blur-3xl" />
-          <div className="absolute -left-6 bottom-10 h-56 w-56 rounded-full bg-emerald-100 blur-3xl" />
+        <section className="relative min-h-[360px] sm:min-h-[430px] lg:min-h-[560px]">
+          <div className="absolute -right-10 top-2 hidden h-72 w-72 rounded-full bg-emerald-100/80 lg:block" />
+          <div className="absolute -right-20 top-64 hidden h-40 w-40 rounded-full bg-orange-100/90 lg:block" />
+          <div className="absolute bottom-20 right-4 hidden h-32 w-32 bg-[radial-gradient(circle,#cbd5e1_1px,transparent_1px)] [background-size:14px_14px] opacity-35 lg:block" />
 
-          <div className="relative rounded-[2rem] border border-slate-200 bg-white/90 p-4 shadow-2xl shadow-slate-200/80 backdrop-blur">
-            <div className="space-y-4">
-              {visibleFeatureItems.map((feature, index) => {
-                const Icon =
-                  iconMap[feature.icon_key ?? ""] ?? ShieldCheck;
-
-                return (
-                  <div
-                    key={feature.id}
-                    className={[
-                      "rounded-3xl border border-slate-200 bg-white p-5 shadow-sm",
-                      index === 2
-                        ? "border-r-4 border-r-orange-300"
-                        : "border-r-4 border-r-emerald-600",
-                    ].join(" ")}
-                  >
-                    <div className="flex gap-4">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                        <Icon className="h-7 w-7" />
-                      </div>
-
-                      <div>
-                        <h2 className="text-lg font-black text-emerald-800">
-                          {feature.title}
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                          {feature.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="relative h-[360px] w-full sm:h-[430px] lg:absolute lg:right-[-96px] lg:top-[-80px] lg:h-[455px] lg:w-[820px] xl:right-[-230px] xl:h-[470px] xl:w-[900px]">
+            <Image
+              src={imageUrl}
+              alt="Visual forum laporan dan dashboard kesehatan keuangan BUMDes"
+              fill
+              unoptimized
+              priority
+              sizes="(max-width: 1024px) 100vw, 58vw"
+              className="object-contain object-center"
+            />
           </div>
         </section>
       </div>

@@ -10,6 +10,7 @@ export type PublicLandingSection = {
   body: string | null;
   cta_label: string | null;
   cta_href: string | null;
+  image_url?: string | null;
   display_order: number;
 };
 
@@ -35,6 +36,10 @@ export type PublicNewsPost = {
   author_name: string | null;
   published_at: string | null;
   display_order: number;
+  link_href: string | null;
+  popup_enabled: boolean;
+  popup_delay_seconds: number;
+  popup_position: string;
 };
 
 export type PublicLandingContent = {
@@ -140,6 +145,10 @@ const fallbackContent: PublicLandingContent = {
       author_name: "ORVIA-BUMDES",
       published_at: null,
       display_order: 10,
+      link_href: null,
+      popup_enabled: false,
+      popup_delay_seconds: 5,
+      popup_position: "top-right",
     },
   ],
 };
@@ -152,7 +161,7 @@ export async function getPublicLandingContent(): Promise<PublicLandingContent> {
       supabase
         .from("v_public_landing_sections")
         .select(
-          "id, section_key, section_label, eyebrow, title, subtitle, body, cta_label, cta_href, display_order",
+          "id, section_key, section_label, eyebrow, title, subtitle, body, cta_label, cta_href, image_url, display_order",
         )
         .order("display_order", { ascending: true }),
 
@@ -166,7 +175,7 @@ export async function getPublicLandingContent(): Promise<PublicLandingContent> {
       supabase
         .from("v_public_news_posts")
         .select(
-          "id, slug, title, excerpt, cover_image_url, author_name, published_at, display_order",
+          "id, slug, title, excerpt, cover_image_url, author_name, published_at, display_order, link_href, popup_enabled, popup_delay_seconds, popup_position",
         )
         .order("published_at", { ascending: false, nullsFirst: false }),
     ]);
@@ -188,3 +197,6 @@ export async function getPublicLandingContent(): Promise<PublicLandingContent> {
     return fallbackContent;
   }
 }
+
+
+
