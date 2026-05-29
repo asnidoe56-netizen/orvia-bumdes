@@ -233,6 +233,55 @@ export default async function BumdesReportsPage() {
 
   const latestProfitSharing = profitSharingRows[0];
 
+  const labaRugiChartPoints = [...labaRugiRows]
+    .sort((a, b) => {
+      const yearCompare = toNumber(a.period_year) - toNumber(b.period_year);
+      if (yearCompare !== 0) return yearCompare;
+
+      return toNumber(a.period_month) - toNumber(b.period_month);
+    })
+    .map((row) => ({
+      label: formatPeriod(row.period_year, row.period_month),
+      pendapatan: toNumber(row.total_pendapatan),
+      biaya: toNumber(row.total_hpp) + toNumber(row.total_beban),
+      laba: toNumber(row.laba_rugi_bersih),
+    }));
+
+  const chartValues = labaRugiChartPoints.flatMap((point) => [
+    point.pendapatan,
+    point.biaya,
+    point.laba,
+  ]);
+
+  const chartMax = Math.max(...chartValues, 1);
+  const chartMin = Math.min(...chartValues, 0);
+  const chartRange = Math.max(chartMax - chartMin, 1);
+
+  const chartWidth = 720;
+  const chartHeight = 260;
+  const chartPaddingX = 48;
+  const chartPaddingY = 36;
+
+  const getChartX = (index: number) =>
+    labaRugiChartPoints.length <= 1
+      ? chartWidth / 2
+      : chartPaddingX +
+        (index / (labaRugiChartPoints.length - 1)) *
+          (chartWidth - chartPaddingX * 2);
+
+  const getChartY = (value: number) =>
+    chartHeight -
+    chartPaddingY -
+    ((value - chartMin) / chartRange) * (chartHeight - chartPaddingY * 2);
+
+  const buildChartPath = (key: "pendapatan" | "biaya" | "laba") =>
+    labaRugiChartPoints
+      .map((point, index) => {
+        const command = index === 0 ? "M" : "L";
+        return `${command} ${getChartX(index)} ${getChartY(point[key])}`;
+      })
+      .join(" ");
+
   return (
     <div>
       <PageHeader
@@ -313,36 +362,166 @@ export default async function BumdesReportsPage() {
                   Belum ada data laba rugi untuk tenant BUMDes ini.
                 </div>
               ) : (
-                <div className="overflow-x-auto px-5 pb-5">
-                  <table className="min-w-[760px] w-full border-separate border-spacing-y-3 text-left text-sm">
-                    <thead>
-                      <tr className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                        <th className="px-4">Periode</th>
-                        <th className="px-4">Pendapatan</th>
-                        <th className="px-4">HPP</th>
-                        <th className="px-4">Beban</th>
-                        <th className="px-4">Laba Bersih</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {labaRugiRows.map((row) => (
-                        <tr
-                          key={`${row.unit_id ?? "tenant"}-${row.period_year}-${row.period_month}`}
-                          className="bg-white shadow-sm ring-1 ring-slate-100"
-                        >
-                          <td className="rounded-l-2xl px-4 py-4 font-bold text-slate-900">
-                            {formatPeriod(row.period_year, row.period_month)}
-                          </td>
-                          <td className="px-4 py-4">{formatCurrency(row.total_pendapatan)}</td>
-                          <td className="px-4 py-4">{formatCurrency(row.total_hpp)}</td>
-                          <td className="px-4 py-4">{formatCurrency(row.total_beban)}</td>
-                          <td className="rounded-r-2xl px-4 py-4 font-black text-emerald-700">
-                            {formatCurrency(row.laba_rugi_bersih)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-5 px-5 pb-5">
+                  <div className="rounded-3xl border border-slate-100 bg-gradient-to-br from-white to-slate-50 p-5">
+                    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-black text-slate-950">
+                          Tren Kinerja Keuangan
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          Garis tren pendapatan, total biaya, dan laba bersih per periode laporan.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 text-xs font-bold">
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
+                          Pendapatan
+                        </span>
+                        <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700">
+                          HPP + Beban
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
+                          Laba Bersih
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <svg
+                        viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                        className="h-[260px] min-w-[680px] w-full"
+                        role="img"
+                        aria-label="Grafik tren laba rugi konsolidasi"
+                      >
+                        {[0, 1, 2, 3].map((line) => {
+                          const y =
+                            chartPaddingY +
+                            line * ((chartHeight - chartPaddingY * 2) / 3);
+
+                          return (
+                            <line
+                              key={line}
+                              x1={chartPaddingX}
+                              x2={chartWidth - chartPaddingX}
+                              y1={y}
+                              y2={y}
+                              stroke="currentColor"
+                              className="text-slate-200"
+                              strokeDasharray="6 8"
+                            />
+                          );
+                        })}
+
+                        <path
+                          d={buildChartPath("pendapatan")}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-emerald-600"
+                        />
+                        <path
+                          d={buildChartPath("biaya")}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-orange-500"
+                        />
+                        <path
+                          d={buildChartPath("laba")}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-slate-800"
+                        />
+
+                        {labaRugiChartPoints.map((point, index) => {
+                          const x = getChartX(index);
+
+                          return (
+                            <g key={`${point.label}-${index}`}>
+                              <circle
+                                cx={x}
+                                cy={getChartY(point.pendapatan)}
+                                r="5"
+                                fill="currentColor"
+                                className="text-emerald-600"
+                              />
+                              <circle
+                                cx={x}
+                                cy={getChartY(point.biaya)}
+                                r="5"
+                                fill="currentColor"
+                                className="text-orange-500"
+                              />
+                              <circle
+                                cx={x}
+                                cy={getChartY(point.laba)}
+                                r="5"
+                                fill="currentColor"
+                                className="text-slate-800"
+                              />
+                              <text
+                                x={x}
+                                y={chartHeight - 8}
+                                textAnchor="middle"
+                                className="fill-slate-500 text-[11px] font-bold"
+                              >
+                                {point.label}
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    </div>
+
+                    {labaRugiChartPoints.length === 1 ? (
+                      <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
+                        Grafik akan membentuk tren yang lebih dinamis setelah tersedia lebih dari satu periode laporan.
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <div className="rounded-2xl bg-emerald-50 p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
+                        Pendapatan
+                      </p>
+                      <p className="mt-2 text-lg font-black text-slate-950">
+                        {formatCurrency(totalPendapatan)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-orange-50 p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange-700">
+                        HPP
+                      </p>
+                      <p className="mt-2 text-lg font-black text-slate-950">
+                        {formatCurrency(totalHpp)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                        Beban
+                      </p>
+                      <p className="mt-2 text-lg font-black text-slate-950">
+                        {formatCurrency(totalBeban)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-900 p-4 text-white">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-300">
+                        Laba Bersih
+                      </p>
+                      <p className="mt-2 text-lg font-black">
+                        {formatCurrency(labaBersih)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </Card>
@@ -572,4 +751,5 @@ export default async function BumdesReportsPage() {
     </div>
   );
 }
+
 
