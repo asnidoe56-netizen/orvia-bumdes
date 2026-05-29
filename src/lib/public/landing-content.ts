@@ -68,14 +68,15 @@ const fallbackContent: PublicLandingContent = {
       id: "fallback-manajemen",
       section_key: "manajemen",
       section_label: "Manajemen",
-      eyebrow: "Manajemen",
-      title: "Konten manajemen dikelola dari dashboard platform.",
+      eyebrow: "Manajemen Platform",
+      title:
+        "Manajemen Platform yang Terstruktur untuk Ekosistem BUMDes yang Lebih Akuntabel.",
       subtitle:
-        "Super Admin Platform dapat mengatur narasi, fitur, dan informasi tata kelola yang tampil di halaman publik.",
+        "ORVIA-BUMDES dikelola dengan pendekatan organisasi modern yang menggabungkan teknologi, tata kelola, pendampingan, dan monitoring agar proses bisnis BUMDes menjadi lebih transparan, terukur, dan berkelanjutan.",
       body:
-        "Ini disiapkan sebagai placeholder awal sebelum modul CMS publik dibuat di Super Admin Platform.",
-      cta_label: null,
-      cta_href: null,
+        "Halaman ini menjelaskan bagaimana ORVIA-BUMDES dikelola sebagai sebuah organisasi platform: mulai dari pengelola platform, tim teknologi dan sistem, tata kelola dan akuntansi, pendampingan implementasi, sampai monitoring dan evaluasi.",
+      cta_label: "Lihat Struktur Manajemen",
+      cta_href: "/manajemen#struktur-manajemen",
       display_order: 20,
     },
     {
@@ -197,6 +198,4 @@ export async function getPublicLandingContent(): Promise<PublicLandingContent> {
     return fallbackContent;
   }
 }
-
-
 

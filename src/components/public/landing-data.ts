@@ -9,7 +9,7 @@
 export const publicNavItems = [
   { label: "Beranda", href: "/" },
   { label: "Aplikasi", href: "/aplikasi" },
-  { label: "Manajemen", href: "#manajemen" },
+  { label: "Manajemen", href: "/manajemen" },
   { label: "Berita", href: "#berita" },
   { label: "Tentang", href: "/tentang" },
 ];
@@ -91,6 +91,4 @@ export const publicContentPreviewSections = [
     tone: "orange",
   },
 ];
-
-
 
