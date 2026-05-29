@@ -1,4 +1,6 @@
-﻿import {
+export const dynamic = "force-dynamic";
+
+import {
   ArrowLeft,
   Banknote,
   ClipboardList,

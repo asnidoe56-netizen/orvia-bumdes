@@ -1,4 +1,6 @@
-﻿import { ArrowLeft, CheckCircle2, PlayCircle } from "lucide-react";
+export const dynamic = "force-dynamic";
+
+import { ArrowLeft, CheckCircle2, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";

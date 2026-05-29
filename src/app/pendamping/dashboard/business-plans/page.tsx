@@ -1,4 +1,6 @@
-﻿import {
+export const dynamic = "force-dynamic";
+
+import {
   ClipboardCheck,
   Clock3,
   Eye,

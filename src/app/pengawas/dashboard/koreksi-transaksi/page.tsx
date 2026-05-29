@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Clock3, Eye, FileCheck2, ShieldCheck, XCircle } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";

@@ -1,4 +1,6 @@
-﻿import { Clock, CheckCircle2, XCircle } from "lucide-react";
+export const dynamic = "force-dynamic";
+
+import { Clock, CheckCircle2, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import {
   approveTenantRegistration,

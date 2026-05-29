@@ -1,4 +1,6 @@
-﻿import Link from "next/link";
+export const dynamic = "force-dynamic";
+
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, WalletCards } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";

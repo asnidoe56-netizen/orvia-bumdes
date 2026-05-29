@@ -1,4 +1,6 @@
-﻿import { FileSpreadsheet } from "lucide-react";
+export const dynamic = "force-dynamic";
+
+import { FileSpreadsheet } from "lucide-react";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";

@@ -1,4 +1,6 @@
-﻿import { FileSpreadsheet } from "lucide-react";
+export const dynamic = "force-dynamic";
+
+import { FileSpreadsheet } from "lucide-react";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { ExportPdfButton } from "./_components/export-pdf-button";
 import { createClient } from "@/lib/supabase/server";

@@ -1,4 +1,6 @@
-﻿import { CheckCircle2, Clock, Landmark, XCircle } from "lucide-react";
+export const dynamic = "force-dynamic";
+
+import { CheckCircle2, Clock, Landmark, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import {
   approveBupatiRegistration,

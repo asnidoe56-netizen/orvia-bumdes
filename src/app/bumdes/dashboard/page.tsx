@@ -1,4 +1,6 @@
-﻿import { Building2, MapPin, UsersRound, Store, ShieldCheck } from "lucide-react";
+export const dynamic = "force-dynamic";
+
+import { Building2, MapPin, UsersRound, Store, ShieldCheck } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";

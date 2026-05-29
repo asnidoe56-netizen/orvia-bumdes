@@ -1,4 +1,6 @@
-﻿import { ArrowLeft, Banknote, FileText, HandCoins, WalletCards } from "lucide-react";
+export const dynamic = "force-dynamic";
+
+import { ArrowLeft, Banknote, FileText, HandCoins, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";

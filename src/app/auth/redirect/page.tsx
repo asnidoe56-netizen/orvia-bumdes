@@ -1,4 +1,6 @@
-﻿import { redirect } from "next/navigation";
+export const dynamic = "force-dynamic";
+
+import { redirect } from "next/navigation";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { getFallbackRedirectPath } from "@/lib/navigation/role-routes";
 

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { PlusCircle, Search, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { PageBackButton } from "@/components/ui/page-back-button";

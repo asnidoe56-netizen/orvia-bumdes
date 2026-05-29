@@ -1,4 +1,6 @@
-﻿import { Package, PlusCircle } from "lucide-react";
+export const dynamic = "force-dynamic";
+
+import { Package, PlusCircle } from "lucide-react";
 import { redirect } from "next/navigation";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { createClient } from "@/lib/supabase/server";
