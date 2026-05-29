@@ -1,6 +1,5 @@
 ﻿import Link from "next/link";
-import { revalidatePath } from "next/cache";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ImagePlus, LinkIcon, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -27,126 +26,6 @@ type PublicSection = {
   display_order: number;
   is_published: boolean;
 };
-
-function getString(formData: FormData, key: string) {
-  const value = formData.get(key);
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function getNullableString(formData: FormData, key: string) {
-  const value = getString(formData, key);
-  return value.length > 0 ? value : null;
-}
-
-function getInteger(formData: FormData, key: string) {
-  const value = Number(getString(formData, key));
-  return Number.isFinite(value) ? value : 0;
-}
-
-function getBoolean(formData: FormData, key: string) {
-  return formData.get(key) === "on";
-}
-
-function getSafeFileName(fileName: string) {
-  return fileName
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]/g, "-")
-    .replace(/-+/g, "-");
-}
-
-async function updatePublicSectionWithImage(formData: FormData) {
-  "use server";
-
-  const supabase = await createClient();
-
-  const id = getString(formData, "id");
-  const title = getString(formData, "title");
-  const sectionLabel = getString(formData, "section_label");
-  const manualImageUrl = getNullableString(formData, "image_url");
-  const imageFile = formData.get("image_file");
-  const shouldClearImage = formData.get("clear_image_url") === "1";
-
-  if (!id || !title || !sectionLabel) {
-    throw new Error("Section, label, dan judul wajib diisi.");
-  }
-
-  let ctaLabel = getNullableString(formData, "cta_label");
-  let ctaHref = getNullableString(formData, "cta_href");
-
-  if ((ctaLabel && !ctaHref) || (!ctaLabel && ctaHref)) {
-    ctaLabel = null;
-    ctaHref = null;
-  }
-
-  let finalImageUrl = shouldClearImage ? null : manualImageUrl;
-
-  if (!shouldClearImage && imageFile instanceof File && imageFile.size > 0) {
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-
-    if (!allowedTypes.includes(imageFile.type)) {
-      throw new Error("Format gambar harus JPG, PNG, WEBP, atau GIF.");
-    }
-
-    if (imageFile.size > 5 * 1024 * 1024) {
-      throw new Error("Ukuran gambar maksimal 5MB.");
-    }
-
-    const safeFileName = getSafeFileName(imageFile.name);
-    const uploadPath = `sections/${id}/${Date.now()}-${safeFileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("public-content")
-      .upload(uploadPath, imageFile, {
-        cacheControl: "3600",
-        contentType: imageFile.type,
-        upsert: true,
-      });
-
-    if (uploadError) {
-      throw new Error(`Upload gambar gagal: ${uploadError.message}`);
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from("public-content")
-      .getPublicUrl(uploadPath);
-
-    finalImageUrl = publicUrlData.publicUrl;
-  }
-
-  const { error } = await supabase
-    .from("public_content_sections")
-    .update({
-      section_label: sectionLabel,
-      eyebrow: getNullableString(formData, "eyebrow"),
-      title,
-      subtitle: getNullableString(formData, "subtitle"),
-      body: getNullableString(formData, "body"),
-      cta_label: ctaLabel,
-      cta_href: ctaHref,
-      image_url: finalImageUrl,
-      display_order: getInteger(formData, "display_order"),
-      is_published: getBoolean(formData, "is_published"),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  revalidatePath("/");
-  revalidatePath("/aplikasi");
-  revalidatePath("/manajemen");
-  revalidatePath("/tentang");
-  revalidatePath("/platform/dashboard/public-content");
-  revalidatePath(`/platform/dashboard/public-content/sections/${id}/edit`);
-
-  if (shouldClearImage) {
-    redirect(`/platform/dashboard/public-content/sections/${id}/edit`);
-  }
-
-  redirect("/platform/dashboard/public-content");
-}
 
 export default async function EditPublicSectionPage({ params }: PageProps) {
   const { id } = await params;
@@ -188,7 +67,9 @@ export default async function EditPublicSectionPage({ params }: PageProps) {
         />
 
         <form
-          action={updatePublicSectionWithImage}
+          action={`/api/platform/public-content/sections/${section.id}`}
+          method="post"
+          encType="multipart/form-data"
           className="space-y-5 px-5 pb-5"
         >
           <input type="hidden" name="id" value={section.id} />
@@ -413,3 +294,6 @@ export default async function EditPublicSectionPage({ params }: PageProps) {
     </div>
   );
 }
+
+
+

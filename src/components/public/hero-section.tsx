@@ -92,7 +92,7 @@ export function HeroSection({ section, featureItems }: HeroSectionProps) {
           <div className="absolute -right-20 top-64 hidden h-40 w-40 rounded-full bg-orange-100/90 lg:block" />
           <div className="absolute bottom-20 right-4 hidden h-32 w-32 bg-[radial-gradient(circle,#cbd5e1_1px,transparent_1px)] [background-size:14px_14px] opacity-35 lg:block" />
 
-          <div className="relative h-[360px] w-full sm:h-[430px] lg:absolute lg:right-[-96px] lg:top-[-40px] lg:h-[455px] lg:w-[820px] xl:right-[-230px] xl:h-[470px] xl:w-[900px]">
+          <div className="relative h-[360px] w-full sm:h-[430px] lg:absolute lg:right-[-96px] lg:top-[-10px] lg:h-[455px] lg:w-[820px] xl:right-[-230px] xl:h-[470px] xl:w-[900px]">
             <Image
               src={imageUrl}
               alt="Visual forum laporan dan dashboard kesehatan keuangan BUMDes"
