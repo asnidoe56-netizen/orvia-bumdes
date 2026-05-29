@@ -1,8 +1,30 @@
 ﻿import Link from "next/link";
-import { ArrowRight, Building2 } from "lucide-react";
-import { featureCards, trustItems } from "@/components/public/landing-data";
+import {
+  ArrowRight,
+  Building2,
+  LayoutDashboard,
+  ShieldCheck,
+  UsersRound,
+  type LucideIcon,
+} from "lucide-react";
+import { trustItems } from "@/components/public/landing-data";
+import type { PublicLandingItem } from "@/lib/public/landing-content";
 
-export function HeroSection() {
+const iconMap: Record<string, LucideIcon> = {
+  users: UsersRound,
+  dashboard: LayoutDashboard,
+  shield: ShieldCheck,
+};
+
+type HeroSectionProps = {
+  featureItems: PublicLandingItem[];
+};
+
+export function HeroSection({ featureItems }: HeroSectionProps) {
+  const visibleFeatureItems = featureItems.filter(
+    (item) => item.section_key === "aplikasi",
+  );
+
   return (
     <section id="beranda" className="relative overflow-hidden pt-20">
       <div className="absolute right-0 top-20 h-72 w-72 rounded-full bg-emerald-100/70 blur-3xl" />
@@ -67,12 +89,13 @@ export function HeroSection() {
 
           <div className="relative rounded-[2rem] border border-slate-200 bg-white/90 p-4 shadow-2xl shadow-slate-200/80 backdrop-blur">
             <div className="space-y-4">
-              {featureCards.map((feature, index) => {
-                const Icon = feature.icon;
+              {visibleFeatureItems.map((feature, index) => {
+                const Icon =
+                  iconMap[feature.icon_key ?? ""] ?? ShieldCheck;
 
                 return (
                   <div
-                    key={feature.title}
+                    key={feature.id}
                     className={[
                       "rounded-3xl border border-slate-200 bg-white p-5 shadow-sm",
                       index === 2

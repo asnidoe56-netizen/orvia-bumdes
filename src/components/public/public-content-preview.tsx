@@ -1,4 +1,12 @@
-﻿import { publicContentPreviewSections } from "@/components/public/landing-data";
+﻿import type {
+  PublicLandingSection,
+  PublicNewsPost,
+} from "@/lib/public/landing-content";
+
+type PublicContentPreviewProps = {
+  sections: PublicLandingSection[];
+  newsPosts: PublicNewsPost[];
+};
 
 function getSectionClass(tone: string) {
   if (tone === "slate") return "bg-slate-50";
@@ -15,10 +23,58 @@ function getEyebrowClass(tone: string) {
   return "text-emerald-700";
 }
 
-export function PublicContentPreview() {
+function findSection(
+  sections: PublicLandingSection[],
+  sectionKey: string,
+): PublicLandingSection | undefined {
+  return sections.find((section) => section.section_key === sectionKey);
+}
+
+export function PublicContentPreview({
+  sections,
+  newsPosts,
+}: PublicContentPreviewProps) {
+  const aplikasi = findSection(sections, "aplikasi");
+  const manajemen = findSection(sections, "manajemen");
+  const latestNews = newsPosts[0];
+
+  const previewSections = [
+    {
+      id: "aplikasi",
+      eyebrow: aplikasi?.eyebrow ?? "Aplikasi",
+      title: aplikasi?.title ?? "Satu ekosistem kerja untuk banyak peran.",
+      description:
+        aplikasi?.body ??
+        aplikasi?.subtitle ??
+        "Bagian ini dapat diatur dari database Super Admin Platform.",
+      tone: "white",
+    },
+    {
+      id: "manajemen",
+      eyebrow: manajemen?.eyebrow ?? "Manajemen",
+      title:
+        manajemen?.title ??
+        "Konten manajemen akan dikelola dari dashboard platform.",
+      description:
+        manajemen?.body ??
+        manajemen?.subtitle ??
+        "Ini disiapkan sebagai placeholder awal sebelum modul CMS publik dibuat.",
+      tone: "slate",
+    },
+    {
+      id: "berita",
+      eyebrow: "Berita",
+      title: latestNews?.title ?? "Ruang publikasi perkembangan BUMDes.",
+      description:
+        latestNews?.excerpt ??
+        "Artikel, pengumuman, dan informasi publik nanti dapat dimasukkan melalui database dan halaman Super Admin Platform.",
+      tone: "orange",
+    },
+  ];
+
   return (
     <>
-      {publicContentPreviewSections.map((section) => (
+      {previewSections.map((section) => (
         <section
           key={section.id}
           id={section.id}
