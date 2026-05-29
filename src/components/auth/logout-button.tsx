@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
@@ -12,7 +12,7 @@ export function LogoutButton() {
 
         await supabase.auth.signOut();
 
-        router.replace("/login");
+        router.replace("/");
         router.refresh();
     }
 
