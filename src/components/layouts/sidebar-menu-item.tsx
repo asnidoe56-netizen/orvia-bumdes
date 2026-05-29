@@ -10,17 +10,22 @@ import {
   ClipboardCheck,
   ClipboardList,
   Database,
+  Landmark,
   FileText,
   HandCoins,
   LayoutDashboard,
   Package,
+  ReceiptText,
+  RotateCcw,
   ShieldCheck,
   ShoppingCart,
   Store,
   TrendingUp,
   Truck,
+  UserRoundCheck,
   UsersRound,
   WalletCards,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -34,6 +39,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Ringkasan Platform": LayoutDashboard,
   "Registrasi BUMDes": ClipboardList,
   "Registrasi Pendamping": UsersRound,
+  "Registrasi Bupati": UserRoundCheck,
   "Data BUMDes": Building2,
   "Users & Role": UsersRound,
   Governance: ShieldCheck,
@@ -45,15 +51,24 @@ const iconMap: Record<string, LucideIcon> = {
   "Laporan Konsolidasi": BarChart3,
   Monitoring: Activity,
   "Bagi Hasil": HandCoins,
+  "Koreksi Transaksi": RotateCcw,
 
   "Ringkasan Unit": LayoutDashboard,
   "Master Data": Database,
+  Landmark,
+  "Catat Transaksi": ReceiptText,
+  "Cek Alur Transaksi": Workflow,
   "Persediaan Barang": Package,
+  ReceiptText,
+  RotateCcw,
   Supplier: Truck,
+  UserRoundCheck,
   Customer: UsersRound,
   Pembelian: ClipboardCheck,
   Penjualan: ShoppingCart,
   "Kas & Bank": WalletCards,
+  Workflow,
+  "Aset Tetap": Landmark,
   Laporan: FileText,
 
   Audit: ShieldCheck,
@@ -182,6 +197,10 @@ export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
     </Link>
   );
 }
+
+
+
+
 
 
 

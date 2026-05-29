@@ -9,7 +9,7 @@ export function Card({ children, className = "" }: CardProps) {
   return (
     <section
       className={[
-        "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm",
+        "min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5",
         className,
       ].join(" ")}
     >
@@ -26,15 +26,19 @@ type CardHeaderProps = {
 
 export function CardHeader({ title, description, action }: CardHeaderProps) {
   return (
-    <div className="mb-4 flex items-start justify-between gap-4">
-      <div>
-        <h3 className="text-base font-bold text-slate-950">{title}</h3>
+    <div className="mb-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <h3 className="break-words text-base font-bold text-slate-950">
+          {title}
+        </h3>
         {description ? (
-          <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-500">
+            {description}
+          </p>
         ) : null}
       </div>
 
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? <div className="shrink-0 sm:text-right">{action}</div> : null}
     </div>
   );
 }

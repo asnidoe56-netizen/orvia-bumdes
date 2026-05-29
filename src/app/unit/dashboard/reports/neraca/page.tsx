@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import { FileSpreadsheet } from "lucide-react";
 import { PageBackButton } from "@/components/ui/page-back-button";
@@ -82,20 +82,24 @@ function ReportLine({
 }) {
   return (
     <div
-      className={`grid grid-cols-[1fr_auto] gap-4 border-b border-slate-100 py-3 ${
+      className={`grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(170px,auto)] gap-6 border-b border-slate-100 py-3 ${
         bold ? "font-bold" : ""
       } ${muted ? "text-slate-500" : "text-slate-800"}`}
     >
-      <div className={indent ? "pl-6" : ""}>
+      <div className={["min-w-0 break-words", indent ? "pl-6" : ""].join(" ")}>
         {label}
         {note ? (
-          <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
+          <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
             {note}
           </span>
         ) : null}
       </div>
 
-      <div className={`text-right tabular-nums ${amountClass(value)}`}>
+      <div
+        className={`whitespace-nowrap text-right tabular-nums ${amountClass(
+          value
+        )}`}
+      >
         {value === undefined ? "" : formatRupiah(value)}
       </div>
     </div>
@@ -267,7 +271,9 @@ export default async function NeracaReportPage() {
           </p>
         </section>
       ) : (
-        <section className="mx-auto max-w-5xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+        <div className="min-w-0 overflow-hidden rounded-[2rem] print:overflow-visible">
+          <div className="w-full overflow-x-auto pb-2 print:overflow-visible print:pb-0">
+            <section className="mx-auto min-w-[760px] max-w-5xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-10">
           <div className="rounded-[2rem] border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-6 md:p-8">
             <div className="text-center">
               <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-700">
@@ -284,7 +290,7 @@ export default async function NeracaReportPage() {
 
               <p className="mt-1 text-sm text-slate-500">
                 {tenant?.nama_desa ? `Desa ${tenant.nama_desa}` : null}
-                {tenant?.nama_desa && tenant?.nama_kecamatan ? " · " : null}
+                {tenant?.nama_desa && tenant?.nama_kecamatan ? " Â· " : null}
                 {tenant?.nama_kecamatan
                   ? `Kecamatan ${tenant.nama_kecamatan}`
                   : null}
@@ -372,7 +378,7 @@ export default async function NeracaReportPage() {
               />
 
               <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <div className="grid grid-cols-[1fr_auto] gap-4">
+                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(190px,auto)] gap-6">
                   <div>
                     <p className="text-sm font-bold uppercase tracking-wide text-slate-500">
                       Kewajiban + Ekuitas
@@ -383,7 +389,7 @@ export default async function NeracaReportPage() {
                   </div>
 
                   <div
-                    className={`text-right text-2xl font-black tabular-nums ${
+                    className={`whitespace-nowrap text-right text-2xl font-black tabular-nums ${
                       isBalanced ? "text-emerald-700" : "text-rose-700"
                     }`}
                   >
@@ -394,12 +400,15 @@ export default async function NeracaReportPage() {
             </div>
           </div>
 
-          <p className="mt-5 text-center text-xs text-slate-400">
-            Laporan ini dihasilkan otomatis dari saldo akun yang sudah diposting
-            pada engine akuntansi ERP BUMDes.
-          </p>
-        </section>
+              <p className="mt-5 text-center text-xs text-slate-400">
+                Laporan ini dihasilkan otomatis dari saldo akun yang sudah diposting
+                pada engine akuntansi ERP BUMDes.
+              </p>
+            </section>
+          </div>
+        </div>
       )}
     </div>
   );
 }
+

@@ -4,17 +4,24 @@ type DataTableProps = {
   columns: string[];
   children?: ReactNode;
   emptyText?: string;
+  minWidthClassName?: string;
 };
 
 export function DataTable({
   columns,
   children,
   emptyText = "Belum ada data.",
+  minWidthClassName = "min-w-[720px]",
 }: DataTableProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="w-full overflow-x-auto">
+        <table
+          className={[
+            "w-full border-collapse text-left text-sm",
+            minWidthClassName,
+          ].join(" ")}
+        >
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               {columns.map((column) => (

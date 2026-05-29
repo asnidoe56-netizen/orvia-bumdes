@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import { FileSpreadsheet } from "lucide-react";
 import { PageBackButton } from "@/components/ui/page-back-button";
@@ -122,12 +122,18 @@ function ReportLine({
 }) {
   return (
     <div
-      className={`grid grid-cols-[1fr_auto] gap-4 border-b border-slate-100 py-3 ${
+      className={`grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(170px,auto)] gap-6 border-b border-slate-100 py-3 ${
         bold ? "font-bold" : ""
       } ${muted ? "text-slate-500" : "text-slate-800"}`}
     >
-      <div className={indent ? "pl-6" : ""}>{label}</div>
-      <div className={`text-right tabular-nums ${amountClass(value)}`}>
+      <div className={["min-w-0 break-words", indent ? "pl-6" : ""].join(" ")}>
+        {label}
+      </div>
+      <div
+        className={`whitespace-nowrap text-right tabular-nums ${amountClass(
+          value
+        )}`}
+      >
         {value === undefined ? "" : formatRupiah(value)}
       </div>
     </div>
@@ -452,10 +458,12 @@ export default async function LabaRugiReportPage({ searchParams }: PageProps) {
           </p>
         </section>
       ) : (
-        <section
-          id="laba-rugi-pdf-area"
-          className="erp-print-sheet mx-auto max-w-5xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-10"
-        >
+        <div className="min-w-0 overflow-hidden rounded-[2rem] print:overflow-visible">
+          <div className="w-full overflow-x-auto pb-2 print:overflow-visible print:pb-0">
+            <section
+              id="laba-rugi-pdf-area"
+              className="erp-print-sheet mx-auto min-w-[760px] max-w-5xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-10"
+            >
           <div className="erp-print-card rounded-[2rem] border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-6 md:p-8">
             <div className="text-center">
               <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-700">
@@ -472,7 +480,7 @@ export default async function LabaRugiReportPage({ searchParams }: PageProps) {
 
               <p className="mt-1 text-sm text-slate-500">
                 {tenant?.nama_desa ? `Desa ${tenant.nama_desa}` : null}
-                {tenant?.nama_desa && tenant?.nama_kecamatan ? " · " : null}
+                {tenant?.nama_desa && tenant?.nama_kecamatan ? " Â· " : null}
                 {tenant?.nama_kecamatan
                   ? `Kecamatan ${tenant.nama_kecamatan}`
                   : null}
@@ -600,15 +608,18 @@ export default async function LabaRugiReportPage({ searchParams }: PageProps) {
             </div>
           </div>
 
-          <p className="mt-5 text-center text-xs text-slate-400">
-            Laporan ini dihasilkan otomatis dari transaksi yang sudah diposting
-            pada engine akuntansi ERP BUMDes.
-          </p>
-        </section>
+              <p className="mt-5 text-center text-xs text-slate-400">
+                Laporan ini dihasilkan otomatis dari transaksi yang sudah diposting
+                pada engine akuntansi ERP BUMDes.
+              </p>
+            </section>
+          </div>
+        </div>
       )}
     </div>
   );
 }
+
 
 
 
