@@ -43,6 +43,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Data BUMDes": Building2,
   "Users & Role": UsersRound,
   Governance: ShieldCheck,
+  "Konten Publik": FileText,
 
   "Ringkasan BUMDes": LayoutDashboard,
   "Master Plan": ClipboardList,
@@ -197,6 +198,7 @@ export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
     </Link>
   );
 }
+
 
 
 

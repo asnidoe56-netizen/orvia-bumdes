@@ -12,6 +12,7 @@ export const platformNav: NavItem[] = [
   { label: "Data BUMDes", href: "/platform/dashboard/bumdes" },
   { label: "Users & Role", href: "/platform/dashboard/users" },
   { label: "Governance", href: "/platform/dashboard/governance" },
+  { label: "Konten Publik", href: "/platform/dashboard/public-content" },
 ];
 
 export const bumdesNav: NavItem[] = [
@@ -63,6 +64,7 @@ export const bupatiNav: NavItem[] = [
   { label: "Executive Summary", href: "/bupati/dashboard" },
   { label: "Kinerja Daerah", href: "/bupati/dashboard/regional-performance" },
 ];
+
 
 
 
