@@ -55,6 +55,12 @@ const iconMap: Record<string, LucideIcon> = {
   "Koreksi Transaksi": RotateCcw,
 
   "Ringkasan Unit": LayoutDashboard,
+  "Data Anggota": UsersRound,
+  "Kelompok Anggota": UsersRound,
+  "Pengajuan Pinjaman": ClipboardList,
+  "Simpanan Anggota": WalletCards,
+  "Pencairan Pinjaman": HandCoins,
+  "Angsuran Pinjaman": HandCoins,
   "Master Data": Database,
   Landmark,
   "Catat Transaksi": ReceiptText,
@@ -198,6 +204,7 @@ export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
     </Link>
   );
 }
+
 
 
 
