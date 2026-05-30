@@ -1,29 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { activatePublicApplicationLinkForm } from "../actions";
 
 type PublicApplicationLinkCardProps = {
-  publicUrlPath: string | null;
+  publicUrl: string | null;
   title: string | null;
   isActive: boolean;
 };
 
 export function PublicApplicationLinkCard({
-  publicUrlPath,
+  publicUrl,
   title,
   isActive,
 }: PublicApplicationLinkCardProps) {
   const [copied, setCopied] = useState(false);
-
-  const publicUrl = useMemo(() => {
-    if (!publicUrlPath) return null;
-
-    if (typeof window === "undefined") {
-      return publicUrlPath;
-    }
-
-    return `${window.location.origin}${publicUrlPath}`;
-  }, [publicUrlPath]);
 
   async function handleCopy() {
     if (!publicUrl) return;
@@ -64,7 +55,8 @@ export function PublicApplicationLinkCard({
             </div>
           ) : (
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-              Link publik belum tersedia untuk unit ini.
+              Link publik belum tersedia untuk unit ini. Aktifkan link agar
+              calon anggota dapat mengajukan pinjaman secara mandiri.
             </div>
           )}
         </div>
@@ -78,17 +70,27 @@ export function PublicApplicationLinkCard({
                 : "bg-slate-100 text-slate-600",
             ].join(" ")}
           >
-            {isActive ? "Aktif" : "Tidak aktif"}
+            {isActive ? "Aktif" : "Belum aktif"}
           </span>
 
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={!publicUrl || !isActive}
-            className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            {copied ? "Link Disalin" : "Salin Link"}
-          </button>
+          {publicUrl && isActive ? (
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              {copied ? "Link Disalin" : "Salin Link"}
+            </button>
+          ) : (
+            <form action={activatePublicApplicationLinkForm}>
+              <button
+                type="submit"
+                className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                Aktifkan Link
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </section>

@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
@@ -278,9 +279,14 @@ export default async function SavingsLoanApplicationsPage() {
   const groups = (groupsResult.data ?? []) as GroupOption[];
   const applications = (applicationsResult.data ?? []) as IntakeApplicationRow[];
   const publicLink = publicLinkResult.data as PublicApplicationLinkRow | null;
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host");
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? "http";
+  const origin = host ? `${protocol}://${host}` : "";
   const publicUrlPath = publicLink
     ? `/ajukan-pinjaman/${publicLink.public_slug}/${publicLink.public_token}`
     : null;
+  const publicUrl = publicUrlPath ? `${origin}${publicUrlPath}` : null;
   const readError =
     groupsResult.error || applicationsResult.error || publicLinkResult.error;
 
@@ -303,7 +309,7 @@ export default async function SavingsLoanApplicationsPage() {
       </section>
 
       <PublicApplicationLinkCard
-        publicUrlPath={publicUrlPath}
+        publicUrl={publicUrl}
         title={publicLink?.title ?? null}
         isActive={Boolean(publicLink?.is_active)}
       />

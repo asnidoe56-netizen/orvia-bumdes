@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
 import { getLoginContext } from "@/lib/auth/get-login-context";
@@ -302,3 +302,53 @@ export async function createApplicantFirstLoanApplication(
   };
 }
 
+export async function activatePublicApplicationLink(): Promise<ApplicationActionState> {
+  const context = await getLoginContext();
+
+  if (!context?.tenant_id || !context.unit_id) {
+    return {
+      success: false,
+      message: "Konteks tenant/unit tidak ditemukan. Silakan login ulang.",
+    };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc(
+    "activate_savings_loan_public_application_link",
+    {
+      p_tenant_id: context.tenant_id,
+      p_unit_id: context.unit_id,
+      p_title: "Form Pengajuan Pinjaman Unit Simpan Pinjam",
+      p_description:
+        "Form publik untuk pengajuan pinjaman calon anggota Unit Simpan Pinjam.",
+      p_allow_individual: true,
+      p_allow_group: true,
+      p_require_pdf: true,
+      p_max_requested_amount: 50000000,
+      p_min_tenor_months: 1,
+      p_max_tenor_months: 36,
+    },
+  );
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message || "Link pengajuan publik gagal diaktifkan.",
+    };
+  }
+
+  revalidatePath("/unit/dashboard/simpan-pinjam/pengajuan");
+
+  return {
+    success: true,
+    message: "Link pengajuan publik berhasil diaktifkan.",
+  };
+}
+
+export async function activatePublicApplicationLinkForm(
+  formData: FormData,
+): Promise<void> {
+  void formData;
+  await activatePublicApplicationLink();
+}
