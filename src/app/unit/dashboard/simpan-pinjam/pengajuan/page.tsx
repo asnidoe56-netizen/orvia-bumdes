@@ -1,12 +1,20 @@
-﻿import { PageBackButton } from "@/components/ui/page-back-button";
+import { PageBackButton } from "@/components/ui/page-back-button";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
 import { ApplicantFirstApplicationForm } from "./_components/application-forms";
+import { PublicApplicationLinkCard } from "./_components/public-application-link-card";
 
 type GroupOption = {
   id: string;
   group_no: string;
   group_name: string;
+};
+
+type PublicApplicationLinkRow = {
+  public_slug: string;
+  public_token: string;
+  title: string | null;
+  is_active: boolean;
 };
 
 type IntakeApplicationRow = {
@@ -240,7 +248,7 @@ export default async function SavingsLoanApplicationsPage() {
 
   const supabase = await createClient();
 
-  const [groupsResult, applicationsResult] = await Promise.all([
+  const [groupsResult, applicationsResult, publicLinkResult] = await Promise.all([
     supabase
       .from("v_savings_loan_groups")
       .select("id, group_no, group_name")
@@ -257,11 +265,24 @@ export default async function SavingsLoanApplicationsPage() {
       .eq("tenant_id", context.tenant_id)
       .eq("unit_id", context.unit_id)
       .order("created_at", { ascending: false }),
+
+    supabase
+      .from("savings_loan_public_application_links")
+      .select("public_slug, public_token, title, is_active")
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .eq("is_active", true)
+      .maybeSingle(),
   ]);
 
   const groups = (groupsResult.data ?? []) as GroupOption[];
   const applications = (applicationsResult.data ?? []) as IntakeApplicationRow[];
-  const readError = groupsResult.error || applicationsResult.error;
+  const publicLink = publicLinkResult.data as PublicApplicationLinkRow | null;
+  const publicUrlPath = publicLink
+    ? `/ajukan-pinjaman/${publicLink.public_slug}/${publicLink.public_token}`
+    : null;
+  const readError =
+    groupsResult.error || applicationsResult.error || publicLinkResult.error;
 
   return (
     <div className="mx-auto max-w-7xl space-y-5">
@@ -280,6 +301,12 @@ export default async function SavingsLoanApplicationsPage() {
           sistem mencatat alasan dan metadata surat pernyataan.
         </p>
       </section>
+
+      <PublicApplicationLinkCard
+        publicUrlPath={publicUrlPath}
+        title={publicLink?.title ?? null}
+        isActive={Boolean(publicLink?.is_active)}
+      />
 
       <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,480px)_minmax(0,1fr)]">
         <div className="min-w-0">
