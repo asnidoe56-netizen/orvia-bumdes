@@ -97,6 +97,19 @@ export function RepaymentActionPanel({
   const defaultService = Number(nextSchedule?.remaining_service_amount ?? 0);
   const defaultAdmin = Number(nextSchedule?.remaining_admin_amount ?? 0);
   const defaultPenalty = Number(nextSchedule?.remaining_penalty_amount ?? 0);
+  const defaultCashBankAccountId = cashBankAccounts[0]?.id ?? "";
+  const defaultProductId = products[0]?.id ?? "";
+
+  const defaultFirstDueDate = useMemo(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + 1);
+
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -125,6 +138,7 @@ export function RepaymentActionPanel({
               Produk Pinjaman
               <select
                 name="product_id"
+                defaultValue={defaultProductId}
                 required
                 disabled={isGeneratingSchedule || products.length === 0}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
@@ -145,6 +159,7 @@ export function RepaymentActionPanel({
               <input
                 type="date"
                 name="first_due_date"
+                defaultValue={defaultFirstDueDate}
                 required
                 disabled={isGeneratingSchedule}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
@@ -175,7 +190,7 @@ export function RepaymentActionPanel({
         </form>
       ) : null}
 
-      {canRepay ? (
+      {canRepay && hasSchedule ? (
         <form
           action={repaymentAction}
           className="space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4"
@@ -213,6 +228,7 @@ export function RepaymentActionPanel({
               Akun Kas/Bank
               <select
                 name="cash_bank_account_id"
+                defaultValue={defaultCashBankAccountId}
                 required
                 disabled={isPostingRepayment || cashBankAccounts.length === 0}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
@@ -328,9 +344,12 @@ export function RepaymentActionPanel({
         </form>
       ) : (
         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-500">
-          Tidak ada sisa pokok yang perlu ditagih.
+          {!hasSchedule
+            ? "Buat jadwal angsuran terlebih dahulu. Setelah jadwal dibuat, nominal pokok dan jasa akan otomatis terisi dari engine backend."
+            : "Tidak ada sisa pokok yang perlu ditagih."}
         </div>
       )}
     </div>
   );
 }
+
