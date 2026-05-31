@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -124,13 +124,22 @@ export async function submitPublicLoanApplication(
     };
   }
 
+  if (!supportingDocumentUrl) {
+    return {
+      success: false,
+      message:
+        "URL Dokumen PDF wajib diisi. Gunakan URL yang berakhir .pdf, contoh: https://example.com/dokumen-pengajuan.pdf.",
+    };
+  }
+
   if (
-    !supportingDocumentUrl ||
+    !supportingDocumentUrl.toLowerCase().endsWith(".pdf") ||
     !supportingDocumentName.toLowerCase().endsWith(".pdf")
   ) {
     return {
       success: false,
-      message: "Dokumen pendukung wajib berupa PDF.",
+      message:
+        "Dokumen pendukung wajib berupa PDF. Pastikan URL dan nama dokumen sama-sama berakhir .pdf.",
     };
   }
 
