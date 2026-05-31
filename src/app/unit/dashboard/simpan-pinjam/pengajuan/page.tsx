@@ -1,9 +1,10 @@
-import { headers } from "next/headers";
+﻿import { headers } from "next/headers";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
 import { ApplicantFirstApplicationForm } from "./_components/application-forms";
 import { PublicApplicationLinkCard } from "./_components/public-application-link-card";
+import { VerificationActionPanel } from "./_components/verification-action-panel";
 
 type GroupOption = {
   id: string;
@@ -24,8 +25,10 @@ type IntakeApplicationRow = {
   application_date: string | null;
   application_method: string | null;
   status: string | null;
+  status_label: string | null;
   input_mode: string | null;
   verification_status: string | null;
+  verification_status_label: string | null;
   applicant_full_name: string | null;
   applicant_identity_number: string | null;
   applicant_phone: string | null;
@@ -49,6 +52,16 @@ type IntakeApplicationRow = {
   assisted_statement_name: string | null;
   has_assisted_statement_text: boolean | null;
   intake_audit_status: string | null;
+  reviewed_at: string | null;
+  reviewed_by_name: string | null;
+  approved_at: string | null;
+  approved_by_name: string | null;
+  rejected_at: string | null;
+  rejected_by_name: string | null;
+  rejection_reason: string | null;
+  can_verify: boolean | null;
+  can_request_correction: boolean | null;
+  can_reject: boolean | null;
 };
 
 function formatDate(value: string | null) {
@@ -135,7 +148,8 @@ function IntakeMobileCard({ application }: { application: IntakeApplicationRow }
             {borrower}
           </h3>
           <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {methodLabel(application.application_method)} ·{" "}
+            {methodLabel(application.application_method)}{" "}
+            <span aria-hidden="true">·</span>{" "}
             {inputModeLabel(application.input_mode)}
           </p>
         </div>
@@ -168,7 +182,7 @@ function IntakeMobileCard({ application }: { application: IntakeApplicationRow }
         <div>
           <dt className="font-semibold text-slate-500">Status Verifikasi</dt>
           <dd className="mt-1">
-            <VerificationBadge status={application.verification_status} />
+            <VerificationBadge status={application.verification_status_label ?? application.verification_status} />
           </dd>
         </div>
 
@@ -209,7 +223,7 @@ function IntakeMobileCard({ application }: { application: IntakeApplicationRow }
       ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <StatusBadge status={application.status} />
+        <StatusBadge status={application.status_label ?? application.status} />
 
         {application.assisted_statement_required ? (
           <span className="inline-flex w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
@@ -232,6 +246,16 @@ function IntakeMobileCard({ application }: { application: IntakeApplicationRow }
           Lihat Dokumen PDF
         </a>
       ) : null}
+
+      <div className="mt-4">
+        <VerificationActionPanel
+          applicationId={application.id}
+          applicationNo={application.application_no}
+          canVerify={application.can_verify}
+          canRequestCorrection={application.can_request_correction}
+          canReject={application.can_reject}
+        />
+      </div>
     </article>
   );
 }
@@ -261,7 +285,7 @@ export default async function SavingsLoanApplicationsPage() {
     supabase
       .from("v_savings_loan_applicant_intake_applications")
       .select(
-        "id, application_no, application_date, application_method, status, input_mode, verification_status, applicant_full_name, applicant_identity_number, applicant_phone, member_no, member_full_name, group_no, group_name, requested_amount, tenor_months, loan_purpose, income_source, estimated_repayment_capacity, business_or_job_type, supporting_document_url, supporting_document_name, active_group_member_count, application_group_member_count, group_requested_amount_total, declaration_accepted, assisted_statement_required, assisted_statement_name, has_assisted_statement_text, intake_audit_status",
+        "id, application_no, application_date, application_method, status, status_label, input_mode, verification_status, verification_status_label, applicant_full_name, applicant_identity_number, applicant_phone, member_no, member_full_name, group_no, group_name, requested_amount, tenor_months, loan_purpose, income_source, estimated_repayment_capacity, business_or_job_type, supporting_document_url, supporting_document_name, active_group_member_count, application_group_member_count, group_requested_amount_total, declaration_accepted, assisted_statement_required, assisted_statement_name, has_assisted_statement_text, intake_audit_status, reviewed_at, reviewed_by_name, approved_at, approved_by_name, rejected_at, rejected_by_name, rejection_reason, can_verify, can_request_correction, can_reject",
       )
       .eq("tenant_id", context.tenant_id)
       .eq("unit_id", context.unit_id)
@@ -358,7 +382,7 @@ export default async function SavingsLoanApplicationsPage() {
               </div>
 
               <div className="mt-4 hidden min-w-0 overflow-x-auto md:block">
-                <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-left text-sm">
+                <table className="w-full min-w-[1380px] border-separate border-spacing-0 text-left text-sm">
                   <thead>
                     <tr className="text-xs uppercase tracking-wide text-slate-500">
                       <th className="border-b border-slate-200 px-3 py-3">
@@ -390,6 +414,9 @@ export default async function SavingsLoanApplicationsPage() {
                       </th>
                       <th className="border-b border-slate-200 px-3 py-3">
                         Dokumen
+                      </th>
+                      <th className="border-b border-slate-200 px-3 py-3">
+                        Aksi
                       </th>
                     </tr>
                   </thead>
@@ -433,7 +460,7 @@ export default async function SavingsLoanApplicationsPage() {
                           </td>
                           <td className="border-b border-slate-100 px-3 py-3">
                             <VerificationBadge
-                              status={application.verification_status}
+                              status={application.verification_status_label ?? application.verification_status}
                             />
                           </td>
                           <td className="border-b border-slate-100 px-3 py-3">
@@ -463,6 +490,17 @@ export default async function SavingsLoanApplicationsPage() {
                               <span className="text-slate-500">-</span>
                             )}
                           </td>
+                          <td className="border-b border-slate-100 px-3 py-3">
+                            <div className="w-[280px]">
+                              <VerificationActionPanel
+                                applicationId={application.id}
+                                applicationNo={application.application_no}
+                                canVerify={application.can_verify}
+                                canRequestCorrection={application.can_request_correction}
+                                canReject={application.can_reject}
+                              />
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -476,3 +514,4 @@ export default async function SavingsLoanApplicationsPage() {
     </div>
   );
 }
+

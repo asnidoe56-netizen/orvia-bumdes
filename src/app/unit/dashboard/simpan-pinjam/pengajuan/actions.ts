@@ -352,3 +352,128 @@ export async function activatePublicApplicationLinkForm(
   void formData;
   await activatePublicApplicationLink();
 }
+export async function verifySavingsLoanApplication(
+  _prevState: ApplicationActionState,
+  formData: FormData,
+): Promise<ApplicationActionState> {
+  const applicationId = String(formData.get("application_id") ?? "").trim();
+  const notes = String(formData.get("verification_notes") ?? "").trim();
+
+  if (!applicationId) {
+    return {
+      success: false,
+      message: "ID pengajuan tidak ditemukan.",
+    };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("verify_savings_loan_application", {
+    p_application_id: applicationId,
+    p_notes: notes || null,
+  });
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message || "Verifikasi pengajuan gagal diproses.",
+    };
+  }
+
+  revalidatePath("/unit/dashboard/simpan-pinjam/pengajuan");
+
+  return {
+    success: true,
+    message: "Pengajuan berhasil diverifikasi.",
+  };
+}
+
+export async function requestCorrectionSavingsLoanApplication(
+  _prevState: ApplicationActionState,
+  formData: FormData,
+): Promise<ApplicationActionState> {
+  const applicationId = String(formData.get("application_id") ?? "").trim();
+  const correctionNotes = String(formData.get("correction_notes") ?? "").trim();
+
+  if (!applicationId) {
+    return {
+      success: false,
+      message: "ID pengajuan tidak ditemukan.",
+    };
+  }
+
+  if (!correctionNotes) {
+    return {
+      success: false,
+      message: "Catatan perbaikan wajib diisi.",
+    };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc(
+    "request_correction_savings_loan_application",
+    {
+      p_application_id: applicationId,
+      p_correction_notes: correctionNotes,
+    },
+  );
+
+  if (error) {
+    return {
+      success: false,
+      message:
+        error.message || "Permintaan perbaikan pengajuan gagal diproses.",
+    };
+  }
+
+  revalidatePath("/unit/dashboard/simpan-pinjam/pengajuan");
+
+  return {
+    success: true,
+    message: "Pengajuan berhasil ditandai perlu perbaikan.",
+  };
+}
+
+export async function rejectSavingsLoanApplication(
+  _prevState: ApplicationActionState,
+  formData: FormData,
+): Promise<ApplicationActionState> {
+  const applicationId = String(formData.get("application_id") ?? "").trim();
+  const rejectionReason = String(formData.get("rejection_reason") ?? "").trim();
+
+  if (!applicationId) {
+    return {
+      success: false,
+      message: "ID pengajuan tidak ditemukan.",
+    };
+  }
+
+  if (!rejectionReason) {
+    return {
+      success: false,
+      message: "Alasan penolakan wajib diisi.",
+    };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("reject_savings_loan_application", {
+    p_application_id: applicationId,
+    p_rejection_reason: rejectionReason,
+  });
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message || "Penolakan pengajuan gagal diproses.",
+    };
+  }
+
+  revalidatePath("/unit/dashboard/simpan-pinjam/pengajuan");
+
+  return {
+    success: true,
+    message: "Pengajuan berhasil ditolak.",
+  };
+}
