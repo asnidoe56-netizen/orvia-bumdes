@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import {
   ArrowLeft,
@@ -90,6 +90,9 @@ type UnitCapitalAllocationOption = {
 type PageProps = {
   params: Promise<{
     id: string;
+  }>;
+  searchParams?: Promise<{
+    allocationError?: string | string[];
   }>;
 };
 
@@ -228,8 +231,16 @@ function getTimelineDate(row: TimelineRow) {
   );
 }
 
-export default async function BumdesMasterPlanDetailPage({ params }: PageProps) {
+export default async function BumdesMasterPlanDetailPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { id } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const allocationErrorParam = resolvedSearchParams.allocationError;
+  const allocationError = Array.isArray(allocationErrorParam)
+    ? allocationErrorParam[0]
+    : allocationErrorParam;
   const context = await getLoginContext();
 
   if (!context || !context.tenant_id) {
@@ -418,6 +429,12 @@ export default async function BumdesMasterPlanDetailPage({ params }: PageProps) 
           </div>
         </div>
       </div>
+
+      {allocationError ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900 shadow-sm">
+          {allocationError}
+        </div>
+      ) : null}
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {moneyCards.map((card) => (
@@ -988,6 +1005,7 @@ export default async function BumdesMasterPlanDetailPage({ params }: PageProps) 
     </div>
   );
 }
+
 
 
 

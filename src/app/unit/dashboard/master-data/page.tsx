@@ -1,32 +1,79 @@
 ﻿import Link from "next/link";
+import { ArrowRight, Database, Package, Truck, UsersRound } from "lucide-react";
 import { PageBackButton } from "@/components/ui/page-back-button";
-import { Package, Truck, UsersRound, ArrowRight, Database } from "lucide-react";
+import { getLoginContext } from "@/lib/auth/get-login-context";
+import { createClient } from "@/lib/supabase/server";
 
-const masterDataMenus = [
+type MasterDataMenu = {
+  title: string;
+  description: string;
+  href: string;
+  icon: typeof Package;
+  templateOnly?: "PERDAGANGAN";
+};
+
+const masterDataMenus: MasterDataMenu[] = [
   {
     title: "Persediaan Barang",
     description:
       "Kelola master barang, jasa, satuan, tipe item, dan referensi akun persediaan.",
     href: "/unit/dashboard/master-data/items",
     icon: Package,
+    templateOnly: "PERDAGANGAN",
   },
   {
-    title: "Supplier",
+    title: "Supplier / Pemasok",
     description:
-      "Kelola data pemasok sebagai referensi transaksi pembelian unit usaha.",
+      "Kelola data pemasok atau penyedia barang/jasa sebagai referensi transaksi unit, termasuk Belanja Modal.",
     href: "/unit/dashboard/master-data/suppliers",
     icon: Truck,
   },
   {
-    title: "Customer",
+    title: "Customer / Pelanggan",
     description:
-      "Kelola data pelanggan sebagai referensi transaksi penjualan unit usaha.",
+      "Kelola data pelanggan, penerima layanan, atau pihak yang berhubungan dengan transaksi pendapatan unit.",
     href: "/unit/dashboard/master-data/customers",
     icon: UsersRound,
   },
 ];
 
-export default function UnitMasterDataPage() {
+function normalize(value?: string | null) {
+  return value?.trim().toUpperCase().replace(/\s+/g, "_") ?? "";
+}
+
+export default async function UnitMasterDataPage() {
+  const context = await getLoginContext();
+  const supabase = await createClient();
+
+  let templateCode: string | null = null;
+
+  if (context?.tenant_id && context.unit_id) {
+    const { data: unitData } = await supabase
+      .from("business_units")
+      .select("template_id")
+      .eq("tenant_id", context.tenant_id)
+      .eq("id", context.unit_id)
+      .maybeSingle();
+
+    if (unitData?.template_id) {
+      const { data: templateData } = await supabase
+        .from("unit_templates")
+        .select("kode_template")
+        .eq("id", unitData.template_id)
+        .maybeSingle();
+
+      templateCode = templateData?.kode_template ?? null;
+    }
+  }
+
+  const normalizedTemplateCode = normalize(templateCode);
+
+  const visibleMenus = masterDataMenus.filter((menu) => {
+    if (!menu.templateOnly) return true;
+
+    return menu.templateOnly === normalizedTemplateCode;
+  });
+
   return (
     <div className="space-y-5">
       <PageBackButton fallbackHref="/unit/dashboard" />
@@ -43,9 +90,10 @@ export default function UnitMasterDataPage() {
             </h1>
 
             <p className="mt-1 max-w-3xl text-sm text-slate-600">
-              Pusat pengelolaan data referensi unit usaha. Data ini akan
-              digunakan oleh transaksi pembelian, penjualan, persediaan,
-              kas-bank, jurnal, dan laporan.
+              Pusat pengelolaan data referensi unit usaha. Supplier dan customer
+              tersedia sebagai master data global untuk semua jenis unit,
+              sedangkan persediaan barang hanya ditampilkan untuk unit
+              perdagangan.
             </p>
           </div>
 
@@ -56,7 +104,7 @@ export default function UnitMasterDataPage() {
       </section>
 
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {masterDataMenus.map((menu) => {
+        {visibleMenus.map((menu) => {
           const Icon = menu.icon;
 
           return (
