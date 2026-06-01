@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- ORVIA-BUMDES DATABASE MIGRATION
 -- File    : 000003_auth_roles_permissions.sql
 -- Purpose : Permission tables, role-permission mapping foundation,

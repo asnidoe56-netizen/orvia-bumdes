@@ -1,4 +1,4 @@
-﻿-- =========================================================
+-- =========================================================
 -- Migration 000025: Registration & Assignment Governance Engine
 -- ORVIA-BUMDES / ERP BUMDes
 --

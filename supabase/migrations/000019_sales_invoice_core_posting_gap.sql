@@ -1,4 +1,4 @@
-﻿-- Migration 0000151: Sales Invoice Core Posting Gap
+-- Migration 0000151: Sales Invoice Core Posting Gap
 -- Purpose:
 --   Package legacy sales core posting RPCs and frontend audit view
 --   into numbered commercial migration order.

@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- ORVIA-BUMDES COMMERCIAL BASELINE MIGRATION
 -- 000013_inventory_adjustment_governance_engine.sql
 --

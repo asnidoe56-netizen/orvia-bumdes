@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- ORVIA-BUMDES DATABASE MIGRATION
 -- File    : 000004_unit_templates_registry.sql
 -- Purpose : Unit template seed, unit transaction feature registry,

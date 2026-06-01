@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- ORVIA-BUMDES DATABASE MIGRATION
 -- File    : 000002_core_identity_tenant_unit.sql
 -- Purpose : Core identity, tenant, unit, registration, and unit template baseline

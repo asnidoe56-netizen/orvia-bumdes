@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- ORVIA-BUMDES COMMERCIAL BASELINE MIGRATION
 -- 000011_supplier_customer_master_engine.sql
 --

@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- ORVIA-BUMDES DATABASE MIGRATION
 -- File    : 000001_extensions_enums.sql
 -- Purpose : Extensions and enum types baseline

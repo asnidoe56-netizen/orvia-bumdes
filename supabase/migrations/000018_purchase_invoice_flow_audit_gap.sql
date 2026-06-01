@@ -1,4 +1,4 @@
-﻿-- Migration 0000142: Purchase Invoice Flow Audit Gap
+-- Migration 0000142: Purchase Invoice Flow Audit Gap
 -- Purpose:
 --   Package legacy frontend audit view v_purchase_invoice_flow_audit
 --   into numbered commercial migration order.

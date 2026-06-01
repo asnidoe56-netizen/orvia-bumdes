@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- ORVIA-BUMDES COMMERCIAL BASELINE MIGRATION
 -- 000006_accounting_period_journal_engine.sql
 --

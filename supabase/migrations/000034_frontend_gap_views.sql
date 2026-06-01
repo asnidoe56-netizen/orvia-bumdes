@@ -1,4 +1,4 @@
-﻿-- Migration 000029: Frontend Gap Views
+-- Migration 000029: Frontend Gap Views
 -- Source: audited Lovable reverse-engineering draft
 -- Purpose: package read-only reporting/compatibility views referenced by frontend but missing from official migrations.
 -- Scope: 14 frontend gap views only. No functions, no RLS policies, no broad reverse dump.

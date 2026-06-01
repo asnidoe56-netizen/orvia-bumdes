@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- 000027_savings_loan_engine.sql
 -- ORVIA-BUMDES Commercial Baseline Migration
 -- Savings Loan / Simpan Pinjam Engine

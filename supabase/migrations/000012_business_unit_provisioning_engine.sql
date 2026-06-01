@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- ORVIA-BUMDES COMMERCIAL BASELINE MIGRATION
 -- 000010_business_unit_provisioning_engine.sql
 --
