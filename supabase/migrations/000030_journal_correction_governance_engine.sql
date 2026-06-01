@@ -1258,17 +1258,18 @@ execute function public.prevent_final_journal_correction_mutation();
 -- Permissions
 -- =========================================================
 
-insert into public.permissions (code, name, description)
+insert into public.permissions (code, name, module, description)
 values
-  ('journal_correction.create', 'Create journal correction', 'Create draft journal correction'),
-  ('journal_correction.request', 'Request journal correction approval', 'Submit journal correction for approval'),
-  ('journal_correction.approve', 'Approve journal correction', 'Approve journal correction as pengawas'),
-  ('journal_correction.reject', 'Reject journal correction', 'Reject journal correction as pengawas'),
-  ('journal_correction.post', 'Post journal correction', 'Post approved journal correction'),
-  ('journal_correction.view', 'View journal correction', 'View journal correction workflow and audit')
+  ('journal_correction.create', 'Create journal correction', 'journal_correction', 'Create draft journal correction'),
+  ('journal_correction.request', 'Request journal correction approval', 'journal_correction', 'Submit journal correction for approval'),
+  ('journal_correction.approve', 'Approve journal correction', 'journal_correction', 'Approve journal correction as pengawas'),
+  ('journal_correction.reject', 'Reject journal correction', 'journal_correction', 'Reject journal correction as pengawas'),
+  ('journal_correction.post', 'Post journal correction', 'journal_correction', 'Post approved journal correction'),
+  ('journal_correction.view', 'View journal correction', 'journal_correction', 'View journal correction workflow and audit')
 on conflict (code) do update
 set
   name = excluded.name,
+  module = excluded.module,
   description = excluded.description;
 
 insert into public.role_permissions (permission_id, role)

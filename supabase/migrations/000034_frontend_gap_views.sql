@@ -592,40 +592,40 @@ CREATE OR REPLACE VIEW public.v_unit_financial_health_scoring AS
  WITH laba_rugi_yearly AS (
          SELECT v_laba_rugi_summary.tenant_id,
             v_laba_rugi_summary.unit_id,
-            v_laba_rugi_summary.period_year AS report_year,
+            v_laba_rugi_summary.periode_tahun AS report_year,
             sum(COALESCE(v_laba_rugi_summary.total_pendapatan, 0::numeric)) AS total_pendapatan,
             sum(COALESCE(v_laba_rugi_summary.total_hpp, 0::numeric)) AS total_hpp,
             sum(COALESCE(v_laba_rugi_summary.laba_kotor, 0::numeric)) AS laba_kotor,
             sum(COALESCE(v_laba_rugi_summary.total_beban, 0::numeric)) AS total_beban,
-            sum(COALESCE(v_laba_rugi_summary.laba_rugi_bersih, 0::numeric)) AS laba_rugi_bersih
+            sum(COALESCE(v_laba_rugi_summary.laba_bersih, 0::numeric)) AS laba_bersih
            FROM v_laba_rugi_summary
-          GROUP BY v_laba_rugi_summary.tenant_id, v_laba_rugi_summary.unit_id, v_laba_rugi_summary.period_year
+          GROUP BY v_laba_rugi_summary.tenant_id, v_laba_rugi_summary.unit_id, v_laba_rugi_summary.periode_tahun
         ), neraca_detail_grouped AS (
          SELECT v_neraca_detail.tenant_id,
             v_neraca_detail.unit_id,
             sum(
                 CASE
-                    WHEN v_neraca_detail.account_code = ANY (ARRAY['1110'::text, '1111'::text, '1120'::text]) THEN COALESCE(v_neraca_detail.neraca_amount, 0::numeric)
+                    WHEN v_neraca_detail.kode = ANY (ARRAY['1110'::text, '1111'::text, '1120'::text]) THEN COALESCE(v_neraca_detail.amount, 0::numeric)
                     ELSE 0::numeric
                 END) AS kas_setara_kas,
             sum(
                 CASE
-                    WHEN v_neraca_detail.account_code = '1130'::text THEN COALESCE(v_neraca_detail.neraca_amount, 0::numeric)
+                    WHEN v_neraca_detail.kode = '1130'::text THEN COALESCE(v_neraca_detail.amount, 0::numeric)
                     ELSE 0::numeric
                 END) AS piutang_usaha,
             sum(
                 CASE
-                    WHEN v_neraca_detail.account_code = '1300'::text THEN COALESCE(v_neraca_detail.neraca_amount, 0::numeric)
+                    WHEN v_neraca_detail.kode = '1300'::text THEN COALESCE(v_neraca_detail.amount, 0::numeric)
                     ELSE 0::numeric
                 END) AS persediaan,
             sum(
                 CASE
-                    WHEN v_neraca_detail.account_code = ANY (ARRAY['1110'::text, '1111'::text, '1120'::text, '1130'::text, '1300'::text]) THEN COALESCE(v_neraca_detail.neraca_amount, 0::numeric)
+                    WHEN v_neraca_detail.kode = ANY (ARRAY['1110'::text, '1111'::text, '1120'::text, '1130'::text, '1300'::text]) THEN COALESCE(v_neraca_detail.amount, 0::numeric)
                     ELSE 0::numeric
                 END) AS aset_lancar,
             sum(
                 CASE
-                    WHEN v_neraca_detail.account_code ~~ '21%'::text THEN COALESCE(v_neraca_detail.neraca_amount, 0::numeric)
+                    WHEN v_neraca_detail.kode ~~ '21%'::text THEN COALESCE(v_neraca_detail.amount, 0::numeric)
                     ELSE 0::numeric
                 END) AS kewajiban_lancar
            FROM v_neraca_detail
@@ -652,12 +652,12 @@ CREATE OR REPLACE VIEW public.v_unit_financial_health_scoring AS
             lr.total_hpp,
             lr.laba_kotor,
             lr.total_beban,
-            lr.laba_rugi_bersih,
+            lr.laba_bersih,
             ns.total_aset,
             ns.total_kewajiban,
             ns.total_ekuitas,
             ns.selisih_neraca,
-            ns.status_neraca,
+            ns.audit_result AS status_neraca,
             COALESCE(nd.kas_setara_kas, 0::numeric) AS kas_setara_kas,
             COALESCE(nd.piutang_usaha, 0::numeric) AS piutang_usaha,
             COALESCE(nd.persediaan, 0::numeric) AS persediaan,
@@ -666,11 +666,11 @@ CREATE OR REPLACE VIEW public.v_unit_financial_health_scoring AS
             COALESCE(cs.total_penjualan_kredit, 0::numeric) AS total_penjualan_kredit,
                 CASE
                     WHEN COALESCE(ns.total_ekuitas, 0::numeric) = 0::numeric THEN NULL::numeric
-                    ELSE round(lr.laba_rugi_bersih / ns.total_ekuitas * 100::numeric, 2)
+                    ELSE round(lr.laba_bersih / ns.total_ekuitas * 100::numeric, 2)
                 END AS roe_percent,
                 CASE
                     WHEN COALESCE(ns.total_aset, 0::numeric) = 0::numeric THEN NULL::numeric
-                    ELSE round(lr.laba_rugi_bersih / ns.total_aset * 100::numeric, 2)
+                    ELSE round(lr.laba_bersih / ns.total_aset * 100::numeric, 2)
                 END AS roi_percent,
                 CASE
                     WHEN COALESCE(nd.kewajiban_lancar, 0::numeric) = 0::numeric THEN NULL::numeric
@@ -717,7 +717,7 @@ CREATE OR REPLACE VIEW public.v_unit_financial_health_scoring AS
             b.total_hpp,
             b.laba_kotor,
             b.total_beban,
-            b.laba_rugi_bersih,
+            b.laba_bersih,
             b.total_aset,
             b.total_kewajiban,
             b.total_ekuitas,
@@ -825,7 +825,7 @@ CREATE OR REPLACE VIEW public.v_unit_financial_health_scoring AS
     total_hpp,
     laba_kotor,
     total_beban,
-    laba_rugi_bersih,
+    laba_bersih,
     total_aset,
     total_kewajiban,
     total_ekuitas,
@@ -898,7 +898,7 @@ CREATE OR REPLACE VIEW public.v_bupati_dashboard_summary AS
             h.total_hpp,
             h.laba_kotor,
             h.total_beban,
-            h.laba_rugi_bersih,
+            h.laba_bersih,
             h.total_aset,
             h.total_kewajiban,
             h.total_ekuitas,
@@ -954,7 +954,7 @@ CREATE OR REPLACE VIEW public.v_bupati_dashboard_summary AS
             COALESCE(sum(hb.total_hpp), 0::numeric) AS total_hpp,
             COALESCE(sum(hb.laba_kotor), 0::numeric) AS laba_kotor,
             COALESCE(sum(hb.total_beban), 0::numeric) AS total_beban,
-            COALESCE(sum(hb.laba_rugi_bersih), 0::numeric) AS laba_rugi_bersih,
+            COALESCE(sum(hb.laba_bersih), 0::numeric) AS laba_bersih,
             COALESCE(sum(hb.total_aset), 0::numeric) AS total_aset,
             COALESCE(sum(hb.total_kewajiban), 0::numeric) AS total_kewajiban,
             COALESCE(sum(hb.total_ekuitas), 0::numeric) AS total_ekuitas,
@@ -976,7 +976,7 @@ CREATE OR REPLACE VIEW public.v_bupati_dashboard_summary AS
     fs.total_hpp,
     fs.laba_kotor,
     fs.total_beban,
-    fs.laba_rugi_bersih,
+    fs.laba_bersih,
     fs.skor_kesehatan_rata_rata,
     fs.skor_maksimal_rata_rata,
     fs.total_sehat,
@@ -992,7 +992,7 @@ CREATE OR REPLACE VIEW public.v_bupati_dashboard_summary AS
             ELSE 0::numeric
         END AS aset_terhadap_dana_tersalur_percent,
         CASE
-            WHEN cs.total_dana_tersalur > 0::numeric THEN round(fs.laba_rugi_bersih / cs.total_dana_tersalur * 100::numeric, 2)
+            WHEN cs.total_dana_tersalur > 0::numeric THEN round(fs.laba_bersih / cs.total_dana_tersalur * 100::numeric, 2)
             ELSE 0::numeric
         END AS produktivitas_dana_percent
    FROM latest_year y
@@ -1024,7 +1024,7 @@ CREATE OR REPLACE VIEW public.v_bupati_kecamatan_performance AS
             h.total_hpp,
             h.laba_kotor,
             h.total_beban,
-            h.laba_rugi_bersih,
+            h.laba_bersih,
             h.total_aset,
             h.total_kewajiban,
             h.total_ekuitas,
@@ -1081,7 +1081,7 @@ CREATE OR REPLACE VIEW public.v_bupati_kecamatan_performance AS
     count(DISTINCT b.tenant_id)::integer AS total_bumdes,
     count(DISTINCT b.unit_id)::integer AS total_unit,
     COALESCE(sum(b.total_pendapatan), 0::numeric) AS total_pendapatan,
-    COALESCE(sum(b.laba_rugi_bersih), 0::numeric) AS laba_rugi_bersih,
+    COALESCE(sum(b.laba_bersih), 0::numeric) AS laba_bersih,
     COALESCE(sum(b.total_aset), 0::numeric) AS total_aset,
     COALESCE(avg(b.dashboard_health_score), 0::numeric) AS skor_rata_rata,
     COALESCE(avg(b.dashboard_max_score), 100::numeric) AS skor_maksimal_rata_rata,
@@ -1118,7 +1118,7 @@ CREATE OR REPLACE VIEW public.v_bupati_bumdes_priority_attention AS
             h.total_hpp,
             h.laba_kotor,
             h.total_beban,
-            h.laba_rugi_bersih,
+            h.laba_bersih,
             h.total_aset,
             h.total_kewajiban,
             h.total_ekuitas,
@@ -1174,7 +1174,7 @@ CREATE OR REPLACE VIEW public.v_bupati_bumdes_priority_attention AS
     nama_unit,
     report_year,
     total_pendapatan,
-    laba_rugi_bersih,
+    laba_bersih,
     total_aset,
     kas_setara_kas,
     piutang_usaha,
@@ -1189,7 +1189,7 @@ CREATE OR REPLACE VIEW public.v_bupati_bumdes_priority_attention AS
     accounting_consistency_status,
     concat_ws(', '::text,
         CASE
-            WHEN COALESCE(laba_rugi_bersih, 0::numeric) < 0::numeric THEN 'rugi bersih'::text
+            WHEN COALESCE(laba_bersih, 0::numeric) < 0::numeric THEN 'rugi bersih'::text
             ELSE NULL::text
         END,
         CASE
@@ -1217,8 +1217,8 @@ CREATE OR REPLACE VIEW public.v_bupati_bumdes_priority_attention AS
             ELSE NULL::text
         END) AS masalah_utama
    FROM base b
-  WHERE dashboard_health_status ~~* '%KURANG%'::text OR dashboard_health_status ~~* '%TIDAK%'::text OR COALESCE(laba_rugi_bersih, 0::numeric) < 0::numeric OR COALESCE(kas_setara_kas, 0::numeric) <= 0::numeric OR COALESCE(roe_percent, 0::numeric) < 0::numeric OR COALESCE(accounting_consistency_status, ''::text) !~~* '%PASS%'::text
-  ORDER BY dashboard_health_score, laba_rugi_bersih;
+  WHERE dashboard_health_status ~~* '%KURANG%'::text OR dashboard_health_status ~~* '%TIDAK%'::text OR COALESCE(laba_bersih, 0::numeric) < 0::numeric OR COALESCE(kas_setara_kas, 0::numeric) <= 0::numeric OR COALESCE(roe_percent, 0::numeric) < 0::numeric OR COALESCE(accounting_consistency_status, ''::text) !~~* '%PASS%'::text
+  ORDER BY dashboard_health_score, laba_bersih;
 
 -- ---------- v_bupati_dashboard_summary ----------
 
@@ -1245,7 +1245,7 @@ CREATE OR REPLACE VIEW public.v_bupati_top_performing_bumdes AS
             h.total_hpp,
             h.laba_kotor,
             h.total_beban,
-            h.laba_rugi_bersih,
+            h.laba_bersih,
             h.total_aset,
             h.total_kewajiban,
             h.total_ekuitas,
@@ -1301,7 +1301,7 @@ CREATE OR REPLACE VIEW public.v_bupati_top_performing_bumdes AS
     nama_unit,
     report_year,
     total_pendapatan,
-    laba_rugi_bersih,
+    laba_bersih,
     total_aset,
     roe_percent,
     roi_percent,
@@ -1310,8 +1310,8 @@ CREATE OR REPLACE VIEW public.v_bupati_top_performing_bumdes AS
     dashboard_health_status,
     accounting_consistency_status
    FROM base b
-  WHERE COALESCE(laba_rugi_bersih, 0::numeric) > 0::numeric AND COALESCE(total_aset, 0::numeric) > 0::numeric
-  ORDER BY dashboard_health_score DESC, laba_rugi_bersih DESC, total_pendapatan DESC;
+  WHERE COALESCE(laba_bersih, 0::numeric) > 0::numeric AND COALESCE(total_aset, 0::numeric) > 0::numeric
+  ORDER BY dashboard_health_score DESC, laba_bersih DESC, total_pendapatan DESC;
 
 -- ---------- v_business_plan_budget_lines ----------
 

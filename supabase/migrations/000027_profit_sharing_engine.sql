@@ -2441,7 +2441,7 @@ select
   scheme_code,
   scheme_name,
 
-  max(allocation_journal_entry_id) as allocation_journal_entry_id,
+  (min(allocation_journal_entry_id::text))::uuid as allocation_journal_entry_id,
   max(allocation_journal_no) as allocation_journal_no,
   max(allocation_journal_status) as allocation_journal_status,
 

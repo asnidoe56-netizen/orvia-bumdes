@@ -92,7 +92,7 @@ create table if not exists public.pendamping_kecamatan_assignments (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint pendamping_kecamatan_assignments_nama_kecamatan_check check ((nullif(trim(both from nama_kecamatan), ''::text) is not null)),
-  constraint pendamping_kecamatan_assignments_status_check check ((status = any (array['active'::text, 'inactive'::text, 'revoked'::text))),
+  constraint pendamping_kecamatan_assignments_status_check check (status in ('active', 'inactive', 'revoked')),
   constraint pendamping_kecamatan_assignments_unique unique (user_id, nama_kecamatan)
 );
 

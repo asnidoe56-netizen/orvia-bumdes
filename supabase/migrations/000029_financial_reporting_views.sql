@@ -40,7 +40,7 @@ with posted_lines as (
   select
     je.tenant_id,
     je.unit_id,
-    je.accounting_period_id,
+    je.period_id as accounting_period_id,
     ap.period_year,
     ap.period_month,
     jl.account_id,
@@ -57,7 +57,7 @@ with posted_lines as (
   join public.chart_of_accounts coa
     on coa.id = jl.account_id
   left join public.accounting_periods ap
-    on ap.id = je.accounting_period_id
+    on ap.id = je.period_id
   where je.status::text = 'posted'
     and (
       coa.tipe::text in ('pendapatan', 'beban')
@@ -190,7 +190,7 @@ with posted_lines as (
   select
     je.tenant_id,
     je.unit_id,
-    je.accounting_period_id,
+    je.period_id as accounting_period_id,
     ap.period_year,
     ap.period_month,
     jl.account_id,
@@ -207,7 +207,7 @@ with posted_lines as (
   join public.chart_of_accounts coa
     on coa.id = jl.account_id
   left join public.accounting_periods ap
-    on ap.id = je.accounting_period_id
+    on ap.id = je.period_id
   where je.status::text = 'posted'
     and (
       coa.tipe::text in ('aset', 'kewajiban', 'ekuitas')
@@ -343,18 +343,15 @@ select
   ap.period_year as periode_tahun,
   ap.period_month as periode_bulan,
   cbt.cash_bank_account_id,
-  cba.name as cash_bank_account_name,
-  cba.account_type::text as cash_bank_account_type,
+  cba.account_name as cash_bank_account_name,
+  cba.account_kind::text as cash_bank_account_type,
   cbt.transaction_type::text as transaction_type,
-  cbt.direction::text as direction,
   cbt.source_type::text as source_type,
   count(*)::bigint as transaction_count,
   coalesce(
     sum(
       case
-        when lower(cbt.direction::text) in ('in', 'masuk', 'receipt', 'debit')
-          then cbt.amount
-        when lower(cbt.transaction_type::text) in ('receipt', 'income', 'opening_balance', 'transfer_in')
+        when lower(cbt.transaction_type::text) in ('receipt', 'opening_balance', 'transfer_in', 'adjustment_in')
           then cbt.amount
         else 0
       end
@@ -364,9 +361,7 @@ select
   coalesce(
     sum(
       case
-        when lower(cbt.direction::text) in ('out', 'keluar', 'payment', 'credit')
-          then cbt.amount
-        when lower(cbt.transaction_type::text) in ('payment', 'expense', 'transfer_out')
+        when lower(cbt.transaction_type::text) in ('payment', 'transfer_out', 'adjustment_out')
           then cbt.amount
         else 0
       end
@@ -377,9 +372,7 @@ select
     coalesce(
       sum(
         case
-          when lower(cbt.direction::text) in ('in', 'masuk', 'receipt', 'debit')
-            then cbt.amount
-          when lower(cbt.transaction_type::text) in ('receipt', 'income', 'opening_balance', 'transfer_in')
+          when lower(cbt.transaction_type::text) in ('receipt', 'opening_balance', 'transfer_in', 'adjustment_in')
             then cbt.amount
           else 0
         end
@@ -390,9 +383,7 @@ select
     coalesce(
       sum(
         case
-          when lower(cbt.direction::text) in ('out', 'keluar', 'payment', 'credit')
-            then cbt.amount
-          when lower(cbt.transaction_type::text) in ('payment', 'expense', 'transfer_out')
+          when lower(cbt.transaction_type::text) in ('payment', 'transfer_out', 'adjustment_out')
             then cbt.amount
           else 0
         end
@@ -416,10 +407,9 @@ group by
   ap.period_year,
   ap.period_month,
   cbt.cash_bank_account_id,
-  cba.name,
-  cba.account_type::text,
+  cba.account_name,
+  cba.account_kind::text,
   cbt.transaction_type::text,
-  cbt.direction::text,
   cbt.source_type::text;
 
 -- =========================================================
@@ -440,19 +430,15 @@ select
   coa.tipe::text as tipe,
   coa.account_type::text as account_type,
   em.movement_type::text as movement_type,
-  em.source_type::text as source_type,
+  null::text as source_type,
   count(*)::bigint as movement_count,
   coalesce(
     sum(
       case
         when lower(em.movement_type::text) in (
-          'capital_in',
-          'increase',
-          'surplus',
-          'profit_allocation',
-          'retained_earning',
-          'reserve_in',
-          'cadangan_in'
+          'capital_injection',
+          'surplus_allocation',
+          'opening_balance'
         )
         then em.amount
         else 0
@@ -464,13 +450,8 @@ select
     sum(
       case
         when lower(em.movement_type::text) in (
-          'capital_out',
-          'decrease',
-          'withdrawal',
-          'deficit',
-          'distribution',
-          'reserve_out',
-          'cadangan_out'
+          'capital_withdrawal',
+          'deficit_allocation'
         )
         then em.amount
         else 0
@@ -483,13 +464,9 @@ select
       sum(
         case
           when lower(em.movement_type::text) in (
-            'capital_in',
-            'increase',
-            'surplus',
-            'profit_allocation',
-            'retained_earning',
-            'reserve_in',
-            'cadangan_in'
+            'capital_injection',
+            'surplus_allocation',
+            'opening_balance'
           )
           then em.amount
           else 0
@@ -502,13 +479,8 @@ select
       sum(
         case
           when lower(em.movement_type::text) in (
-            'capital_out',
-            'decrease',
-            'withdrawal',
-            'deficit',
-            'distribution',
-            'reserve_out',
-            'cadangan_out'
+            'capital_withdrawal',
+            'deficit_allocation'
           )
           then em.amount
           else 0
@@ -540,8 +512,7 @@ group by
   coa.nama,
   coa.tipe::text,
   coa.account_type::text,
-  em.movement_type::text,
-  em.source_type::text;
+  em.movement_type::text;
 
 -- =========================================================
 -- FINANCIAL DASHBOARD SUMMARY
@@ -552,55 +523,47 @@ with laba_rugi_base as (
   select
     tenant_id,
     unit_id,
-    period_id as accounting_period_id,
-    period_year as report_year,
-    period_month as report_month,
+    accounting_period_id,
+    periode_tahun as report_year,
+    periode_bulan as report_month,
     total_pendapatan,
     total_hpp,
     laba_kotor,
     total_beban,
-    laba_rugi_bersih
+    laba_bersih
   from public.v_laba_rugi_summary
 ),
 cash_summary as (
   select
     tenant_id,
     unit_id,
-    report_year,
-    report_month,
-    sum(cash_in_amount)::numeric as total_cash_in,
-    sum(cash_out_amount)::numeric as total_cash_out,
-    sum(cash_effect_amount)::numeric as net_cash_flow
+    periode_tahun as report_year,
+    periode_bulan as report_month,
+    sum(cash_in)::numeric as total_cash_in,
+    sum(cash_out)::numeric as total_cash_out,
+    sum(net_cash_flow)::numeric as net_cash_flow
   from public.v_cash_flow_statement
   group by
     tenant_id,
     unit_id,
-    report_year,
-    report_month
+    periode_tahun,
+    periode_bulan
 ),
 equity_summary as (
   select
     tenant_id,
     unit_id,
-    report_year,
-    sum(
-      case
-        when equity_effect_amount >= 0 then equity_effect_amount
-        else 0
-      end
-    )::numeric as total_equity_increase,
-    sum(
-      case
-        when equity_effect_amount < 0 then abs(equity_effect_amount)
-        else 0
-      end
-    )::numeric as total_equity_decrease,
-    sum(equity_effect_amount)::numeric as net_equity_change
+    periode_tahun as report_year,
+    periode_bulan as report_month,
+    sum(equity_increase)::numeric as total_equity_increase,
+    sum(equity_decrease)::numeric as total_equity_decrease,
+    sum(net_equity_change)::numeric as net_equity_change
   from public.v_statement_of_changes_in_equity
   group by
     tenant_id,
     unit_id,
-    report_year
+    periode_tahun,
+    periode_bulan
 ),
 report_keys as (
   select
@@ -628,7 +591,7 @@ report_keys as (
     unit_id,
     null::uuid as accounting_period_id,
     report_year,
-    null::integer as report_month
+    report_month
   from equity_summary
 
   union
@@ -636,9 +599,9 @@ report_keys as (
   select
     tenant_id,
     unit_id,
-    null::uuid as accounting_period_id,
-    null::integer as report_year,
-    null::integer as report_month
+    accounting_period_id,
+    periode_tahun as report_year,
+    periode_bulan as report_month
   from public.v_neraca_summary
 )
 select
@@ -652,14 +615,14 @@ select
   coalesce(lr.total_hpp, 0)::numeric as total_hpp,
   coalesce(lr.laba_kotor, 0)::numeric as laba_kotor,
   coalesce(lr.total_beban, 0)::numeric as total_beban,
-  coalesce(lr.laba_rugi_bersih, 0)::numeric as laba_rugi_bersih,
+  coalesce(lr.laba_bersih, 0)::numeric as laba_bersih,
 
   coalesce(ns.total_aset, 0)::numeric as total_aset,
   coalesce(ns.total_kewajiban, 0)::numeric as total_kewajiban,
   coalesce(ns.total_ekuitas, 0)::numeric as total_ekuitas,
-  coalesce(ns.total_kewajiban_ekuitas, 0)::numeric as total_kewajiban_ekuitas,
+  (coalesce(ns.total_kewajiban, 0) + coalesce(ns.total_ekuitas, 0))::numeric as total_kewajiban_ekuitas,
   coalesce(ns.selisih_neraca, 0)::numeric as selisih_neraca,
-  coalesce(ns.status_neraca, 'NO_BALANCE_DATA')::text as status_neraca,
+  coalesce(ns.audit_result, 'NO_BALANCE_DATA')::text as status_neraca,
 
   coalesce(cs.total_cash_in, 0)::numeric as total_cash_in,
   coalesce(cs.total_cash_out, 0)::numeric as total_cash_out,
@@ -670,9 +633,9 @@ select
   coalesce(es.net_equity_change, 0)::numeric as net_equity_change,
 
   case
-    when coalesce(ns.status_neraca, 'NO_BALANCE_DATA') in ('BALANCED', 'SEIMBANG', 'PASS')
+    when coalesce(ns.audit_result, 'NO_BALANCE_DATA') in ('BALANCED', 'SEIMBANG', 'PASS')
       then 'PASS'
-    when ns.status_neraca is null
+    when ns.audit_result is null
       then 'NO_BALANCE_DATA'
     else 'CHECK_BALANCE'
   end as audit_result
@@ -686,6 +649,9 @@ left join laba_rugi_base lr
 left join public.v_neraca_summary ns
   on ns.tenant_id = rk.tenant_id
  and ns.unit_id = rk.unit_id
+ and ns.accounting_period_id is not distinct from rk.accounting_period_id
+ and ns.periode_tahun is not distinct from rk.report_year
+ and ns.periode_bulan is not distinct from rk.report_month
 left join cash_summary cs
   on cs.tenant_id = rk.tenant_id
  and cs.unit_id = rk.unit_id
@@ -694,7 +660,8 @@ left join cash_summary cs
 left join equity_summary es
   on es.tenant_id = rk.tenant_id
  and es.unit_id = rk.unit_id
- and es.report_year is not distinct from rk.report_year;
+ and es.report_year is not distinct from rk.report_year
+ and es.report_month is not distinct from rk.report_month;
 -- =========================================================
 -- Grants
 -- =========================================================

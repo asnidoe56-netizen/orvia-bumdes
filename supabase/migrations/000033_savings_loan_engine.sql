@@ -2462,11 +2462,7 @@ begin
   from public.get_user_login_context(auth.uid())
   limit 1;
 
-  perform public.assert_user_has_permission(
-    auth.uid(),
-    'savings_loan.application.verify',
-    v_context.tenant_id,
-    v_context.unit_id
+  perform public.assert_user_has_permission('savings_loan.application.verify', auth.uid(), v_context.tenant_id, v_context.unit_id
   );
 
   select *
@@ -2514,12 +2510,14 @@ begin
   insert into public.audit_timeline (
     tenant_id,
     unit_id,
-    actor_user_id,
+    actor_id,
     actor_role,
     event_type,
-    event_label,
-    source_table,
+    entity_type,
+    entity_id,
+    source_type,
     source_id,
+    description,
     metadata
   )
   values (
@@ -2528,9 +2526,11 @@ begin
     auth.uid(),
     v_context.role,
     'savings_loan_application.verified',
-    'Pengajuan pinjaman diverifikasi',
     'savings_loan_applications',
     p_application_id,
+    'savings_loan_application',
+    p_application_id,
+    'Pengajuan pinjaman diverifikasi',
     jsonb_build_object(
       'previous_status', v_application.status,
       'new_status', 'approved',
@@ -2584,11 +2584,7 @@ begin
   from public.get_user_login_context(auth.uid())
   limit 1;
 
-  perform public.assert_user_has_permission(
-    auth.uid(),
-    'savings_loan.application.request_correction',
-    v_context.tenant_id,
-    v_context.unit_id
+  perform public.assert_user_has_permission('savings_loan.application.request_correction', auth.uid(), v_context.tenant_id, v_context.unit_id
   );
 
   select *
@@ -2635,12 +2631,14 @@ begin
   insert into public.audit_timeline (
     tenant_id,
     unit_id,
-    actor_user_id,
+    actor_id,
     actor_role,
     event_type,
-    event_label,
-    source_table,
+    entity_type,
+    entity_id,
+    source_type,
     source_id,
+    description,
     metadata
   )
   values (
@@ -2649,9 +2647,11 @@ begin
     auth.uid(),
     v_context.role,
     'savings_loan_application.needs_correction',
-    'Pengajuan pinjaman perlu perbaikan',
     'savings_loan_applications',
     p_application_id,
+    'savings_loan_application',
+    p_application_id,
+    'Pengajuan pinjaman perlu perbaikan',
     jsonb_build_object(
       'previous_status', v_application.status,
       'new_status', 'under_review',
@@ -2705,11 +2705,7 @@ begin
   from public.get_user_login_context(auth.uid())
   limit 1;
 
-  perform public.assert_user_has_permission(
-    auth.uid(),
-    'savings_loan.application.reject',
-    v_context.tenant_id,
-    v_context.unit_id
+  perform public.assert_user_has_permission('savings_loan.application.reject', auth.uid(), v_context.tenant_id, v_context.unit_id
   );
 
   select *
@@ -2758,12 +2754,14 @@ begin
   insert into public.audit_timeline (
     tenant_id,
     unit_id,
-    actor_user_id,
+    actor_id,
     actor_role,
     event_type,
-    event_label,
-    source_table,
+    entity_type,
+    entity_id,
+    source_type,
     source_id,
+    description,
     metadata
   )
   values (
@@ -2772,9 +2770,11 @@ begin
     auth.uid(),
     v_context.role,
     'savings_loan_application.rejected',
-    'Pengajuan pinjaman ditolak',
     'savings_loan_applications',
     p_application_id,
+    'savings_loan_application',
+    p_application_id,
+    'Pengajuan pinjaman ditolak',
     jsonb_build_object(
       'previous_status', v_application.status,
       'new_status', 'rejected',
@@ -2840,11 +2840,7 @@ begin
   from public.get_user_login_context(auth.uid())
   limit 1;
 
-  perform public.assert_user_has_permission(
-    auth.uid(),
-    'savings_loan.disbursement.create',
-    v_context.tenant_id,
-    v_context.unit_id
+  perform public.assert_user_has_permission('savings_loan.disbursement.create', auth.uid(), v_context.tenant_id, v_context.unit_id
   );
 
   select *
@@ -2961,8 +2957,8 @@ begin
     tenant_id,
     unit_id,
     period_id,
-    entry_no,
-    entry_date,
+    journal_no,
+    journal_date,
     description,
     source_type,
     source_id,
@@ -2989,6 +2985,7 @@ begin
 
   insert into public.journal_lines (
     journal_entry_id,
+    line_no,
     account_id,
     debit,
     credit,
@@ -2997,6 +2994,7 @@ begin
   values
     (
       v_journal_id,
+      1,
       v_receivable_account_id,
       v_application.requested_amount,
       0,
@@ -3004,6 +3002,7 @@ begin
     ),
     (
       v_journal_id,
+      2,
       v_cash_account_id,
       0,
       v_application.requested_amount,
@@ -3062,12 +3061,14 @@ begin
   insert into public.audit_timeline (
     tenant_id,
     unit_id,
-    actor_user_id,
+    actor_id,
     actor_role,
     event_type,
-    event_label,
-    source_table,
+    entity_type,
+    entity_id,
+    source_type,
     source_id,
+    description,
     metadata
   )
   values (
@@ -3076,9 +3077,11 @@ begin
     auth.uid(),
     v_context.role,
     'savings_loan_disbursement.posted',
-    'Pencairan pinjaman diposting',
     'savings_loan_disbursements',
     v_disbursement_id,
+    'savings_loan_disbursement',
+    v_disbursement_id,
+    'Pencairan pinjaman diposting',
     jsonb_build_object(
       'application_id', p_application_id,
       'disbursement_no', upper(trim(p_disbursement_no)),
@@ -3163,11 +3166,7 @@ begin
   from public.get_user_login_context(auth.uid())
   limit 1;
 
-  perform public.assert_user_has_permission(
-    auth.uid(),
-    'savings_loan.repayment.create',
-    v_context.tenant_id,
-    v_context.unit_id
+  perform public.assert_user_has_permission('savings_loan.repayment.create', auth.uid(), v_context.tenant_id, v_context.unit_id
   );
 
   select *
@@ -3373,8 +3372,8 @@ begin
     tenant_id,
     unit_id,
     period_id,
-    entry_no,
-    entry_date,
+    journal_no,
+    journal_date,
     description,
     source_type,
     source_id,
@@ -3401,6 +3400,7 @@ begin
 
   insert into public.journal_lines (
     journal_entry_id,
+    line_no,
     account_id,
     debit,
     credit,
@@ -3408,6 +3408,7 @@ begin
   )
   values (
     v_journal_id,
+    (select coalesce(max(line_no), 0) + 1 from public.journal_lines where journal_entry_id = v_journal_id),
     v_cash_account_id,
     v_total_amount,
     0,
@@ -3417,6 +3418,7 @@ begin
   if coalesce(p_principal_amount, 0) > 0 then
     insert into public.journal_lines (
       journal_entry_id,
+      line_no,
       account_id,
       debit,
       credit,
@@ -3424,6 +3426,7 @@ begin
     )
     values (
       v_journal_id,
+      (select coalesce(max(line_no), 0) + 1 from public.journal_lines where journal_entry_id = v_journal_id),
       v_receivable_account_id,
       0,
       coalesce(p_principal_amount, 0),
@@ -3434,6 +3437,7 @@ begin
   if coalesce(p_service_amount, 0) > 0 then
     insert into public.journal_lines (
       journal_entry_id,
+      line_no,
       account_id,
       debit,
       credit,
@@ -3441,6 +3445,7 @@ begin
     )
     values (
       v_journal_id,
+      (select coalesce(max(line_no), 0) + 1 from public.journal_lines where journal_entry_id = v_journal_id),
       v_service_income_account_id,
       0,
       coalesce(p_service_amount, 0),
@@ -3451,6 +3456,7 @@ begin
   if coalesce(p_admin_amount, 0) > 0 then
     insert into public.journal_lines (
       journal_entry_id,
+      line_no,
       account_id,
       debit,
       credit,
@@ -3458,6 +3464,7 @@ begin
     )
     values (
       v_journal_id,
+      (select coalesce(max(line_no), 0) + 1 from public.journal_lines where journal_entry_id = v_journal_id),
       v_admin_income_account_id,
       0,
       coalesce(p_admin_amount, 0),
@@ -3468,6 +3475,7 @@ begin
   if coalesce(p_penalty_amount, 0) > 0 then
     insert into public.journal_lines (
       journal_entry_id,
+      line_no,
       account_id,
       debit,
       credit,
@@ -3475,6 +3483,7 @@ begin
     )
     values (
       v_journal_id,
+      (select coalesce(max(line_no), 0) + 1 from public.journal_lines where journal_entry_id = v_journal_id),
       v_penalty_income_account_id,
       0,
       coalesce(p_penalty_amount, 0),
@@ -3541,12 +3550,14 @@ begin
   insert into public.audit_timeline (
     tenant_id,
     unit_id,
-    actor_user_id,
+    actor_id,
     actor_role,
     event_type,
-    event_label,
-    source_table,
+    entity_type,
+    entity_id,
+    source_type,
     source_id,
+    description,
     metadata
   )
   values (
@@ -3555,9 +3566,11 @@ begin
     auth.uid(),
     v_context.role,
     'savings_loan_repayment.posted',
-    'Angsuran pinjaman diposting',
     'savings_loan_repayments',
     v_repayment_id,
+    'savings_loan_repayment',
+    v_repayment_id,
+    'Angsuran pinjaman diposting',
     jsonb_build_object(
       'application_id', p_application_id,
       'repayment_no', upper(trim(p_repayment_no)),
@@ -3636,11 +3649,7 @@ begin
   from public.get_user_login_context(auth.uid())
   limit 1;
 
-  perform public.assert_user_has_permission(
-    auth.uid(),
-    'savings_loan.repayment.create',
-    v_context.tenant_id,
-    v_context.unit_id
+  perform public.assert_user_has_permission('savings_loan.repayment.create', auth.uid(), v_context.tenant_id, v_context.unit_id
   );
 
   select *
@@ -3830,11 +3839,7 @@ begin
   from public.get_user_login_context(auth.uid())
   limit 1;
 
-  perform public.assert_user_has_permission(
-    auth.uid(),
-    'savings_loan.repayment.create',
-    v_context.tenant_id,
-    v_context.unit_id
+  perform public.assert_user_has_permission('savings_loan.repayment.create', auth.uid(), v_context.tenant_id, v_context.unit_id
   );
 
   select *
@@ -4448,7 +4453,7 @@ select
   d.principal_amount,
   d.status as disbursement_status,
   d.journal_entry_id,
-  je.entry_no as journal_entry_no,
+  je.journal_no as journal_entry_no,
   d.cash_bank_transaction_id,
   cb.transaction_no as cash_bank_transaction_no,
   d.posted_at,
@@ -4606,7 +4611,7 @@ left join lateral (
 left join lateral (
   select count(at.id)::integer as audit_timeline_count
   from public.audit_timeline at
-  where at.source_table in ('savings_loan_repayments', 'savings_loan_disbursements')
+  where at.entity_type in ('savings_loan_repayments', 'savings_loan_disbursements')
     and (
       at.metadata ->> 'application_id' = a.id::text
       or at.source_id = d.id
@@ -4765,8 +4770,8 @@ on public.savings_loan_products
 for select
 to authenticated
 using (
-  public.has_permission(auth.uid(), 'savings_loan.application.view', tenant_id, unit_id)
-  or public.has_permission(auth.uid(), 'savings_loan.repayment.view', tenant_id, unit_id)
+  public.has_permission('savings_loan.application.view', auth.uid(), tenant_id, unit_id)
+  or public.has_permission('savings_loan.repayment.view', auth.uid(), tenant_id, unit_id)
 );
 
 drop policy if exists savings_loan_public_links_authenticated_manage
@@ -4777,11 +4782,11 @@ on public.savings_loan_public_application_links
 for all
 to authenticated
 using (
-  public.has_permission(auth.uid(), 'savings_loan.application.view', tenant_id, unit_id)
+  public.has_permission('savings_loan.application.view', auth.uid(), tenant_id, unit_id)
 )
 with check (
-  public.has_permission(auth.uid(), 'savings_loan.application.verify', tenant_id, unit_id)
-  or public.has_permission(auth.uid(), 'savings_loan.application.view', tenant_id, unit_id)
+  public.has_permission('savings_loan.application.verify', auth.uid(), tenant_id, unit_id)
+  or public.has_permission('savings_loan.application.view', auth.uid(), tenant_id, unit_id)
 );
 
 drop policy if exists savings_loan_public_submissions_authenticated_select
@@ -4792,7 +4797,7 @@ on public.savings_loan_public_application_submissions
 for select
 to authenticated
 using (
-  public.has_permission(auth.uid(), 'savings_loan.application.view', tenant_id, unit_id)
+  public.has_permission('savings_loan.application.view', auth.uid(), tenant_id, unit_id)
 );
 
 grant select on public.v_savings_loan_members to authenticated;
@@ -4886,7 +4891,7 @@ grant execute on function public.create_and_post_savings_loan_repayment(uuid, te
 grant execute on function public.generate_savings_loan_repayment_schedule(uuid, uuid, date) to authenticated;
 grant execute on function public.sync_savings_loan_repayment_schedule_payments(uuid) to authenticated;
 
-insert into public.permissions (permission_code, permission_name, module_name, description)
+insert into public.permissions (code, name, module, description)
 values
   ('savings_loan.application.view', 'Lihat Pengajuan Simpan Pinjam', 'savings_loan', 'Melihat data anggota, kelompok, dan pengajuan pinjaman.'),
   ('savings_loan.application.verify', 'Verifikasi Pengajuan Simpan Pinjam', 'savings_loan', 'Memverifikasi pengajuan pinjaman.'),
@@ -4896,45 +4901,49 @@ values
   ('savings_loan.disbursement.create', 'Posting Pencairan Pinjaman', 'savings_loan', 'Membuat dan memposting pencairan pinjaman.'),
   ('savings_loan.repayment.view', 'Lihat Angsuran Pinjaman', 'savings_loan', 'Melihat angsuran dan jadwal pinjaman.'),
   ('savings_loan.repayment.create', 'Posting Angsuran Pinjaman', 'savings_loan', 'Membuat jadwal dan memposting angsuran pinjaman.')
-on conflict (permission_code)
+on conflict (code)
 do update set
-  permission_name = excluded.permission_name,
-  module_name = excluded.module_name,
+  name = excluded.name,
+  module = excluded.module,
   description = excluded.description;
 
-insert into public.role_permissions (role, permission_code)
-values
-  ('super_admin_platform', 'savings_loan.application.view'),
-  ('direktur_bumdes', 'savings_loan.application.view'),
-  ('admin_bumdes', 'savings_loan.application.view'),
-  ('manager_unit', 'savings_loan.application.view'),
-  ('operator_unit', 'savings_loan.application.view'),
-  ('viewer_unit', 'savings_loan.application.view'),
+insert into public.role_permissions (permission_id, role)
+select p.id, x.role::public.app_role
+from public.permissions p
+join (
+  values
+    ('savings_loan.application.view', 'super_admin_platform'),
+    ('savings_loan.application.view', 'direktur_bumdes'),
+    ('savings_loan.application.view', 'admin_bumdes'),
+    ('savings_loan.application.view', 'manager_unit'),
+    ('savings_loan.application.view', 'operator_unit'),
+    ('savings_loan.application.view', 'viewer_unit'),
 
-  ('manager_unit', 'savings_loan.application.verify'),
-  ('operator_unit', 'savings_loan.application.verify'),
-  ('manager_unit', 'savings_loan.application.request_correction'),
-  ('operator_unit', 'savings_loan.application.request_correction'),
-  ('manager_unit', 'savings_loan.application.reject'),
-  ('operator_unit', 'savings_loan.application.reject'),
+    ('savings_loan.application.verify', 'manager_unit'),
+    ('savings_loan.application.verify', 'operator_unit'),
+    ('savings_loan.application.request_correction', 'manager_unit'),
+    ('savings_loan.application.request_correction', 'operator_unit'),
+    ('savings_loan.application.reject', 'manager_unit'),
+    ('savings_loan.application.reject', 'operator_unit'),
 
-  ('super_admin_platform', 'savings_loan.disbursement.view'),
-  ('direktur_bumdes', 'savings_loan.disbursement.view'),
-  ('admin_bumdes', 'savings_loan.disbursement.view'),
-  ('manager_unit', 'savings_loan.disbursement.view'),
-  ('operator_unit', 'savings_loan.disbursement.view'),
-  ('viewer_unit', 'savings_loan.disbursement.view'),
-  ('manager_unit', 'savings_loan.disbursement.create'),
-  ('operator_unit', 'savings_loan.disbursement.create'),
+    ('savings_loan.disbursement.view', 'super_admin_platform'),
+    ('savings_loan.disbursement.view', 'direktur_bumdes'),
+    ('savings_loan.disbursement.view', 'admin_bumdes'),
+    ('savings_loan.disbursement.view', 'manager_unit'),
+    ('savings_loan.disbursement.view', 'operator_unit'),
+    ('savings_loan.disbursement.view', 'viewer_unit'),
+    ('savings_loan.disbursement.create', 'manager_unit'),
+    ('savings_loan.disbursement.create', 'operator_unit'),
 
-  ('super_admin_platform', 'savings_loan.repayment.view'),
-  ('direktur_bumdes', 'savings_loan.repayment.view'),
-  ('admin_bumdes', 'savings_loan.repayment.view'),
-  ('manager_unit', 'savings_loan.repayment.view'),
-  ('operator_unit', 'savings_loan.repayment.view'),
-  ('viewer_unit', 'savings_loan.repayment.view'),
-  ('manager_unit', 'savings_loan.repayment.create'),
-  ('operator_unit', 'savings_loan.repayment.create')
-on conflict (role, permission_code)
-do nothing;
+    ('savings_loan.repayment.view', 'super_admin_platform'),
+    ('savings_loan.repayment.view', 'direktur_bumdes'),
+    ('savings_loan.repayment.view', 'admin_bumdes'),
+    ('savings_loan.repayment.view', 'manager_unit'),
+    ('savings_loan.repayment.view', 'operator_unit'),
+    ('savings_loan.repayment.view', 'viewer_unit'),
+    ('savings_loan.repayment.create', 'manager_unit'),
+    ('savings_loan.repayment.create', 'operator_unit')
+) as x(code, role)
+  on x.code = p.code
+on conflict do nothing;
 
