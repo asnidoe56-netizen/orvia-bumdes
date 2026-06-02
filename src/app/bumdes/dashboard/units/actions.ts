@@ -5,106 +5,52 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 
-function makeLoginCode(prefix: string) {
-  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `${prefix}-${Date.now()}-${random}`;
-}
-
 function clean(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
 }
 
-async function createUnitUserAccess(params: {
-  tenantId: string;
-  unitId: string;
+async function createAuthUnitUser(params: {
   role: "manager_unit" | "operator_unit";
   fullName: string;
   email: string;
   password: string;
-  generatedBy: string;
-  unitCode: string;
-  unitName: string;
+  tenantId: string;
 }) {
   const admin = createAdminClient();
 
-  const { data: createdUser, error: createUserError } =
-    await admin.auth.admin.createUser({
-      email: params.email,
-      password: params.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: params.fullName,
-        tenant_id: params.tenantId,
-        unit_id: params.unitId,
-        role: params.role,
-        source: "business_unit_creation",
-      },
-    });
+  const { data, error } = await admin.auth.admin.createUser({
+    email: params.email,
+    password: params.password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: params.fullName,
+      tenant_id: params.tenantId,
+      role: params.role,
+      source: "business_unit_atomic_creation",
+    },
+  });
 
-  if (createUserError || !createdUser.user) {
-    const message = createUserError?.message ?? "";
+  if (error || !data.user) {
+    const message = error?.message ?? "";
 
     if (message.toLowerCase().includes("already been registered")) {
       throw new Error(
-        `Email ${params.email} sudah terdaftar sebagai akun login. Gunakan email lain, atau reset password akun tersebut dari Supabase Auth.`
+        `Email ${params.email} sudah terdaftar sebagai akun login. Gunakan email lain atau reset password akun tersebut.`
       );
     }
 
-    throw new Error(
-      createUserError?.message || `Akun ${params.role} gagal dibuat.`
-    );
+    throw new Error(error?.message || `Akun ${params.role} gagal dibuat.`);
   }
 
-  await admin
-    .from("profiles")
-    .upsert(
-      {
-        id: createdUser.user.id,
-        full_name: params.fullName,
-        default_tenant_id: params.tenantId,
-      },
-      {
-        onConflict: "id",
-      }
-    );
+  return data.user.id;
+}
 
-  const { error: roleError } = await admin.from("user_roles").insert({
-    user_id: createdUser.user.id,
-    role: params.role,
-    tenant_id: params.tenantId,
-    unit_id: params.unitId,
-  });
+async function deleteAuthUserIfExists(userId: string | null) {
+  if (!userId) return;
 
-  if (roleError) {
-    await admin.auth.admin.deleteUser(createdUser.user.id);
+  const admin = createAdminClient();
 
-    throw new Error(
-      roleError.message || `Role ${params.role} gagal disimpan.`
-    );
-  }
-
-  const { error: credentialError } = await admin
-    .from("unit_access_credentials")
-    .insert({
-      user_id: createdUser.user.id,
-      tenant_id: params.tenantId,
-      unit_id: params.unitId,
-      login_code: makeLoginCode(`${params.unitCode}-${params.role}`),
-      email_virtual: params.email,
-      role: params.role,
-      must_change_password: false,
-      access_status: "active",
-      generated_by: params.generatedBy,
-    });
-
-  if (credentialError) {
-    await admin.auth.admin.deleteUser(createdUser.user.id);
-
-    throw new Error(
-      credentialError.message ||
-        `Credential akses ${params.role} gagal disimpan.`
-    );
-  }
+  await admin.auth.admin.deleteUser(userId);
 }
 
 export async function createBusinessUnitWithAccess(formData: FormData) {
@@ -165,53 +111,65 @@ export async function createBusinessUnitWithAccess(formData: FormData) {
     }
 
     if (operatorEmail === managerEmail) {
-      throw new Error("Email Operator Unit tidak boleh sama dengan Email Manager Unit.");
+      throw new Error(
+        "Email Operator Unit tidak boleh sama dengan Email Manager Unit."
+      );
     }
   }
 
-  const supabase = await createClient();
+  let managerUserId: string | null = null;
+  let operatorUserId: string | null = null;
 
-  const { data: unitId, error: unitError } = await supabase.rpc(
-    "create_business_unit",
-    {
-      p_tenant_id: context.tenant_id,
-      p_template_id: templateId,
-      p_kode_unit: kodeUnit,
-      p_nama_unit: namaUnit,
-      p_jenis_unit: jenisUnit,
-    }
-  );
-
-  if (unitError || !unitId) {
-    throw new Error(unitError?.message || "Unit usaha gagal dibuat.");
-  }
-
-  await createUnitUserAccess({
-    tenantId: context.tenant_id,
-    unitId,
-    role: "manager_unit",
-    fullName: managerName,
-    email: managerEmail,
-    password: managerPassword,
-    generatedBy: context.user_id,
-    unitCode: kodeUnit,
-    unitName: namaUnit,
-  });
-
-  if (createOperator) {
-    await createUnitUserAccess({
+  try {
+    managerUserId = await createAuthUnitUser({
+      role: "manager_unit",
+      fullName: managerName,
+      email: managerEmail,
+      password: managerPassword,
       tenantId: context.tenant_id,
-      unitId,
-      role: "operator_unit",
-      fullName: operatorName,
-      email: operatorEmail,
-      password: operatorPassword,
-      generatedBy: context.user_id,
-      unitCode: kodeUnit,
-      unitName: namaUnit,
     });
-  }
 
-  revalidatePath("/bumdes/dashboard");
-  revalidatePath("/bumdes/dashboard/units");
+    if (createOperator) {
+      operatorUserId = await createAuthUnitUser({
+        role: "operator_unit",
+        fullName: operatorName,
+        email: operatorEmail,
+        password: operatorPassword,
+        tenantId: context.tenant_id,
+      });
+    }
+
+    const supabase = await createClient();
+
+    const { error } = await supabase.rpc(
+      "create_business_unit_with_existing_access",
+      {
+        p_tenant_id: context.tenant_id,
+        p_template_id: templateId,
+        p_kode_unit: kodeUnit,
+        p_nama_unit: namaUnit,
+        p_jenis_unit: jenisUnit,
+        p_manager_user_id: managerUserId,
+        p_manager_email: managerEmail,
+        p_manager_full_name: managerName,
+        p_manager_login_code: null,
+        p_operator_user_id: operatorUserId,
+        p_operator_email: createOperator ? operatorEmail : null,
+        p_operator_full_name: createOperator ? operatorName : null,
+        p_operator_login_code: null,
+      }
+    );
+
+    if (error) {
+      throw new Error(error.message || "Unit usaha dan kredensial gagal dibuat.");
+    }
+
+    revalidatePath("/bumdes/dashboard");
+    revalidatePath("/bumdes/dashboard/units");
+  } catch (error) {
+    await deleteAuthUserIfExists(operatorUserId);
+    await deleteAuthUserIfExists(managerUserId);
+
+    throw error;
+  }
 }
