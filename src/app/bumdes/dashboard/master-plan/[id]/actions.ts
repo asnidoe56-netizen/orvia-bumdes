@@ -5,16 +5,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 
-type CapitalAllocationOption = {
-  option_type: string;
-  id: string;
-  code: string | null;
-  name: string | null;
-  kind: string | null;
-  unit_id: string | null;
-  current_balance: number | null;
-};
-
 function getRequiredString(formData: FormData, key: string, message: string) {
   const value = String(formData.get(key) ?? "").trim();
 
@@ -309,50 +299,6 @@ export async function postUnitCapitalAllocationAction(formData: FormData) {
 
   const supabase = await createClient();
 
-  const allocationErrorRedirect = (message: string) => {
-    return redirect(
-      `/bumdes/dashboard/master-plan/${businessPlanId}?allocationError=${encodeURIComponent(
-        message
-      )}`
-    );
-  };
-
-  const { data: allocationOptions, error: allocationOptionsError } =
-    await supabase.rpc("get_unit_capital_allocation_options", {
-      p_business_plan_id: businessPlanId,
-    });
-
-  if (allocationOptionsError) {
-    return allocationErrorRedirect(
-      "Opsi alokasi modal belum dapat divalidasi. Silakan muat ulang halaman dan coba kembali."
-    );
-  }
-
-  const sourceEquity = allocationOptions?.find((option: CapitalAllocationOption) =>
-      option.option_type === "source_equity" &&
-      option.id === sourceEquityAccountId
-  );
-
-  const targetEquity = allocationOptions?.find((option: CapitalAllocationOption) =>
-      option.option_type === "target_equity" &&
-      option.id === targetEquityAccountId
-  );
-
-  const sourceEquityType = sourceEquity?.kind ?? null;
-  const targetEquityType = targetEquity?.kind ?? null;
-
-  if (!sourceEquityType || !targetEquityType) {
-    return allocationErrorRedirect(
-      "Akun modal sumber atau tujuan tidak valid untuk proposal ini. Silakan pilih ulang akun modal dari daftar yang tersedia."
-    );
-  }
-
-  if (sourceEquityType !== targetEquityType) {
-    return allocationErrorRedirect(
-      "Akun modal sumber dan tujuan belum sejenis. Gunakan pasangan yang sama: Modal Awal Desa ke Modal Awal Unit, atau Modal Tambahan Desa ke Modal Tambahan Unit."
-    );
-  }
-
   const { error } = await supabase.rpc("post_unit_capital_allocation", {
     p_business_plan_id: businessPlanId,
     p_capital_disbursement_id: capitalDisbursementId,
@@ -368,12 +314,7 @@ export async function postUnitCapitalAllocationAction(formData: FormData) {
   });
 
   if (error) {
-    const message =
-      error.message === "Jenis ekuitas sumber dan tujuan harus sama"
-        ? "Akun modal sumber dan tujuan belum sejenis. Gunakan pasangan yang sama: Modal Awal Desa ke Modal Awal Unit, atau Modal Tambahan Desa ke Modal Tambahan Unit."
-        : error.message;
-
-    return allocationErrorRedirect(message);
+    throw new Error(error.message);
   }
 
   revalidatePath("/bumdes/dashboard/master-plan");
@@ -381,9 +322,4 @@ export async function postUnitCapitalAllocationAction(formData: FormData) {
 
   redirect(`/bumdes/dashboard/master-plan/${businessPlanId}`);
 }
-
-
-
-
-
 

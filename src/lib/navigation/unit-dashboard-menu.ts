@@ -3,8 +3,6 @@ import { unitNav } from "@/lib/navigation/dashboard-config";
 
 export const savingsLoanUnitNav: NavItem[] = [
   { label: "Ringkasan Unit", href: "/unit/dashboard" },
-  { label: "Master Data", href: "/unit/dashboard/master-data" },
-  { label: "Catat Transaksi", href: "/unit/dashboard/catat-transaksi" },
   { label: "Data Anggota", href: "/unit/dashboard/simpan-pinjam/anggota" },
   { label: "Kelompok Anggota", href: "/unit/dashboard/simpan-pinjam/kelompok" },
   { label: "Pengajuan Pinjaman", href: "/unit/dashboard/simpan-pinjam/pengajuan" },
@@ -12,7 +10,6 @@ export const savingsLoanUnitNav: NavItem[] = [
   { label: "Pencairan Pinjaman", href: "/unit/dashboard/simpan-pinjam/pencairan" },
   { label: "Angsuran Pinjaman", href: "/unit/dashboard/simpan-pinjam/angsuran" },
   { label: "Kas & Bank", href: "/unit/dashboard/cash-bank" },
-  { label: "Aset Tetap", href: "/unit/dashboard/aset-tetap" },
   { label: "Laporan", href: "/unit/dashboard/reports" },
 ];
 
@@ -35,6 +32,3 @@ export function isSavingsLoanUnit(context: UnitMenuContext) {
 export function getUnitDashboardNav(context: UnitMenuContext): NavItem[] {
   return isSavingsLoanUnit(context) ? savingsLoanUnitNav : unitNav;
 }
-
-
-
