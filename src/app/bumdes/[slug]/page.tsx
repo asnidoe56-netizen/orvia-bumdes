@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   ArrowRight,
   Building2,
+
   Clock3,
   Download,
   FileText,
@@ -14,10 +15,9 @@ import {
   Target,
   UsersRound,
 } from "lucide-react";
-import { PublicNavbar } from "@/components/public/public-navbar";
-import { PublicNewsPopup } from "@/components/public/public-news-popup";
-import { getPublicLandingContent } from "@/lib/public/landing-content";
 import { createClient } from "@/lib/supabase/server";
+import styles from "./page.module.css";
+import { PublicBumdesMobileMenu } from "./public-bumdes-mobile-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -72,32 +72,6 @@ type PublicDocument = {
   file_url: string;
 };
 
-function SectionHeading({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div className="mx-auto mb-10 max-w-3xl text-center">
-      <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-700">
-        {eyebrow}
-      </p>
-      <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-        {title}
-      </h2>
-      {description ? (
-        <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
-          {description}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
 function roleLabel(roleGroup: string) {
   const labels: Record<string, string> = {
     penasihat: "Penasihat",
@@ -111,6 +85,76 @@ function roleLabel(roleGroup: string) {
   return labels[roleGroup] ?? roleGroup;
 }
 
+function SectionTitle({
+  eyebrow,
+  accent,
+  title,
+  description,
+  dark = false,
+}: {
+  eyebrow?: string;
+  accent: string;
+  title: string;
+  description?: string;
+  dark?: boolean;
+}) {
+  return (
+    <div className={styles.sectionHead}>
+      {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
+      <h2 style={dark ? { color: "white" } : undefined}>
+        <span className={styles.accent}>{accent}</span> {title}
+      </h2>
+      {description ? <p>{description}</p> : null}
+    </div>
+  );
+}
+
+function PublicBumdesNavbar() {
+  const navItems = [
+    { label: "Beranda", href: "#beranda" },
+    { label: "Profil", href: "#profil" },
+    { label: "Tentang", href: "#tentang" },
+    { label: "Unit Aktif", href: "#unit" },
+    { label: "PPID", href: "#ppid" },
+  ];
+
+  return (
+    <header className={styles.navShell}>
+      <div className={styles.navbar}>
+        <Link href="#beranda" className={styles.brand}>
+          <span className={styles.brandIcon}>
+            <Landmark size={22} />
+          </span>
+          <span>
+            <span className={styles.brandTitle}>BUMDes</span>
+            <span className={styles.brandSub}>Informasi Publik</span>
+          </span>
+        </Link>
+
+        <nav className={styles.navLinks}>
+          {navItems.map((item) => (
+            <a key={item.href} href={item.href}>
+              {item.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className={styles.navActions}>
+          <Link href="/login" className={styles.loginButton}>
+            Login
+          </Link>
+          <Link href="/register" className={styles.signupButton}>
+            Signup
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+      </div>
+
+      <PublicBumdesMobileMenu navItems={navItems} />
+    </header>
+  );
+}
+
 export default async function PublicBumdesPage({
   params,
 }: {
@@ -118,7 +162,6 @@ export default async function PublicBumdesPage({
 }) {
   const { slug } = await params;
   const supabase = await createClient();
-  const landingContent = await getPublicLandingContent();
 
   const { data: profile } = await supabase
     .from("v_public_bumdes_profiles")
@@ -126,9 +169,7 @@ export default async function PublicBumdesPage({
     .eq("public_slug", slug)
     .maybeSingle<PublicBumdesProfile>();
 
-  if (!profile) {
-    notFound();
-  }
+  if (!profile) notFound();
 
   const [
     { data: members },
@@ -165,214 +206,214 @@ export default async function PublicBumdesPage({
   const subtitle =
     profile.hero_subtitle ??
     `Desa ${profile.nama_desa}, Kecamatan ${profile.nama_kecamatan}`;
+  const unitCount = units?.length ?? 0;
+  const memberCount = members?.length ?? 0;
+  const documentCount = documents?.length ?? 0;
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-white text-slate-950">
-      <PublicNavbar siteSettings={landingContent.siteSettings} />
+    <main className={styles.page}>
+      <PublicBumdesNavbar />
 
-      <section className="relative isolate overflow-hidden px-4 pb-20 pt-36 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_35%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]" />
-
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+      <section id="beranda" className={styles.hero}>
+        <div className={styles.heroGrid}>
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.3em] text-emerald-700">
-              Profil Publik BUMDes
-            </p>
-            <h1 className="mt-5 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-              {title}
-            </h1>
-            <p className="mt-5 max-w-3xl text-base font-bold leading-8 text-emerald-800">
-              {subtitle}
-            </p>
-            <p className="mt-6 max-w-3xl text-base leading-8 text-slate-600 sm:text-lg">
+            <p className={styles.eyebrow}>Profil Publik BUMDes</p>
+            <h1 className={styles.heroTitle}>{title}</h1>
+            <p className={styles.heroSubtitle}>{subtitle}</p>
+            <p className={styles.heroText}>
               {profile.tagline ??
                 profile.profile_description ??
                 "Halaman informasi resmi BUMDes untuk profil kelembagaan, unit usaha, dan layanan informasi publik."}
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="#profil"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-4 text-sm font-black text-white shadow-lg shadow-emerald-100 transition hover:bg-emerald-800"
-              >
-                Lihat Profil
-                <ArrowRight className="h-4 w-4" />
+            <div className={styles.heroActions}>
+              <a href="#profil" className={styles.primaryButton}>
+                Lihat Profil <ArrowRight size={16} />
               </a>
-              <a
-                href="#ppid"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-black text-slate-800 transition hover:border-emerald-200 hover:bg-emerald-50"
-              >
-                PPID
-                <ShieldCheck className="h-4 w-4" />
+              <a href="#ppid" className={styles.secondaryButton}>
+                PPID <ShieldCheck size={16} />
               </a>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[2.5rem] border border-white bg-white shadow-2xl shadow-emerald-100">
-            <div className="flex h-[380px] items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-orange-50">
-              <div className="text-center">
-                <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] bg-emerald-700 text-white">
-                  <Landmark className="h-12 w-12" />
-                </div>
-                <p className="mt-5 text-2xl font-black text-slate-950">
-                  {profile.nama_bumdes}
+          <div className={styles.heroCard}>
+            <div className={styles.heroCardInner}>
+              <div className={styles.heroMark}>
+                <Landmark size={48} />
+              </div>
+              <p className={styles.heroCardName}>{profile.nama_bumdes}</p>
+              <p className={styles.heroCode}>{profile.kode_bumdes}</p>
+
+              <div className={styles.heroInfo}>
+                <p>
+                  <MapPin size={16} /> Desa {profile.nama_desa}, Kecamatan{" "}
+                  {profile.nama_kecamatan}
                 </p>
-                <p className="mt-2 text-sm font-bold uppercase tracking-[0.2em] text-slate-500">
-                  {profile.kode_bumdes}
+                <p>
+                  <Phone size={16} /> {profile.contact_phone ?? "-"}
+                </p>
+                <p>
+                  <Mail size={16} /> {profile.contact_email ?? "-"}
                 </p>
               </div>
+            </div>
+            <div className={styles.badge}>Publik</div>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.softSection}>
+        <div className={styles.container}>
+          <SectionTitle
+            accent="Ringkasan"
+            title="BUMDes"
+            description="Informasi ringkas yang aman untuk publik, tanpa membuka data transaksi dan laporan internal."
+          />
+
+          <div className={styles.stats}>
+            <div className={styles.stat}>
+              <div className={styles.statValue}>{unitCount}</div>
+              <div className={styles.statLabel}>Unit usaha dipublikasikan</div>
+            </div>
+            <div className={styles.stat}>
+              <div className={styles.statValue}>{memberCount}</div>
+              <div className={styles.statLabel}>Pengurus dipublikasikan</div>
+            </div>
+            <div className={styles.stat}>
+              <div className={styles.statValue}>{documentCount}</div>
+              <div className={styles.statLabel}>Dokumen publik tersedia</div>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="profil" className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionHeading
+      <section id="profil" className={styles.section}>
+        <div className={styles.container}>
+          <SectionTitle
             eyebrow="Profil BUMDes"
-            title="Identitas dan struktur kelembagaan"
+            accent="Identitas"
+            title="dan Struktur"
             description="Informasi dasar BUMDes, kontak publik, dan struktur pengurus yang dipublikasikan."
           />
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
-              <Building2 className="h-6 w-6 text-emerald-700" />
-              <p className="mt-3 text-sm font-black text-slate-950">
-                {profile.nama_bumdes}
-              </p>
-            </div>
-            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
-              <MapPin className="h-6 w-6 text-emerald-700" />
-              <p className="mt-3 text-sm font-black text-slate-950">
-                Desa {profile.nama_desa}, Kecamatan {profile.nama_kecamatan}
-              </p>
-            </div>
-            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
-              <Phone className="h-6 w-6 text-emerald-700" />
-              <p className="mt-3 text-sm font-black text-slate-950">
-                {profile.contact_phone ?? "-"}
-              </p>
-            </div>
-            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
-              <Mail className="h-6 w-6 text-emerald-700" />
-              <p className="mt-3 text-sm font-black text-slate-950">
-                {profile.contact_email ?? "-"}
-              </p>
-            </div>
+          <div className={styles.infoGrid}>
+            {[
+              { icon: Building2, label: "BUMDes", value: profile.nama_bumdes },
+              {
+                icon: MapPin,
+                label: "Wilayah",
+                value: `Desa ${profile.nama_desa}, Kecamatan ${profile.nama_kecamatan}`,
+              },
+              { icon: Phone, label: "Telepon", value: profile.contact_phone ?? "-" },
+              { icon: Mail, label: "Email", value: profile.contact_email ?? "-" },
+            ].map((item) => (
+              <div key={item.label} className={styles.infoCard}>
+                <item.icon className={styles.infoIcon} size={28} />
+                <div className={styles.infoLabel}>{item.label}</div>
+                <div className={styles.infoValue}>{item.value}</div>
+              </div>
+            ))}
           </div>
 
-          <div className="mt-8 rounded-[2rem] border border-slate-200 bg-slate-50 p-6 sm:p-8">
-            <h3 className="text-2xl font-black tracking-tight text-slate-950">
-              Deskripsi Singkat
-            </h3>
-            <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
+          <div className={styles.textPanel}>
+            <h3>Deskripsi Singkat</h3>
+            <p>
               {profile.profile_description ??
                 "Deskripsi profil BUMDes belum dipublikasikan."}
             </p>
-            <p className="mt-4 text-sm font-bold leading-7 text-slate-700">
-              Alamat: {profile.contact_address ?? "-"}
+            <p>
+              <strong>Alamat:</strong> {profile.contact_address ?? "-"}
             </p>
           </div>
 
-          <div className="mt-8">
-            <h3 className="mb-5 text-2xl font-black tracking-tight text-slate-950">
-              Struktur Pengurus
-            </h3>
+          <div className={styles.section} style={{ paddingLeft: 0, paddingRight: 0 }}>
+            <SectionTitle accent="Struktur" title="Pengurus" />
             {members && members.length > 0 ? (
-              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <div className={styles.memberGrid}>
                 {members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
-                  >
-                    <UsersRound className="h-7 w-7 text-emerald-700" />
-                    <p className="mt-4 text-lg font-black text-slate-950">
-                      {member.name}
-                    </p>
-                    <p className="mt-1 text-sm font-bold text-slate-600">
-                      {member.position}
-                    </p>
-                    <p className="mt-3 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700">
+                  <div key={member.id} className={styles.memberCard}>
+                    <div className={styles.memberVisual}>
+                      <UsersRound size={78} />
+                    </div>
+                    <h3>{member.name}</h3>
+                    <p>{member.position}</p>
+                    <span className={styles.rolePill}>
                       {roleLabel(member.role_group)}
-                    </p>
+                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="rounded-[2rem] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm font-bold text-slate-500">
-                Struktur pengurus belum dipublikasikan.
-              </div>
+              <div className={styles.empty}>Struktur pengurus belum dipublikasikan.</div>
             )}
           </div>
         </div>
       </section>
 
-      <section id="tentang" className="bg-slate-50 px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionHeading
-            eyebrow="Tentang"
-            title="Sejarah, visi, misi, dan tujuan layanan"
+      <section id="tentang" className={styles.section}>
+        <div className={styles.container}>
+          <SectionTitle
+            accent="Tentang"
+            title="BUMDes"
+            description="Sejarah singkat, visi, misi, dan tujuan layanan yang dipublikasikan."
           />
-          <div className="grid gap-5 lg:grid-cols-3">
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm lg:col-span-3">
-              <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-700">
-                Sejarah Singkat
-              </p>
-              <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
-                {profile.about_history ??
-                  "Sejarah singkat BUMDes belum dipublikasikan."}
-              </p>
+
+          <div className={styles.aboutGrid}>
+            <div className={styles.timeline}>
+              <div className={styles.timelineItem}>
+                <span className={styles.timelineDot} />
+                <div className={styles.timelineTitle}>Profil</div>
+                <div className={styles.timelineText}>
+                  {profile.about_history ??
+                    "Sejarah singkat BUMDes belum dipublikasikan."}
+                </div>
+              </div>
+              <div className={styles.timelineItem}>
+                <span className={styles.timelineDot} />
+                <div className={styles.timelineTitle}>Layanan</div>
+                <div className={styles.timelineText}>
+                  {profile.service_goals ??
+                    "Tujuan layanan belum dipublikasikan."}
+                </div>
+              </div>
             </div>
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm">
-              <Target className="h-8 w-8 text-emerald-700" />
-              <h3 className="mt-5 text-2xl font-black text-slate-950">Visi</h3>
-              <p className="mt-4 text-sm leading-7 text-slate-600">
-                {profile.vision ?? "Visi belum dipublikasikan."}
-              </p>
-            </div>
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm">
-              <ShieldCheck className="h-8 w-8 text-emerald-700" />
-              <h3 className="mt-5 text-2xl font-black text-slate-950">Misi</h3>
-              <p className="mt-4 text-sm leading-7 text-slate-600">
-                {profile.mission ?? "Misi belum dipublikasikan."}
-              </p>
-            </div>
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm">
-              <Landmark className="h-8 w-8 text-emerald-700" />
-              <h3 className="mt-5 text-2xl font-black text-slate-950">
-                Tujuan Layanan
-              </h3>
-              <p className="mt-4 text-sm leading-7 text-slate-600">
-                {profile.service_goals ??
-                  "Tujuan layanan belum dipublikasikan."}
-              </p>
+
+            <div className={styles.valueGrid}>
+              <div className={styles.valueCard}>
+                <Target color="#0284c7" size={36} />
+                <h3>Visi</h3>
+                <p>{profile.vision ?? "Visi belum dipublikasikan."}</p>
+              </div>
+              <div className={styles.valueCard}>
+                <ShieldCheck color="#0284c7" size={36} />
+                <h3>Misi</h3>
+                <p>{profile.mission ?? "Misi belum dipublikasikan."}</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="unit" className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionHeading
-            eyebrow="Unit Aktif"
-            title="Unit usaha yang dipublikasikan"
+      <section id="unit" className={styles.cyanSection}>
+        <div className={styles.container}>
+          <SectionTitle
+            accent="Unit"
+            title="Aktif"
             description="Daftar unit usaha aktif BUMDes yang tersedia untuk informasi publik."
           />
+
           {units && units.length > 0 ? (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className={styles.unitGrid}>
               {units.map((unit) => (
-                <div
-                  key={unit.unit_id}
-                  className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
-                >
-                  <Building2 className="h-6 w-6 text-emerald-700" />
-                  <h3 className="mt-6 text-2xl font-black tracking-tight text-slate-950">
-                    {unit.nama_unit}
-                  </h3>
-                  <p className="mt-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-700">
-                    {unit.kode_unit} - {unit.jenis_unit}
-                  </p>
-                  <p className="mt-4 text-sm leading-7 text-slate-600">
+                <div key={unit.unit_id} className={styles.unitCard}>
+                  <div className={styles.unitVisual}>
+                    <Building2 size={78} />
+                  </div>
+                  <h3>{unit.nama_unit}</h3>
+                  <span className={styles.unitPill}>
+                    {unit.kode_unit} · {unit.jenis_unit}
+                  </span>
+                  <p>
                     {unit.public_description ??
                       "Deskripsi unit usaha belum dipublikasikan."}
                   </p>
@@ -380,74 +421,61 @@ export default async function PublicBumdesPage({
               ))}
             </div>
           ) : (
-            <div className="rounded-[2rem] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm font-bold text-slate-500">
-              Belum ada unit aktif yang dipublikasikan.
-            </div>
+            <div className={styles.empty}>Belum ada unit aktif yang dipublikasikan.</div>
           )}
         </div>
       </section>
 
-      <section id="ppid" className="bg-slate-950 px-4 py-16 text-white sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto mb-10 max-w-3xl text-center">
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-300">
-              PPID
-            </p>
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-              Keterbukaan Informasi Publik
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">
-              Kanal layanan informasi publik BUMDes untuk mendukung transparansi
-              dan akuntabilitas.
-            </p>
-          </div>
+      <section id="ppid" className={styles.darkSection}>
+        <div className={styles.darkInner}>
+          <SectionTitle
+            dark
+            eyebrow="PPID"
+            accent="Keterbukaan"
+            title="Informasi Publik"
+            description="Kanal layanan informasi publik BUMDes untuk mendukung transparansi dan akuntabilitas."
+          />
 
-          <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-7">
-              <h3 className="text-2xl font-black">Layanan Informasi</h3>
-              <div className="mt-6 space-y-4 text-sm leading-7 text-slate-300">
-                <p className="flex gap-3">
-                  <UsersRound className="mt-1 h-4 w-4 shrink-0 text-emerald-300" />
+          <div className={styles.ppidGrid}>
+            <div className={styles.darkCard}>
+              <h3>Layanan Informasi</h3>
+              <div className={styles.darkList}>
+                <p>
+                  <UsersRound size={18} />{" "}
                   {ppid?.officer_name
                     ? `${ppid.officer_name} - ${ppid.officer_position ?? "PPID"}`
                     : "Penanggung jawab informasi belum dipublikasikan."}
                 </p>
-                <p className="flex gap-3">
-                  <Phone className="mt-1 h-4 w-4 shrink-0 text-emerald-300" />
-                  {ppid?.service_phone ?? profile.contact_phone ?? "-"}
+                <p>
+                  <Phone size={18} /> {ppid?.service_phone ?? profile.contact_phone ?? "-"}
                 </p>
-                <p className="flex gap-3">
-                  <Mail className="mt-1 h-4 w-4 shrink-0 text-emerald-300" />
-                  {ppid?.service_email ?? profile.contact_email ?? "-"}
+                <p>
+                  <Mail size={18} /> {ppid?.service_email ?? profile.contact_email ?? "-"}
                 </p>
-                <p className="flex gap-3">
-                  <MapPin className="mt-1 h-4 w-4 shrink-0 text-emerald-300" />
+                <p>
+                  <MapPin size={18} />{" "}
                   {ppid?.service_address ?? profile.contact_address ?? "-"}
                 </p>
-                <p className="flex gap-3">
-                  <Clock3 className="mt-1 h-4 w-4 shrink-0 text-emerald-300" />
+                <p>
+                  <Clock3 size={18} />{" "}
                   {ppid?.service_hours ?? "Jam layanan belum dipublikasikan."}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-7">
-              <h3 className="text-2xl font-black">Prosedur Informasi</h3>
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl bg-white/10 p-5">
-                  <p className="text-sm font-black text-emerald-300">
-                    Permohonan Informasi
-                  </p>
-                  <p className="mt-3 text-sm leading-7 text-slate-300">
+            <div className={styles.darkCard}>
+              <h3>Prosedur Informasi</h3>
+              <div className={styles.procedureGrid}>
+                <div className={styles.procedureBox}>
+                  <h4>Permohonan Informasi</h4>
+                  <p>
                     {ppid?.request_procedure ??
                       "Prosedur permohonan informasi belum dipublikasikan."}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-white/10 p-5">
-                  <p className="text-sm font-black text-emerald-300">
-                    Keberatan Informasi
-                  </p>
-                  <p className="mt-3 text-sm leading-7 text-slate-300">
+                <div className={styles.procedureBox}>
+                  <h4>Keberatan Informasi</h4>
+                  <p>
                     {ppid?.objection_procedure ??
                       "Prosedur keberatan informasi belum dipublikasikan."}
                   </p>
@@ -455,31 +483,61 @@ export default async function PublicBumdesPage({
               </div>
 
               {documents && documents.length > 0 ? (
-                <div className="mt-6">
-                  <h4 className="text-lg font-black">Dokumen Publik</h4>
-                  <div className="mt-4 space-y-3">
-                    {documents.map((document) => (
-                      <Link
-                        key={document.id}
-                        href={document.file_url}
-                        className="flex items-center justify-between gap-4 rounded-2xl bg-white/10 p-4 text-sm font-bold text-white transition hover:bg-white/15"
-                      >
-                        <span className="flex items-center gap-3">
-                          <FileText className="h-4 w-4 text-emerald-300" />
-                          {document.title}
-                        </span>
-                        <Download className="h-4 w-4" />
-                      </Link>
-                    ))}
-                  </div>
+                <div className={styles.documentList}>
+                  {documents.map((document) => (
+                    <Link
+                      key={document.id}
+                      href={document.file_url}
+                      className={styles.documentLink}
+                    >
+                      <span>
+                        <FileText size={16} /> {document.title}
+                      </span>
+                      <Download size={16} />
+                    </Link>
+                  ))}
                 </div>
               ) : null}
             </div>
           </div>
+
+          <footer className={styles.footer}>
+            <div className={styles.footerGrid}>
+              <div className={styles.footerLogo}>
+                <Landmark color="#7dd3fc" size={44} />
+                <div>
+                  <div className={styles.footerName}>{profile.nama_bumdes}</div>
+                  <div className={styles.footerText}>Profil Publik BUMDes</div>
+                </div>
+              </div>
+
+              <div className={styles.footerText}>
+                <div className={styles.footerTitle}>Kontak Publik</div>
+                <p>{profile.contact_address ?? "-"}</p>
+                <p>{profile.contact_phone ?? "-"}</p>
+                <p>{profile.contact_email ?? "-"}</p>
+              </div>
+
+              <div>
+                <div className={styles.footerTitle}>Navigasi</div>
+                <div className={styles.footerNav}>
+                  <a href="#beranda">Beranda</a>
+                  <a href="#profil">Profil</a>
+                  <a href="#tentang">Tentang</a>
+                  <a href="#unit">Unit Aktif</a>
+                  <a href="#ppid">PPID</a>
+                </div>
+              </div>
+            </div>
+
+            <p className={styles.disclaimer}>
+              Informasi pada halaman ini bersifat publik dan tidak menampilkan
+              data transaksi, jurnal, kas-bank, pelanggan, supplier, atau data
+              personal internal.
+            </p>
+          </footer>
         </div>
       </section>
-
-      <PublicNewsPopup newsPosts={landingContent.newsPosts} />
     </main>
   );
 }
