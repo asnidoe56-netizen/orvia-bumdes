@@ -43,6 +43,7 @@ export const unitNav: NavItem[] = [
 export const pengawasNav: NavItem[] = [
   { label: "Audit", href: "/pengawas/dashboard" },
   { label: "Koreksi Transaksi", href: "/pengawas/dashboard/koreksi-transaksi" },
+  { label: "Audit Konsistensi", href: "/pengawas/dashboard/audit-konsistensi" },
   { label: "Laporan", href: "/pengawas/dashboard/reports" },
 ];
 
