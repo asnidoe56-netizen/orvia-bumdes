@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { PlusCircle } from "lucide-react";
 import {
   createAndPostSalesInvoice,
@@ -52,6 +52,11 @@ function formatCurrency(value: number) {
   }).format(Number(value || 0));
 }
 
+const initialActionState = {
+  success: false,
+  message: null as string | null,
+};
+
 function formatNumber(value: number) {
   return new Intl.NumberFormat("id-ID", {
     maximumFractionDigits: 2,
@@ -72,6 +77,10 @@ export function SalesEntryFormClient({
   const [preview, setPreview] = useState<SalesLinePreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewPending, startPreviewTransition] = useTransition();
+  const [actionState, formAction, isSubmitPending] = useActionState(
+    createAndPostSalesInvoice,
+    initialActionState
+  );
 
   const selectedItem = useMemo(
     () => items.find((item) => item.id === selectedItemId) ?? null,
@@ -145,7 +154,7 @@ export function SalesEntryFormClient({
 
   return (
     <form
-      action={createAndPostSalesInvoice}
+      action={formAction}
       className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
     >
       <input type="hidden" name="payment_type" value={paymentType} />
@@ -357,6 +366,12 @@ export function SalesEntryFormClient({
         </label>
       </div>
 
+      {actionState.message ? (
+        <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          {actionState.message}
+        </div>
+      ) : null}
+
       <div className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-5 text-slate-500">
           Saat disimpan, engine database menghitung ulang harga jual aktif,
@@ -365,9 +380,10 @@ export function SalesEntryFormClient({
 
         <button
           type="submit"
-          className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700"
+          disabled={isSubmitPending}
+          className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          {submitLabel}
+          {isSubmitPending ? "Menyimpan..." : submitLabel}
         </button>
       </div>
     </form>

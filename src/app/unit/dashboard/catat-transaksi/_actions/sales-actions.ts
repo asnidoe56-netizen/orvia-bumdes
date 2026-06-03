@@ -47,6 +47,19 @@ function getNumber(formData: FormData, key: string, defaultValue = 0) {
 }
 
 
+export type SalesInvoiceActionState = {
+  success: boolean;
+  message: string | null;
+};
+
+function getActionErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Transaksi penjualan gagal disimpan dan diposting.";
+}
+
 type SalesLinePreviewInput = {
   itemId: string;
   quantity: number;
@@ -95,94 +108,109 @@ export async function previewSalesLineDiscountPercent(input: SalesLinePreviewInp
     gross_profit: number;
   };
 }
-export async function createAndPostSalesInvoice(formData: FormData) {
-  const context = await getLoginContext();
+export async function createAndPostSalesInvoice(
+  _previousState: SalesInvoiceActionState,
+  formData: FormData
+): Promise<SalesInvoiceActionState> {
+  try {
+    const context = await getLoginContext();
 
-  if (!context?.tenant_id || !context.unit_id) {
-    throw new Error("Sesi unit tidak valid.");
-  }
-
-  const requestedInvoiceNo = String(formData.get("invoice_no") ?? "").trim();
-  const paymentType = getOptionalString(formData, "payment_type") ?? "cash";
-  const invoiceNo = (requestedInvoiceNo || generateSalesInvoiceNo(paymentType)).toUpperCase();
-
-  const invoiceDate = getRequiredString(
-    formData,
-    "invoice_date",
-    "Tanggal penjualan wajib diisi."
-  );
-
-  const itemId = getRequiredString(
-    formData,
-    "item_id",
-    "Barang wajib dipilih."
-  );
-
-  const customerId = getOptionalString(formData, "customer_id");
-  const dueDate = getOptionalString(formData, "due_date");
-  const notes = getOptionalString(formData, "notes");
-  const description = getOptionalString(formData, "description");
-
-  const quantity = getNumber(formData, "quantity");
-  const discountPercent = getNumber(formData, "discount_percent", 0);
-  const taxAmount = getNumber(formData, "tax_amount", 0);
-
-  if (!["cash", "credit"].includes(paymentType)) {
-    throw new Error("Jenis penjualan tidak valid.");
-  }
-
-  if (paymentType === "credit" && !dueDate) {
-    throw new Error("Tanggal jatuh tempo wajib diisi untuk penjualan kredit.");
-  }
-
-  if (quantity <= 0) {
-    throw new Error("Jumlah harus lebih dari 0.");
-  }
-
-  if (discountPercent < 0 || discountPercent > 100) {
-    throw new Error("Diskon persen harus berada di antara 0 sampai 100.");
-  }
-
-  if (taxAmount < 0) {
-    throw new Error("Pajak tidak boleh negatif.");
-  }
-
-  const supabase = await createClient();
-
-  const { error } = await supabase.rpc(
-    "create_and_post_sales_invoice_with_discount_percent",
-    {
-      p_tenant_id: context.tenant_id,
-      p_unit_id: context.unit_id,
-      p_customer_id: customerId,
-      p_invoice_no: invoiceNo,
-      p_invoice_date: invoiceDate,
-      p_due_date: dueDate,
-      p_payment_type: paymentType,
-      p_notes: notes,
-      p_lines: [
-        {
-          item_id: itemId,
-          quantity,
-          discount_percent: discountPercent,
-          tax_amount: taxAmount,
-          description,
-        },
-      ],
+    if (!context?.tenant_id || !context.unit_id) {
+      throw new Error("Sesi unit tidak valid.");
     }
-  );
 
-  if (error) {
-    throw new Error(error.message || "Transaksi penjualan gagal disimpan dan diposting.");
+    const requestedInvoiceNo = String(formData.get("invoice_no") ?? "").trim();
+    const paymentType = getOptionalString(formData, "payment_type") ?? "cash";
+    const invoiceNo = (requestedInvoiceNo || generateSalesInvoiceNo(paymentType)).toUpperCase();
+
+    const invoiceDate = getRequiredString(
+      formData,
+      "invoice_date",
+      "Tanggal penjualan wajib diisi."
+    );
+
+    const itemId = getRequiredString(
+      formData,
+      "item_id",
+      "Barang wajib dipilih."
+    );
+
+    const customerId = getOptionalString(formData, "customer_id");
+    const dueDate = getOptionalString(formData, "due_date");
+    const notes = getOptionalString(formData, "notes");
+    const description = getOptionalString(formData, "description");
+
+    const quantity = getNumber(formData, "quantity");
+    const discountPercent = getNumber(formData, "discount_percent", 0);
+    const taxAmount = getNumber(formData, "tax_amount", 0);
+
+    if (!["cash", "credit"].includes(paymentType)) {
+      throw new Error("Jenis penjualan tidak valid.");
+    }
+
+    if (paymentType === "credit" && !dueDate) {
+      throw new Error("Tanggal jatuh tempo wajib diisi untuk penjualan kredit.");
+    }
+
+    if (quantity <= 0) {
+      throw new Error("Jumlah harus lebih dari 0.");
+    }
+
+    if (discountPercent < 0 || discountPercent > 100) {
+      throw new Error("Diskon persen harus berada di antara 0 sampai 100.");
+    }
+
+    if (taxAmount < 0) {
+      throw new Error("Pajak tidak boleh negatif.");
+    }
+
+    const supabase = await createClient();
+
+    const { error } = await supabase.rpc(
+      "create_and_post_sales_invoice_with_discount_percent",
+      {
+        p_tenant_id: context.tenant_id,
+        p_unit_id: context.unit_id,
+        p_customer_id: customerId,
+        p_invoice_no: invoiceNo,
+        p_invoice_date: invoiceDate,
+        p_due_date: dueDate,
+        p_payment_type: paymentType,
+        p_notes: notes,
+        p_lines: [
+          {
+            item_id: itemId,
+            quantity,
+            discount_percent: discountPercent,
+            tax_amount: taxAmount,
+            description,
+          },
+        ],
+      }
+    );
+
+    if (error) {
+      return {
+        success: false,
+        message:
+          error.message ||
+          "Transaksi penjualan gagal disimpan dan diposting.",
+      };
+    }
+
+    revalidatePath("/unit/dashboard/catat-transaksi");
+    revalidatePath("/unit/dashboard/sales");
+    revalidatePath("/unit/dashboard/inventory");
+    revalidatePath("/unit/dashboard/daftar-stok");
+    revalidatePath("/unit/dashboard/cash-bank");
+    revalidatePath("/unit/dashboard/reports");
+    revalidatePath("/unit/dashboard");
+  } catch (error) {
+    return {
+      success: false,
+      message: getActionErrorMessage(error),
+    };
   }
-
-  revalidatePath("/unit/dashboard/catat-transaksi");
-  revalidatePath("/unit/dashboard/sales");
-  revalidatePath("/unit/dashboard/inventory");
-  revalidatePath("/unit/dashboard/daftar-stok");
-  revalidatePath("/unit/dashboard/cash-bank");
-  revalidatePath("/unit/dashboard/reports");
-  revalidatePath("/unit/dashboard");
 
   redirect("/unit/dashboard/catat-transaksi");
 }
