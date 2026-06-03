@@ -1,7 +1,8 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import {
   ArrowRight,
   BarChart3,
+  BookOpenText,
   FileSpreadsheet,
   Gauge,
   Landmark,
@@ -12,6 +13,13 @@ import { PageBackButton } from "@/components/ui/page-back-button";
 
 const reportCards = [
   {
+    title: "Buku Besar",
+    description:
+      "Melihat seluruh mutasi jurnal per akun, debit, kredit, sumber transaksi, dan saldo berjalan.",
+    href: "/unit/dashboard/reports/buku-besar",
+    icon: BookOpenText,
+    status: "Database",
+  },  {
     title: "Laba Rugi",
     description:
       "Melihat pendapatan, HPP, beban operasional, dan hasil usaha unit dalam satu periode.",

@@ -92,10 +92,11 @@ export function SalesEntryFormClient({
   const isCredit = paymentType === "credit";
 
   useEffect(() => {
-    setPreview(null);
-    setPreviewError(null);
-
     if (!selectedItemId || !Number.isFinite(quantity) || quantity <= 0) {
+      startPreviewTransition(() => {
+        setPreview(null);
+        setPreviewError(null);
+      });
       return;
     }
 
@@ -104,12 +105,18 @@ export function SalesEntryFormClient({
       discountPercent < 0 ||
       discountPercent > 100
     ) {
-      setPreviewError("Diskon persen harus berada di antara 0 sampai 100.");
+      startPreviewTransition(() => {
+        setPreview(null);
+        setPreviewError("Diskon persen harus berada di antara 0 sampai 100.");
+      });
       return;
     }
 
     if (!Number.isFinite(taxAmount) || taxAmount < 0) {
-      setPreviewError("Pajak tidak boleh negatif.");
+      startPreviewTransition(() => {
+        setPreview(null);
+        setPreviewError("Pajak tidak boleh negatif.");
+      });
       return;
     }
 
