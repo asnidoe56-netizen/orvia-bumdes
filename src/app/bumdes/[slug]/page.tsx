@@ -40,6 +40,15 @@ type PublicBumdesProfile = {
   nama_kecamatan: string;
 };
 
+type PublicBumdesSlugStatus = {
+  public_slug: string;
+  is_published: boolean;
+  nama_bumdes: string;
+  kode_bumdes: string;
+  nama_desa: string;
+  nama_kecamatan: string;
+};
+
 type PublicOrgMember = {
   id: string;
   name: string;
@@ -155,6 +164,91 @@ function PublicBumdesNavbar() {
   );
 }
 
+function InactivePublicServicePage({
+  status,
+}: {
+  status: PublicBumdesSlugStatus;
+}) {
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-cyan-50 via-white to-emerald-50">
+      <section className="mx-auto flex min-h-screen w-full max-w-5xl items-center px-5 py-16">
+        <div className="w-full rounded-[2rem] border border-cyan-100 bg-white/90 p-8 shadow-[0_24px_80px_rgba(15,118,110,0.12)] backdrop-blur md:p-12">
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-700 text-white">
+              <Landmark className="h-6 w-6" />
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full bg-cyan-50 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-cyan-700">
+              <ShieldCheck className="h-4 w-4" />
+              Layanan Publik Add-on
+            </span>
+          </div>
+
+          <h1 className="max-w-3xl text-3xl font-black leading-tight text-slate-950 md:text-5xl">
+            Halaman publik BUMDes belum aktif.
+          </h1>
+
+          <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600 md:text-lg">
+            Tautan ini sudah terdaftar di ORVIA-BUMDES, tetapi fitur halaman
+            publik untuk BUMDes ini belum diaktifkan. Layanan publik ini
+            merupakan add-on terpisah yang dapat digunakan setelah mendapat
+            aktivasi dari Super Admin Platform.
+          </p>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                BUMDes
+              </p>
+              <p className="mt-2 font-black text-slate-950">
+                {status.nama_bumdes}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Wilayah
+              </p>
+              <p className="mt-2 font-black text-slate-950">
+                {status.nama_desa}, {status.nama_kecamatan}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-amber-700">
+                Status Layanan
+              </p>
+              <p className="mt-2 font-black text-amber-800">
+                Belum Aktif
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-cyan-100 bg-cyan-50 p-5 text-sm leading-7 text-cyan-900">
+            Untuk menggunakan layanan profil publik ini, silakan hubungi Super
+            Admin Platform ORVIA-BUMDES agar fitur publikasi BUMDes dapat
+            diaktifkan.
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-800"
+            >
+              Kembali ke Beranda
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+            >
+              Login BUMDes
+            </Link>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default async function PublicBumdesPage({
   params,
 }: {
@@ -169,7 +263,17 @@ export default async function PublicBumdesPage({
     .eq("public_slug", slug)
     .maybeSingle<PublicBumdesProfile>();
 
-  if (!profile) notFound();
+  if (!profile) {
+    const { data: slugStatus } = await supabase
+      .from("v_public_bumdes_slug_status")
+      .select("*")
+      .eq("public_slug", slug)
+      .maybeSingle<PublicBumdesSlugStatus>();
+
+    if (!slugStatus) notFound();
+
+    return <InactivePublicServicePage status={slugStatus} />;
+  }
 
   const [
     { data: members },
@@ -411,7 +515,7 @@ export default async function PublicBumdesPage({
                   </div>
                   <h3>{unit.nama_unit}</h3>
                   <span className={styles.unitPill}>
-                    {unit.kode_unit} · {unit.jenis_unit}
+                    {unit.kode_unit} Ã‚Â· {unit.jenis_unit}
                   </span>
                   <p>
                     {unit.public_description ??

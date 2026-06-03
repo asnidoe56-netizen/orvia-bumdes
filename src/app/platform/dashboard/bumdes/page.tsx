@@ -5,6 +5,10 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { createClient } from "@/lib/supabase/server";
+import {
+  publishTenantPublicProfile,
+  unpublishTenantPublicProfile,
+} from "./actions";
 import { CopyPublicLinkButton } from "./copy-public-link-button";
 
 type TenantRow = {
@@ -177,19 +181,73 @@ export default async function PlatformBumdesPage() {
                         {publicPath ? (
                           <div className="flex flex-wrap gap-2">
                             <CopyPublicLinkButton path={publicPath} />
-                            <Link
-                              href={publicPath}
-                              target="_blank"
-                              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white transition hover:bg-emerald-800"
-                            >
-                              Buka
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Link>
+
+                            {profile?.is_published ? (
+                              <>
+                                <Link
+                                  href={publicPath}
+                                  target="_blank"
+                                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white transition hover:bg-emerald-800"
+                                >
+                                  Buka
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                </Link>
+
+                                <form action={unpublishTenantPublicProfile}>
+                                  <input
+                                    type="hidden"
+                                    name="tenant_id"
+                                    value={tenant.id}
+                                  />
+                                  <button
+                                    type="submit"
+                                    className="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 transition hover:bg-amber-100"
+                                  >
+                                    Nonaktifkan
+                                  </button>
+                                </form>
+                              </>
+                            ) : (
+                              <>
+                                <Link
+                                  href={publicPath}
+                                  target="_blank"
+                                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50"
+                                >
+                                  Preview
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                </Link>
+
+                                <form action={publishTenantPublicProfile}>
+                                  <input
+                                    type="hidden"
+                                    name="tenant_id"
+                                    value={tenant.id}
+                                  />
+                                  <button
+                                    type="submit"
+                                    className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white transition hover:bg-emerald-800"
+                                  >
+                                    Aktifkan Publik
+                                  </button>
+                                </form>
+                              </>
+                            )}
                           </div>
                         ) : (
-                          <span className="text-xs font-bold text-slate-400">
-                            Belum tersedia
-                          </span>
+                          <form action={publishTenantPublicProfile}>
+                            <input
+                              type="hidden"
+                              name="tenant_id"
+                              value={tenant.id}
+                            />
+                            <button
+                              type="submit"
+                              className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white transition hover:bg-emerald-800"
+                            >
+                              Generate Profil
+                            </button>
+                          </form>
                         )}
                       </td>
                     </tr>
