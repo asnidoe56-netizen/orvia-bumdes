@@ -1,14 +1,14 @@
 ﻿import {
   KeyRound,
   LockKeyhole,
-  Plus,
+
   ShieldCheck,
   Store,
   UserRoundCheck,
   Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { AddUserDialog } from "./add-user-dialog";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -242,12 +242,7 @@ export default async function BumdesUsersPage() {
         breadcrumb="Direktur BUMDes / Pengguna"
         title="Pengguna BUMDes"
         description="Kelola dan pantau pengguna dalam tenant BUMDes, termasuk direktur, admin BUMDes, manager unit, operator unit, dan viewer unit."
-        action={
-          <Button type="button">
-            <Plus className="h-4 w-4" />
-            Tambah Pengguna
-          </Button>
-        }
+        action={tenantId ? <AddUserDialog units={units} /> : null}
       />
 
       {!tenantId ? (
@@ -417,3 +412,5 @@ export default async function BumdesUsersPage() {
     </div>
   );
 }
+
+
