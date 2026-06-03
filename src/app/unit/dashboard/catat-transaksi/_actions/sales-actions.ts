@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -30,6 +30,71 @@ function getOptionalString(formData: FormData, key: string) {
   return value || null;
 }
 
+function getNumber(formData: FormData, key: string, defaultValue = 0) {
+  const rawValue = String(formData.get(key) ?? "").trim();
+
+  if (!rawValue) {
+    return defaultValue;
+  }
+
+  const value = Number(rawValue);
+
+  if (!Number.isFinite(value)) {
+    throw new Error(`${key} harus berupa angka.`);
+  }
+
+  return value;
+}
+
+
+type SalesLinePreviewInput = {
+  itemId: string;
+  quantity: number;
+  discountPercent: number;
+  taxAmount: number;
+  invoiceDate?: string;
+};
+
+export async function previewSalesLineDiscountPercent(input: SalesLinePreviewInput) {
+  await getLoginContext();
+
+  if (!input.itemId) {
+    return null;
+  }
+
+  if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
+    return null;
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc(
+    "preview_sales_line_discount_percent",
+    {
+      p_item_id: input.itemId,
+      p_quantity: input.quantity,
+      p_discount_percent: input.discountPercent || 0,
+      p_tax_amount: input.taxAmount || 0,
+      p_invoice_date: input.invoiceDate || new Date().toISOString().slice(0, 10),
+    }
+  );
+
+  if (error) {
+    throw new Error(error.message || "Preview perhitungan penjualan gagal.");
+  }
+
+  return data as {
+    unit_price: number;
+    unit_cost: number;
+    quantity: number;
+    discount_percent: number;
+    discount_amount: number;
+    tax_amount: number;
+    gross_amount: number;
+    line_total: number;
+    gross_profit: number;
+  };
+}
 export async function createAndPostSalesInvoice(formData: FormData) {
   const context = await getLoginContext();
 
@@ -58,10 +123,9 @@ export async function createAndPostSalesInvoice(formData: FormData) {
   const notes = getOptionalString(formData, "notes");
   const description = getOptionalString(formData, "description");
 
-  const quantity = Number(String(formData.get("quantity") ?? "0").trim());
-  const unitPrice = Number(String(formData.get("unit_price") ?? "0").trim());
-  const discountAmount = Number(String(formData.get("discount_amount") ?? "0").trim());
-  const taxAmount = Number(String(formData.get("tax_amount") ?? "0").trim());
+  const quantity = getNumber(formData, "quantity");
+  const discountPercent = getNumber(formData, "discount_percent", 0);
+  const taxAmount = getNumber(formData, "tax_amount", 0);
 
   if (!["cash", "credit"].includes(paymentType)) {
     throw new Error("Jenis penjualan tidak valid.");
@@ -71,64 +135,42 @@ export async function createAndPostSalesInvoice(formData: FormData) {
     throw new Error("Tanggal jatuh tempo wajib diisi untuk penjualan kredit.");
   }
 
-  if (Number.isNaN(quantity) || quantity <= 0) {
+  if (quantity <= 0) {
     throw new Error("Jumlah harus lebih dari 0.");
   }
 
-  if (Number.isNaN(unitPrice) || unitPrice < 0) {
-    throw new Error("Harga jual tidak boleh negatif.");
+  if (discountPercent < 0 || discountPercent > 100) {
+    throw new Error("Diskon persen harus berada di antara 0 sampai 100.");
   }
 
-  if (Number.isNaN(discountAmount) || discountAmount < 0) {
-    throw new Error("Diskon tidak boleh negatif.");
-  }
-
-  if (Number.isNaN(taxAmount) || taxAmount < 0) {
+  if (taxAmount < 0) {
     throw new Error("Pajak tidak boleh negatif.");
   }
 
   const supabase = await createClient();
 
-  const { data: unitCostData, error: unitCostError } = await supabase.rpc(
-    "get_inventory_unit_cost",
+  const { error } = await supabase.rpc(
+    "create_and_post_sales_invoice_with_discount_percent",
     {
-      p_item_id: itemId,
+      p_tenant_id: context.tenant_id,
+      p_unit_id: context.unit_id,
+      p_customer_id: customerId,
+      p_invoice_no: invoiceNo,
+      p_invoice_date: invoiceDate,
+      p_due_date: dueDate,
+      p_payment_type: paymentType,
+      p_notes: notes,
+      p_lines: [
+        {
+          item_id: itemId,
+          quantity,
+          discount_percent: discountPercent,
+          tax_amount: taxAmount,
+          description,
+        },
+      ],
     }
   );
-
-  if (unitCostError) {
-    throw new Error(
-      unitCostError.message || "Harga pokok barang belum tersedia."
-    );
-  }
-
-  const unitCost = Number(unitCostData);
-
-  if (Number.isNaN(unitCost) || unitCost <= 0) {
-    throw new Error("Harga pokok barang belum tersedia atau tidak valid.");
-  }
-
-  const { error } = await supabase.rpc("create_and_post_sales_invoice", {
-    p_tenant_id: context.tenant_id,
-    p_unit_id: context.unit_id,
-    p_customer_id: customerId,
-    p_invoice_no: invoiceNo,
-    p_invoice_date: invoiceDate,
-    p_due_date: dueDate,
-    p_payment_type: paymentType,
-    p_notes: notes,
-    p_lines: [
-      {
-        item_id: itemId,
-        quantity,
-        unit_price: unitPrice,
-        discount_amount: discountAmount,
-        tax_amount: taxAmount,
-        unit_cost: unitCost,
-        description,
-      },
-    ],
-  });
 
   if (error) {
     throw new Error(error.message || "Transaksi penjualan gagal disimpan dan diposting.");
@@ -137,10 +179,10 @@ export async function createAndPostSalesInvoice(formData: FormData) {
   revalidatePath("/unit/dashboard/catat-transaksi");
   revalidatePath("/unit/dashboard/sales");
   revalidatePath("/unit/dashboard/inventory");
+  revalidatePath("/unit/dashboard/daftar-stok");
   revalidatePath("/unit/dashboard/cash-bank");
   revalidatePath("/unit/dashboard/reports");
   revalidatePath("/unit/dashboard");
 
   redirect("/unit/dashboard/catat-transaksi");
 }
-

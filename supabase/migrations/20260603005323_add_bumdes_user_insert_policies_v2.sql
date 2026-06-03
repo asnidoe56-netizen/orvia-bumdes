@@ -1,0 +1,3 @@
+﻿-- Stub migration.
+-- Migration ini sudah tercatat/applied di remote database.
+-- File lokal ini hanya untuk menyelaraskan Supabase migration history.

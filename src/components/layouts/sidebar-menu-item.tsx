@@ -66,6 +66,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Catat Transaksi": ReceiptText,
   "Cek Alur Transaksi": Workflow,
   "Persediaan Barang": Package,
+  "Daftar Stok Tersedia": Package,
   ReceiptText,
   RotateCcw,
   Supplier: Truck,
@@ -204,6 +205,7 @@ export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
     </Link>
   );
 }
+
 
 
 
