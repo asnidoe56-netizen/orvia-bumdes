@@ -1,4 +1,4 @@
-﻿import type { NavItem } from "@/lib/navigation/dashboard-config";
+import type { NavItem } from "@/lib/navigation/dashboard-config";
 import { unitNav } from "@/lib/navigation/dashboard-config";
 
 export const savingsLoanUnitNav: NavItem[] = [
@@ -10,6 +10,7 @@ export const savingsLoanUnitNav: NavItem[] = [
   { label: "Pencairan Pinjaman", href: "/unit/dashboard/simpan-pinjam/pencairan" },
   { label: "Angsuran Pinjaman", href: "/unit/dashboard/simpan-pinjam/angsuran" },
   { label: "Kas & Bank", href: "/unit/dashboard/cash-bank" },
+  { label: "Buku Jurnal", href: "/unit/dashboard/reports/buku-jurnal" },
   { label: "Laporan", href: "/unit/dashboard/reports" },
 ];
 

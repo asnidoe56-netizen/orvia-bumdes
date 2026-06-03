@@ -1,4 +1,4 @@
-﻿export type NavItem = {
+export type NavItem = {
   label: string;
   href?: string;
   children?: NavItem[];
@@ -36,6 +36,7 @@ export const unitNav: NavItem[] = [
   { label: "Penjualan", href: "/unit/dashboard/sales" },
   { label: "Kas & Bank", href: "/unit/dashboard/cash-bank" },
   { label: "Aset Tetap", href: "/unit/dashboard/aset-tetap" },
+  { label: "Buku Jurnal", href: "/unit/dashboard/reports/buku-jurnal" },
   { label: "Laporan", href: "/unit/dashboard/reports" },
 ];
 

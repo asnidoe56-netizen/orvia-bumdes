@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -44,6 +44,7 @@ const iconMap: Record<string, LucideIcon> = {
   Pembelian: ClipboardCheck,
   Inventory: Package,
   "Cash Bank": WalletCards,
+  "Buku Jurnal": FileText,
   Laporan: FileText,
 
   Audit: ShieldCheck,
@@ -60,10 +61,12 @@ function isRootDashboardPath(href: string) {
 export function SidebarItem({ href, label }: SidebarItemProps) {
   const pathname = usePathname();
 
-  const isActive = isRootDashboardPath(href)
-    ? pathname === href
-    : pathname === href || pathname.startsWith(`${href}/`);
-
+  const isActive =
+    href === "/unit/dashboard/reports"
+      ? pathname === href
+      : isRootDashboardPath(href)
+        ? pathname === href
+        : pathname === href || pathname.startsWith(`${href}/`);
   const Icon = iconMap[label] ?? LayoutDashboard;
 
   return (
