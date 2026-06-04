@@ -1,4 +1,4 @@
-export type NavItem = {
+﻿export type NavItem = {
   label: string;
   href?: string;
   children?: NavItem[];
@@ -25,6 +25,8 @@ export const bumdesNav: NavItem[] = [
   { label: "Monitoring", href: "/bumdes/dashboard/monitoring" },
   { label: "Cut-off Migrasi", href: "/bumdes/dashboard/cutoff-migrasi" },
   { label: "Bagi Hasil", href: "/bumdes/dashboard/bagi-hasil" },
+  { label: "Manajemen Periode", href: "/bumdes/dashboard/periode-akuntansi" },
+  { label: "Persetujuan Audit", href: "/bumdes/dashboard/akses-audit" },
   { label: "Koreksi Transaksi", href: "/bumdes/dashboard/koreksi-transaksi" },
 ];
 
@@ -48,6 +50,7 @@ export const pengawasNav: NavItem[] = [
   { label: "Koreksi Transaksi", href: "/pengawas/dashboard/koreksi-transaksi" },
   { label: "Cut-off Migrasi", href: "/pengawas/dashboard/cutoff-migrasi" },
   { label: "Audit Konsistensi", href: "/pengawas/dashboard/audit-konsistensi" },
+  { label: "Transparansi Transaksi", href: "/pengawas/dashboard/transparansi-transaksi" },
   { label: "Laporan", href: "/pengawas/dashboard/reports" },
 ];
 
@@ -71,4 +74,7 @@ export const bupatiNav: NavItem[] = [
   { label: "Executive Summary", href: "/bupati/dashboard" },
   { label: "Kinerja Daerah", href: "/bupati/dashboard/regional-performance" },
 ];
+
+
+
 

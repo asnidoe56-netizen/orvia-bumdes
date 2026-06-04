@@ -1,4 +1,5 @@
-﻿import { FileSearch, ShieldCheck } from "lucide-react";
+﻿import Link from "next/link";
+import { ClipboardList, FileSearch, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
@@ -35,6 +36,36 @@ export default function PengawasDashboardPage() {
         />
       </div>
 
+      <div className="mb-5 grid gap-5 md:grid-cols-2">
+        <Link
+          href="/pengawas/dashboard/transparansi-transaksi"
+          className="group rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                Modul Baru
+              </p>
+              <h2 className="mt-2 text-lg font-bold text-slate-950">
+                Transparansi Transaksi
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Pantau catatan tanggal transaksi berbeda dari tanggal input, transaksi pada
+                periode dibuka ulang, dan status review pengawasan.
+              </p>
+            </div>
+
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 transition group-hover:bg-emerald-100">
+              <ClipboardList className="h-5 w-5" />
+            </div>
+          </div>
+
+          <p className="mt-4 text-sm font-bold text-emerald-700">
+            Buka Transparansi Transaksi →
+          </p>
+        </Link>
+      </div>
+
       <Card>
         <CardHeader
           title="Aktivitas Pengawasan"
@@ -57,3 +88,4 @@ export default function PengawasDashboardPage() {
     </div>
   );
 }
+

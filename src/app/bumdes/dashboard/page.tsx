@@ -1,6 +1,7 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
-import { Building2, MapPin, UsersRound, Store, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { Building2, CalendarClock, MapPin, UsersRound, Store, ShieldCheck } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
@@ -156,6 +157,36 @@ export default async function BumdesDashboardPage() {
         </div>
       </section>
 
+      <section className="grid gap-4 md:grid-cols-2">
+        <Link
+          href="/bumdes/dashboard/periode-akuntansi"
+          className="group rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                Modul Baru
+              </p>
+              <h2 className="mt-2 text-lg font-bold text-slate-950">
+                Manajemen Periode
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Kelola periode open, closed, locked, auto close, dan pembukaan ulang periode
+                dengan alasan serta otorisasi.
+              </p>
+            </div>
+
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 transition group-hover:bg-emerald-100">
+              <CalendarClock className="h-5 w-5" />
+            </div>
+          </div>
+
+          <p className="mt-4 text-sm font-bold text-emerald-700">
+            Buka Manajemen Periode →
+          </p>
+        </Link>
+      </section>
+
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
@@ -227,3 +258,4 @@ export default async function BumdesDashboardPage() {
     </div>
   );
 }
+

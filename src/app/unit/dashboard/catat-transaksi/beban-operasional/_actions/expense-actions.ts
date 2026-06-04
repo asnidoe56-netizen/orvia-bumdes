@@ -80,10 +80,18 @@ export async function createAndPostOperationalExpense(
 
     const totalAmount = getRupiahAmount(formData, "total_amount");
     const description = getOptionalString(formData, "description");
+    const operatorReason = getOptionalString(formData, "operator_reason");
 
+    const today = new Date().toISOString().slice(0, 10);
+
+    if (expenseDate !== today && !operatorReason) {
+      throw new Error(
+        "Alasan tanggal input berbeda wajib diisi jika tanggal transaksi bukan tanggal hari ini."
+      );
+    }
     const supabase = await createClient();
 
-    const { error } = await supabase.rpc("create_and_post_operational_expense", {
+    const { error } = await supabase.rpc("create_and_post_operational_expense_v2", {
       p_tenant_id: context.tenant_id,
       p_unit_id: context.unit_id,
       p_expense_no: expenseNo,
@@ -92,6 +100,7 @@ export async function createAndPostOperationalExpense(
       p_cash_bank_account_id: cashBankAccountId,
       p_total_amount: totalAmount,
       p_description: description,
+      p_operator_reason: operatorReason,
     });
 
     if (error) {
@@ -120,3 +129,7 @@ export async function createAndPostOperationalExpense(
     };
   }
 }
+
+
+
+

@@ -186,6 +186,29 @@ export function ExpenseEntryForm({
         />
       </div>
 
+
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="space-y-2">
+          <label
+            htmlFor="operator_reason"
+            className="text-sm font-medium text-amber-900"
+          >
+            Alasan tanggal input berbeda
+          </label>
+          <textarea
+            id="operator_reason"
+            name="operator_reason"
+            rows={3}
+            placeholder="Contoh: Nota baru diterima dari lapangan hari ini."
+            className="w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-900 shadow-sm outline-none focus:border-amber-400"
+          />
+          <p className="text-xs leading-5 text-amber-800">
+            Isi bagian ini jika tanggal transaksi berbeda dari tanggal input hari ini.
+            Sistem tetap mencatat transaksi sesuai tanggal transaksi, dan menyimpan
+            catatan ini untuk transparansi administrasi.
+          </p>
+        </div>
+      </div>
       <div className="rounded-xl border bg-emerald-50 p-4 text-sm leading-6 text-emerald-800">
         Setelah disimpan, engine database akan otomatis membuat jurnal beban,
         transaksi kas/bank keluar, audit log, dan validasi saldo kas/bank.
@@ -207,3 +230,5 @@ export function ExpenseEntryForm({
     </form>
   );
 }
+
+
