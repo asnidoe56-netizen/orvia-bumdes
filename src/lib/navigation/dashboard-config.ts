@@ -8,6 +8,7 @@ export const platformNav: NavItem[] = [
   { label: "Ringkasan Platform", href: "/platform/dashboard" },
   { label: "Registrasi BUMDes", href: "/platform/dashboard/registrations" },
   { label: "Registrasi Pendamping", href: "/platform/dashboard/pendamping-registrations" },
+  { label: "Registrasi Pengawas", href: "/platform/dashboard/pengawas-registrations" },
   { label: "Registrasi Bupati", href: "/platform/dashboard/bupati-registrations" },
   { label: "Data BUMDes", href: "/platform/dashboard/bumdes" },
   { label: "Users & Role", href: "/platform/dashboard/users" },
@@ -22,6 +23,7 @@ export const bumdesNav: NavItem[] = [
   { label: "Pengguna", href: "/bumdes/dashboard/users" },
   { label: "Laporan Konsolidasi", href: "/bumdes/dashboard/reports" },
   { label: "Monitoring", href: "/bumdes/dashboard/monitoring" },
+  { label: "Cut-off Migrasi", href: "/bumdes/dashboard/cutoff-migrasi" },
   { label: "Bagi Hasil", href: "/bumdes/dashboard/bagi-hasil" },
   { label: "Koreksi Transaksi", href: "/bumdes/dashboard/koreksi-transaksi" },
 ];
@@ -29,6 +31,7 @@ export const bumdesNav: NavItem[] = [
 export const unitNav: NavItem[] = [
   { label: "Ringkasan Unit", href: "/unit/dashboard" },
   { label: "Master Data", href: "/unit/dashboard/master-data" },
+  { label: "Cut-off Migrasi", href: "/unit/dashboard/cutoff-migrasi" },
   { label: "Daftar Stok Tersedia", href: "/unit/dashboard/daftar-stok" },
   { label: "Catat Transaksi", href: "/unit/dashboard/catat-transaksi" },
   { label: "Cek Alur Transaksi", href: "/unit/dashboard/cek-alur-transaksi" },
@@ -43,6 +46,7 @@ export const unitNav: NavItem[] = [
 export const pengawasNav: NavItem[] = [
   { label: "Audit", href: "/pengawas/dashboard" },
   { label: "Koreksi Transaksi", href: "/pengawas/dashboard/koreksi-transaksi" },
+  { label: "Cut-off Migrasi", href: "/pengawas/dashboard/cutoff-migrasi" },
   { label: "Audit Konsistensi", href: "/pengawas/dashboard/audit-konsistensi" },
   { label: "Laporan", href: "/pengawas/dashboard/reports" },
 ];
@@ -67,15 +71,4 @@ export const bupatiNav: NavItem[] = [
   { label: "Executive Summary", href: "/bupati/dashboard" },
   { label: "Kinerja Daerah", href: "/bupati/dashboard/regional-performance" },
 ];
-
-
-
-
-
-
-
-
-
-
-
 
