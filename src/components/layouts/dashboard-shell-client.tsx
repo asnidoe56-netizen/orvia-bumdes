@@ -1,8 +1,6 @@
 ﻿"use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useState } from "react";
 import { Bell, Menu, UserRound, X } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { SidebarMenuItem } from "@/components/layouts/sidebar-menu-item";
@@ -31,22 +29,6 @@ const roleLabels: Record<string, string> = {
   inspektorat: "Inspektorat",
   bupati: "Bupati",
 };
-
-function isRootDashboardPath(href: string) {
-  return href.endsWith("/dashboard");
-}
-
-function isPathActive(pathname: string, href?: string) {
-  if (!href) return false;
-
-  if (href === "/unit/dashboard/reports") {
-    return pathname === href;
-  }
-
-  return isRootDashboardPath(href)
-    ? pathname === href
-    : pathname === href || pathname.startsWith(`${href}/`);
-}
 
 function getDisplayName(loginContext: LoginContext | null) {
   return loginContext?.full_name?.trim() || "Pengguna";
@@ -93,12 +75,8 @@ export function DashboardShellClient({
   loginContext,
   children,
 }: DashboardShellClientProps) {
-  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const topNavItems = useMemo(() => {
-    return navItems.filter((item) => item.href).slice(0, 5);
-  }, [navItems]);
 
   const displayName = getDisplayName(loginContext);
   const initials = getInitials(displayName);
@@ -215,26 +193,6 @@ export function DashboardShellClient({
               </div>
             </div>
 
-            <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex">
-              {topNavItems.map((item) => {
-                const active = isPathActive(pathname, item.href);
-
-                return (
-                  <Link
-                    key={item.href ?? item.label}
-                    href={item.href ?? "#"}
-                    className={[
-                      "rounded-xl px-3 py-2 text-sm font-bold transition",
-                      active
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
-                    ].join(" ")}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
 
             <div className="flex shrink-0 items-center gap-2">
               <button
@@ -272,4 +230,6 @@ export function DashboardShellClient({
     </div>
   );
 }
+
+
 
