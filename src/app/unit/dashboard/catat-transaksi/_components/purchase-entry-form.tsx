@@ -1,4 +1,4 @@
-import { PlusCircle, ShoppingBag } from "lucide-react";
+﻿import { PlusCircle } from "lucide-react";
 import { redirect } from "next/navigation";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { createClient } from "@/lib/supabase/server";
@@ -30,9 +30,6 @@ type PurchaseEntryFormProps = {
 
 export async function PurchaseEntryForm({
   paymentType,
-  title,
-  subtitle,
-  eyebrow,
   submitLabel,
 }: PurchaseEntryFormProps) {
   const context = await getLoginContext();
@@ -69,199 +66,239 @@ export async function PurchaseEntryForm({
   const isCredit = paymentType === "credit";
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <PageBackButton fallbackHref="/unit/dashboard/catat-transaksi" />
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-              {eyebrow}
-            </p>
-
-            <h1 className="mt-2 text-2xl font-bold text-slate-950">
-              {title}
-            </h1>
-
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              {subtitle}
-            </p>
-          </div>
-
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-            <ShoppingBag className="h-6 w-6" />
-          </div>
-        </div>
-      </section>
-
-      <form action={createAndPostPurchaseInvoice} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <form action={createAndPostPurchaseInvoice}>
         <input type="hidden" name="payment_type" value={paymentType} />
 
-        <div className="mb-5 flex items-start gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-            <PlusCircle className="h-5 w-5" />
-          </div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <section className="w-full rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-1">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                <PlusCircle className="h-5 w-5" />
+              </div>
 
-          <div>
-            <h2 className="text-lg font-bold text-slate-950">
-              Data Pembelian
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Isi data barang yang dibeli. Nomor transaksi dibuat otomatis, lalu sistem langsung memproses transaksi melalui engine database.
+              <div>
+                <h2 className="text-base font-bold text-slate-950">
+                  Data Pembelian
+                </h2>
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                  Isi data barang yang dibeli. Nomor transaksi, stok, kas/utang,
+                  dan jurnal diproses otomatis oleh database.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              <label className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-700">
+                  Tanggal Pembelian
+                </span>
+                <input
+                  name="invoice_date"
+                  type="date"
+                  required
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+
+              {isCredit ? (
+                <label className="space-y-1.5">
+                  <span className="text-xs font-bold text-slate-700">
+                    Tanggal Jatuh Tempo
+                  </span>
+                  <input
+                    name="due_date"
+                    type="date"
+                    required
+                    className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </label>
+              ) : null}
+
+              <label className={`space-y-1.5 ${isCredit ? "lg:col-span-2" : ""}`}>
+                <span className="text-xs font-bold text-slate-700">
+                  Supplier
+                </span>
+                <select
+                  name="supplier_id"
+                  required
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                >
+                  <option value="">Pilih supplier</option>
+                  {suppliers.map((supplier) => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.supplier_code} - {supplier.supplier_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1.5 lg:col-span-2">
+                <span className="text-xs font-bold text-slate-700">
+                  Barang
+                </span>
+                <select
+                  name="item_id"
+                  required
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                >
+                  <option value="">Pilih barang</option>
+                  {items.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.item_code} - {item.item_name} ({item.unit_of_measure})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-700">
+                  Jumlah
+                </span>
+                <input
+                  name="quantity"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  placeholder="Contoh: 10"
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+
+              <label className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-700">
+                  Harga Beli per Barang
+                </span>
+                <input
+                  name="unit_cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  placeholder="Contoh: 150000"
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+
+              <label className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-700">
+                  Diskon
+                </span>
+                <input
+                  name="discount_amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue="0"
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+
+              <label className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-700">
+                  Pajak
+                </span>
+                <input
+                  name="tax_amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue="0"
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+
+              <label className="space-y-1.5 lg:col-span-2">
+                <span className="text-xs font-bold text-slate-700">
+                  Catatan
+                </span>
+                <textarea
+                  name="notes"
+                  rows={2}
+                  placeholder="Catatan pembelian"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs leading-5 text-slate-500">
+                Saat disimpan, database membuat nomor transaksi otomatis dan
+                memperbarui stok, kas/utang, serta pencatatan keuangan.
+              </p>
+
+              <button
+                type="submit"
+                className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 sm:min-w-[260px]"
+              >
+                {submitLabel}
+              </button>
+            </div>
+          </section>
+
+          <aside className="w-full rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:w-[360px] lg:shrink-0">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">
+              Ringkasan
             </p>
-          </div>
-        </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+            <h2 className="mt-1 text-base font-bold text-slate-950">
+              Ringkasan Pembelian
+            </h2>
 
-          <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-700">
-              Tanggal Pembelian
-            </span>
-            <input
-              name="invoice_date"
-              type="date"
-              required
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            />
-          </label>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Jenis Pembayaran
+              </p>
+              <p className="mt-1 text-xl font-black text-slate-950">
+                {isCredit ? "Kredit" : "Tunai"}
+              </p>
+            </div>
 
-          <label className="space-y-2 md:col-span-2">
-            <span className="text-sm font-semibold text-slate-700">
-              Supplier
-            </span>
-            <select
-              name="supplier_id"
-              required
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            >
-              <option value="">Pilih supplier</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.supplier_code} - {supplier.supplier_name}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 p-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-500">Barang</span>
+                <span className="font-bold text-slate-950">
+                  Dipilih di form
+                </span>
+              </div>
 
-          {isCredit ? (
-            <label className="space-y-2 md:col-span-2">
-              <span className="text-sm font-semibold text-slate-700">
-                Tanggal Jatuh Tempo
-              </span>
-              <input
-                name="due_date"
-                type="date"
-                required
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-              />
-            </label>
-          ) : null}
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-500">Jumlah</span>
+                <span className="font-bold text-slate-950">
+                  Dari input
+                </span>
+              </div>
 
-          <label className="space-y-2 md:col-span-2">
-            <span className="text-sm font-semibold text-slate-700">
-              Barang
-            </span>
-            <select
-              name="item_id"
-              required
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            >
-              <option value="">Pilih barang</option>
-              {items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.item_code} - {item.item_name} ({item.unit_of_measure})
-                </option>
-              ))}
-            </select>
-          </label>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-500">Harga Beli</span>
+                <span className="font-bold text-slate-950">
+                  Dari input
+                </span>
+              </div>
 
-          <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-700">
-              Jumlah
-            </span>
-            <input
-              name="quantity"
-              type="number"
-              min="0.01"
-              step="0.01"
-              required
-              placeholder="Contoh: 10"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            />
-          </label>
+              <div className="border-t border-slate-200 pt-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-bold text-slate-700">
+                    Dampak Posting
+                  </span>
+                  <span className="font-black text-emerald-700">
+                    Otomatis
+                  </span>
+                </div>
+              </div>
+            </div>
 
-          <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-700">
-              Harga Beli per Barang
-            </span>
-            <input
-              name="unit_cost"
-              type="number"
-              min="0"
-              step="0.01"
-              required
-              placeholder="Contoh: 150000"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            />
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-700">
-              Diskon
-            </span>
-            <input
-              name="discount_amount"
-              type="number"
-              min="0"
-              step="0.01"
-              defaultValue="0"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            />
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-700">
-              Pajak
-            </span>
-            <input
-              name="tax_amount"
-              type="number"
-              min="0"
-              step="0.01"
-              defaultValue="0"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            />
-          </label>
-
-          <label className="space-y-2 md:col-span-2">
-            <span className="text-sm font-semibold text-slate-700">
-              Catatan
-            </span>
-            <textarea
-              name="notes"
-              rows={3}
-              placeholder="Catatan pembelian"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            />
-          </label>
-        </div>
-
-        <div className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs leading-5 text-slate-500">
-            Saat disimpan, nomor transaksi dibuat otomatis dan engine database langsung memperbarui stok, kas atau utang, serta pencatatan keuangan.
-          </p>
-
-          <button
-            type="submit"
-            className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700"
-          >
-            {submitLabel}
-          </button>
+            <p className="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
+              {isCredit
+                ? "Pembelian kredit akan menambah persediaan dan utang supplier sesuai engine database."
+                : "Pembelian tunai akan menambah persediaan dan mengurangi kas/bank sesuai engine database."}
+            </p>
+          </aside>
         </div>
       </form>
     </div>
   );
 }
-
-

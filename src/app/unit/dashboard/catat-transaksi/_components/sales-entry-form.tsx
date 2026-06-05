@@ -1,5 +1,4 @@
-import { ReceiptText } from "lucide-react";
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
@@ -33,9 +32,6 @@ type SalesEntryFormProps = {
 
 export async function SalesEntryForm({
   paymentType,
-  title,
-  subtitle,
-  eyebrow,
   submitLabel,
 }: SalesEntryFormProps) {
   const context = await getLoginContext();
@@ -72,30 +68,8 @@ export async function SalesEntryForm({
   const items = (itemResult.data ?? []) as InventoryItem[];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <PageBackButton fallbackHref="/unit/dashboard/catat-transaksi" />
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-              {eyebrow}
-            </p>
-
-            <h1 className="mt-2 text-2xl font-bold text-slate-950">
-              {title}
-            </h1>
-
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              {subtitle}
-            </p>
-          </div>
-
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-            <ReceiptText className="h-6 w-6" />
-          </div>
-        </div>
-      </section>
 
       <SalesEntryFormClient
         paymentType={paymentType}
