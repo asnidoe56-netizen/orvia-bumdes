@@ -37,8 +37,8 @@ export const unitNav: NavItem[] = [
   { label: "Daftar Stok Tersedia", href: "/unit/dashboard/daftar-stok" },
   { label: "Catat Transaksi", href: "/unit/dashboard/catat-transaksi" },
   { label: "Cek Alur Transaksi", href: "/unit/dashboard/cek-alur-transaksi" },
-  { label: "Pembelian", href: "/unit/dashboard/purchasing" },
-  { label: "Penjualan", href: "/unit/dashboard/sales" },
+  { label: "Riwayat Pembelian", href: "/unit/dashboard/purchasing" },
+  { label: "Riwayat Penjualan", href: "/unit/dashboard/sales" },
   { label: "Kas & Bank", href: "/unit/dashboard/cash-bank" },
   { label: "Aset Tetap", href: "/unit/dashboard/aset-tetap" },
   { label: "Buku Jurnal", href: "/unit/dashboard/reports/buku-jurnal" },
@@ -74,6 +74,7 @@ export const bupatiNav: NavItem[] = [
   { label: "Executive Summary", href: "/bupati/dashboard" },
   { label: "Kinerja Daerah", href: "/bupati/dashboard/regional-performance" },
 ];
+
 
 
 

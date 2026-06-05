@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -73,7 +73,9 @@ const iconMap: Record<string, LucideIcon> = {
   UserRoundCheck,
   Customer: UsersRound,
   Pembelian: ClipboardCheck,
+  "Riwayat Pembelian": ClipboardCheck,
   Penjualan: ShoppingCart,
+  "Riwayat Penjualan": ShoppingCart,
   "Kas & Bank": WalletCards,
   Workflow,
   "Aset Tetap": Landmark,
@@ -209,6 +211,7 @@ export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
     </Link>
   );
 }
+
 
 
 
