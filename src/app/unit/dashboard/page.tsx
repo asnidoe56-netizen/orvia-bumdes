@@ -1,3 +1,4 @@
+﻿import { ResponsiveTableShell } from "@/components/ui/responsive-table-shell";
 export const dynamic = "force-dynamic";
 
 import {
@@ -129,8 +130,8 @@ export default async function UnitDashboardPage() {
             </h1>
 
             <p className="mt-1 text-sm text-slate-600">
-              {tenantData?.nama_bumdes ?? "BUMDes"} · Desa{" "}
-              {tenantData?.nama_desa ?? "-"} · Kecamatan{" "}
+              {tenantData?.nama_bumdes ?? "BUMDes"} Â· Desa{" "}
+              {tenantData?.nama_desa ?? "-"} Â· Kecamatan{" "}
               {tenantData?.nama_kecamatan ?? "-"}
             </p>
           </div>
@@ -240,9 +241,46 @@ export default async function UnitDashboardPage() {
               </p>
             </div>
           </div>
+          <div className="space-y-3 md:hidden">
+            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="font-black text-slate-950">Accounting Scope</h3>
+                <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                  Aktif
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                COA unit: {coaCount ?? 0} akun.
+              </p>
+            </article>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <table className="w-full text-left text-sm">
+            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="font-black text-slate-950">Inventory</h3>
+                <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                  Siap Diisi
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Item saat ini: {itemCount ?? 0}.
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="font-black text-slate-950">Kas & Bank</h3>
+                <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                  Menunggu Akun
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Modul akan aktif setelah akun kas/bank dibuat.
+              </p>
+            </article>
+          </div>
+
+          <ResponsiveTableShell className="hidden md:block">
+            <table className="min-w-[720px] w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Modul</th>
@@ -295,10 +333,13 @@ export default async function UnitDashboardPage() {
                 </tr>
               </tbody>
             </table>
-          </div>
+          </ResponsiveTableShell>
         </div>
       </section>
     </div>
   );
 }
+
+
+
 

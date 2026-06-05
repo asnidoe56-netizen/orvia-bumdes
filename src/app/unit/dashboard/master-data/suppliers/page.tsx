@@ -1,3 +1,4 @@
+﻿import { ResponsiveTableShell } from "@/components/ui/responsive-table-shell";
 export const dynamic = "force-dynamic";
 
 import { PlusCircle, Truck } from "lucide-react";
@@ -168,9 +169,61 @@ export default async function UnitMasterSuppliersPage() {
               </p>
             </div>
           </div>
+          <div className="space-y-3 md:hidden">
+            {supplierList.length > 0 ? (
+              supplierList.map((supplier) => (
+                <article
+                  key={supplier.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                        {supplier.supplier_code}
+                      </p>
+                      <h3 className="mt-1 break-words text-base font-black text-slate-950">
+                        {supplier.supplier_name}
+                      </h3>
+                    </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <table className="w-full text-left text-sm">
+                    <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                      {supplier.is_active ? "Aktif" : "Nonaktif"}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-3 border-t border-slate-100 pt-4 text-sm">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                        Kontak
+                      </p>
+                      <p className="mt-1 break-words text-slate-700">
+                        {supplier.phone || "-"}
+                      </p>
+                      <p className="mt-1 break-words text-xs text-slate-500">
+                        {supplier.email || "-"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                        Alamat
+                      </p>
+                      <p className="mt-1 break-words text-slate-600">
+                        {supplier.address || "Alamat belum diisi"}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                Belum ada supplier. Tambahkan supplier pertama dari form di samping.
+              </div>
+            )}
+          </div>
+
+          <ResponsiveTableShell className="hidden md:block">
+            <table className="min-w-[760px] w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Kode</th>
@@ -218,9 +271,12 @@ export default async function UnitMasterSuppliersPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTableShell>
         </div>
       </section>
     </div>
   );
 }
+
+
+
