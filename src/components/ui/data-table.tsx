@@ -1,4 +1,5 @@
 ﻿import { ReactNode } from "react";
+import { ResponsiveTableShell } from "@/components/ui/responsive-table-shell";
 
 type DataTableProps = {
   columns: string[];
@@ -8,46 +9,46 @@ type DataTableProps = {
 };
 
 export function DataTable({
-  columns,
   children,
+  columns,
   emptyText = "Belum ada data.",
   minWidthClassName = "min-w-[720px]",
 }: DataTableProps) {
-  return (
-    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="w-full overflow-x-auto">
-        <table
-          className={[
-            "w-full border-collapse text-left text-sm",
-            minWidthClassName,
-          ].join(" ")}
-        >
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr>
-              {columns.map((column) => (
-                <th key={column} className="px-4 py-3 font-bold">
-                  {column}
-                </th>
-              ))}
-            </tr>
-          </thead>
+  const hasRows = Boolean(children);
 
-          <tbody className="divide-y divide-slate-100 text-slate-700">
-            {children ? (
-              children
-            ) : (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-4 py-10 text-center text-sm text-slate-500"
-                >
-                  {emptyText}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+  return (
+    <ResponsiveTableShell>
+      <table
+        className={[
+          "w-full border-separate border-spacing-0 text-left text-sm",
+          minWidthClassName,
+        ].join(" ")}
+      >
+        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <tr>
+            {columns.map((column) => (
+              <th key={column} className="px-4 py-3 font-black">
+                {column}
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody className="divide-y divide-slate-100">
+          {hasRows ? (
+            children
+          ) : (
+            <tr>
+              <td
+                colSpan={columns.length}
+                className="px-4 py-6 text-center text-sm text-slate-500"
+              >
+                {emptyText}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </ResponsiveTableShell>
   );
 }

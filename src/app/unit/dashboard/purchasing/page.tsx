@@ -182,8 +182,8 @@ export default async function UnitPurchasingPage() {
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
-          <table className="w-full text-left text-sm">
+        <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-200">
+          <table className="min-w-[760px] w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3">Tanggal</th>
@@ -241,3 +241,4 @@ export default async function UnitPurchasingPage() {
     </div>
   );
 }
+

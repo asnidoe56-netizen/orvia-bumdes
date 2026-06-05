@@ -1,7 +1,8 @@
 ﻿"use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { MouseEvent, ReactNode, useEffect, useState } from "react";
 import { Bell, Menu, UserRound, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { SidebarMenuItem } from "@/components/layouts/sidebar-menu-item";
 import type { NavItem } from "@/lib/navigation/dashboard-config";
@@ -75,7 +76,9 @@ export function DashboardShellClient({
   loginContext,
   children,
 }: DashboardShellClientProps) {
+  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -103,6 +106,27 @@ export function DashboardShellClient({
     };
   }, [isMobileMenuOpen]);
 
+  function handleMobileNavClick(event: MouseEvent<HTMLElement>) {
+    const target = event.target as HTMLElement;
+    const link = target.closest("a[href]") as HTMLAnchorElement | null;
+
+    if (!link) return;
+
+    const nextHref = link.getAttribute("href");
+
+    setIsMobileMenuOpen(false);
+
+    if (
+      nextHref &&
+      nextHref.startsWith("/") &&
+      nextHref !== pathname
+    ) {
+      setPendingHref(nextHref);
+    }
+  }
+
+  const isRoutePending = Boolean(pendingHref && pendingHref !== pathname);
+
   const displayName = getDisplayName(loginContext);
   const initials = getInitials(displayName);
   const roleLabel = getRoleLabel(loginContext?.role);
@@ -110,6 +134,17 @@ export function DashboardShellClient({
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-100">
+      {isRoutePending ? (
+        <div className="fixed inset-x-0 top-0 z-[60]">
+          <div className="h-1 w-full overflow-hidden bg-emerald-100">
+            <div className="h-full w-1/2 animate-pulse rounded-r-full bg-emerald-600" />
+          </div>
+          <div className="mx-auto mt-2 w-fit rounded-full border border-emerald-100 bg-white/95 px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm backdrop-blur">
+            Memuat halaman...
+          </div>
+        </div>
+      ) : null}
+
       <aside className="fixed inset-y-0 left-0 z-30 hidden h-dvh w-72 border-r border-slate-200 bg-white p-5 lg:flex lg:flex-col">
         <div className="shrink-0 rounded-2xl bg-emerald-700 p-4 text-white">
           <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
@@ -167,14 +202,12 @@ export function DashboardShellClient({
                 </button>
               </div>
 
-              <nav className="mt-6 shrink-0 space-y-1 pr-1">
+              <nav
+                className="mt-6 shrink-0 space-y-1 pr-1"
+                onClick={handleMobileNavClick}
+              >
                 {navItems.map((item) => (
-                  <div
-                    key={item.href ?? item.label}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <SidebarMenuItem item={item} />
-                  </div>
+                  <SidebarMenuItem key={item.href ?? item.label} item={item} />
                 ))}
               </nav>
 
@@ -256,3 +289,5 @@ export function DashboardShellClient({
     </div>
   );
 }
+
+
