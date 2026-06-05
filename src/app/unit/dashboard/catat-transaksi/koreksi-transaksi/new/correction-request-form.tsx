@@ -148,7 +148,7 @@ export function CorrectionRequestForm({
     <form action={createJournalCorrectionRequestAction} className="space-y-5">
       <input type="hidden" name="journal_entry_id" value={journalEntryId} />
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-slate-900 bg-white p-5">
         <h2 className="text-lg font-bold text-slate-950">Alasan Koreksi</h2>
         <p className="mt-1 text-sm text-slate-600">
           Jelaskan kenapa transaksi ini perlu dikoreksi. Alasan ini akan dibaca Pengawas.
@@ -164,7 +164,7 @@ export function CorrectionRequestForm({
               name="corrected_journal_date"
               defaultValue={originalJournalDate}
               required
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
+              className="w-full rounded-2xl border border-slate-900 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
             />
           </label>
 
@@ -177,7 +177,7 @@ export function CorrectionRequestForm({
               name="corrected_description"
               defaultValue={`Koreksi: ${originalDescription}`}
               required
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
+              className="w-full rounded-2xl border border-slate-900 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
             />
           </label>
         </div>
@@ -189,12 +189,12 @@ export function CorrectionRequestForm({
             required
             rows={4}
             placeholder="Contoh: Akun pendapatan yang dipilih keliru, sehingga perlu diganti ke akun pendapatan jasa."
-            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
+            className="w-full rounded-2xl border border-slate-900 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
           />
         </label>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-slate-900 bg-white p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-950">
@@ -205,7 +205,7 @@ export function CorrectionRequestForm({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm">
+          <div className="rounded-2xl border border-slate-900 bg-slate-50 p-3 text-sm">
             <div className="font-bold text-slate-950">
               Debit: {formatRupiah(totalDebit)}
             </div>
@@ -228,7 +228,7 @@ export function CorrectionRequestForm({
           {lines.map((line, index) => (
             <div
               key={line.key}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              className="rounded-2xl border border-slate-900 bg-slate-50 p-4"
             >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-sm font-bold text-slate-700">
@@ -239,7 +239,7 @@ export function CorrectionRequestForm({
                   <button
                     type="button"
                     onClick={() => removeLine(index)}
-                    className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-red-600 shadow-sm"
+                    className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-red-600"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Hapus
@@ -257,7 +257,7 @@ export function CorrectionRequestForm({
                     value={line.accountId}
                     onChange={(event) => updateLine(index, "accountId", event.target.value)}
                     required
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
+                    className="w-full rounded-2xl border border-slate-900 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
                   >
                     <option value="">Pilih akun</option>
                     {accountOptions.map((account) => (
@@ -277,7 +277,7 @@ export function CorrectionRequestForm({
                     name="line_description"
                     value={line.description}
                     onChange={(event) => updateLine(index, "description", event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
+                    className="w-full rounded-2xl border border-slate-900 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
                   />
                 </label>
 
@@ -292,7 +292,7 @@ export function CorrectionRequestForm({
                     step="1"
                     value={line.debit}
                     onChange={(event) => updateLine(index, "debit", event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
+                    className="w-full rounded-2xl border border-slate-900 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
                   />
                 </label>
 
@@ -307,7 +307,7 @@ export function CorrectionRequestForm({
                     step="1"
                     value={line.credit}
                     onChange={(event) => updateLine(index, "credit", event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
+                    className="w-full rounded-2xl border border-slate-900 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50"
                   />
                 </label>
               </div>
@@ -318,7 +318,7 @@ export function CorrectionRequestForm({
         <button
           type="button"
           onClick={addLine}
-          className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-50"
+          className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-900 bg-white px-4 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50"
         >
           <Plus className="h-4 w-4" />
           Tambah Baris
@@ -341,7 +341,7 @@ export function CorrectionRequestForm({
       <button
         type="submit"
         disabled={!canSubmit}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
       >
         <CheckCircle2 className="h-4 w-4" />
         Ajukan Koreksi ke Pengawas
@@ -349,4 +349,5 @@ export function CorrectionRequestForm({
     </form>
   );
 }
+
 

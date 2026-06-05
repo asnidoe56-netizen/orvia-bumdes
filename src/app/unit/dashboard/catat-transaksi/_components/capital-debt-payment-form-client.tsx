@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useActionState, useState } from "react";
 import {
@@ -104,7 +104,7 @@ function CashBankSelect({ cashBanks }: { cashBanks: CashBankBalance[] }) {
             <select
                 name="cash_bank_account_id"
                 required
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
+                className="mt-2 w-full rounded-2xl border border-slate-900 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
             >
                 <option value="">Pilih kas/bank</option>
 
@@ -113,7 +113,7 @@ function CashBankSelect({ cashBanks }: { cashBanks: CashBankBalance[] }) {
                         key={account.cash_bank_account_id}
                         value={account.cash_bank_account_id}
                     >
-                        {account.account_code} — {account.account_name} — Saldo:{" "}
+                        {account.account_code} â€” {account.account_name} â€” Saldo:{" "}
                         {formatRupiah(account.current_balance)}
                     </option>
                 ))}
@@ -154,7 +154,7 @@ export function CapitalDebtPaymentFormClient({
     }
 
     return (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-slate-900 bg-white p-6">
             <h2 className="text-lg font-bold text-slate-950">
                 Form Pembayaran Hutang Belanja Modal
             </h2>
@@ -180,7 +180,7 @@ export function CapitalDebtPaymentFormClient({
                         required
                         value={selectedPayableId}
                         onChange={(event) => handlePayableChange(event.target.value)}
-                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
+                        className="mt-2 w-full rounded-2xl border border-slate-900 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
                     >
                         <option value="">Pilih hutang Belanja Modal</option>
 
@@ -189,8 +189,8 @@ export function CapitalDebtPaymentFormClient({
                                 key={item.capital_expenditure_id}
                                 value={item.capital_expenditure_id}
                             >
-                                {item.transaction_no} — Hutang Aset/Belanja Modal — Supplier:{" "}
-                                {item.supplier_name || "-"} — Sisa:{" "}
+                                {item.transaction_no} â€” Hutang Aset/Belanja Modal â€” Supplier:{" "}
+                                {item.supplier_name || "-"} â€” Sisa:{" "}
                                 {formatRupiah(item.outstanding_amount)}
                             </option>
                         ))}
@@ -215,7 +215,7 @@ export function CapitalDebtPaymentFormClient({
                         name="payment_no"
                         required
                         defaultValue={generatePaymentNo()}
-                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
+                        className="mt-2 w-full rounded-2xl border border-slate-900 px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
                     />
                 </div>
 
@@ -229,7 +229,7 @@ export function CapitalDebtPaymentFormClient({
                         name="payment_date"
                         required
                         defaultValue={getTodayDate()}
-                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
+                        className="mt-2 w-full rounded-2xl border border-slate-900 px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
                     />
                 </div>
 
@@ -247,7 +247,7 @@ export function CapitalDebtPaymentFormClient({
                         value={amountValue}
                         onChange={(event) => setAmountValue(event.target.value)}
                         placeholder="Otomatis terisi dari sisa hutang"
-                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
+                        className="mt-2 w-full rounded-2xl border border-slate-900 px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
                     />
 
                     <p className="mt-2 text-xs text-slate-500">
@@ -263,7 +263,7 @@ export function CapitalDebtPaymentFormClient({
                         name="notes"
                         rows={3}
                         placeholder="Opsional"
-                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
+                        className="mt-2 w-full rounded-2xl border border-slate-900 px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
                     />
                 </div>
 

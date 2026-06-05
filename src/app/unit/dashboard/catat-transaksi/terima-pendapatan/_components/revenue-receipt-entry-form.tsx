@@ -64,7 +64,7 @@ export function RevenueReceiptEntryForm({
             name="receipt_date"
             type="date"
             defaultValue={today}
-            className="h-11 w-full rounded-xl border bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400"
+            className="h-11 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             required
           />
         </div>
@@ -81,7 +81,7 @@ export function RevenueReceiptEntryForm({
             name="receipt_no"
             type="text"
             placeholder="Otomatis jika dikosongkan"
-            className="h-11 w-full rounded-xl border bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400"
+            className="h-11 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           />
         </div>
 
@@ -95,7 +95,7 @@ export function RevenueReceiptEntryForm({
           <select
             id="revenue_account_id"
             name="revenue_account_id"
-            className="h-11 w-full rounded-xl border bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400"
+            className="h-11 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             defaultValue=""
             required
           >
@@ -127,7 +127,7 @@ export function RevenueReceiptEntryForm({
           <select
             id="cash_bank_account_id"
             name="cash_bank_account_id"
-            className="h-11 w-full rounded-xl border bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400"
+            className="h-11 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             defaultValue=""
             required
           >
@@ -164,7 +164,7 @@ export function RevenueReceiptEntryForm({
             min="1"
             step="1"
             placeholder="Contoh: 250000"
-            className="h-11 w-full rounded-xl border bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400"
+            className="h-11 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             required
           />
         </div>
@@ -182,7 +182,7 @@ export function RevenueReceiptEntryForm({
           name="description"
           rows={4}
           placeholder="Contoh: Terima pendapatan jasa sewa alat bulan Mei"
-          className="w-full rounded-xl border bg-white px-3 py-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-400"
+          className="w-full rounded-xl border border-slate-900 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
         />
       </div>
 
@@ -200,7 +200,7 @@ export function RevenueReceiptEntryForm({
             revenueAccounts.length === 0 ||
             cashBankAccounts.length === 0
           }
-          className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? "Menyimpan..." : "Simpan Terima Pendapatan"}
         </button>
@@ -208,3 +208,4 @@ export function RevenueReceiptEntryForm({
     </form>
   );
 }
+

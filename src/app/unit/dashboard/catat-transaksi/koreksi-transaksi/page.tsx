@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import {
   ArrowRight,
@@ -227,7 +227,7 @@ export default async function UnitKoreksiTransaksiPage({
         </div>
       ) : null}
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-900 bg-white p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
@@ -350,7 +350,7 @@ export default async function UnitKoreksiTransaksiPage({
 
                       <button
                         type="submit"
-                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"
+                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700"
                       >
                         <CheckCircle2 className="h-4 w-4" />
                         Posting
@@ -480,7 +480,7 @@ export default async function UnitKoreksiTransaksiPage({
                   <td className="px-4 py-4">
                     <Link
                       href={`/unit/dashboard/catat-transaksi/koreksi-transaksi/new?journal_entry_id=${item.journal_entry_id}`}
-                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-900 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
                     >
                       Ajukan
                       <ArrowRight className="h-4 w-4" />

@@ -73,7 +73,7 @@ export async function PurchaseEntryForm({
         <input type="hidden" name="payment_type" value={paymentType} />
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-          <section className="w-full rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-1">
+          <section className="w-full rounded-3xl border border-slate-900 bg-white p-4 lg:flex-1">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
                 <PlusCircle className="h-5 w-5" />
@@ -99,7 +99,7 @@ export async function PurchaseEntryForm({
                   name="invoice_date"
                   type="date"
                   required
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -112,7 +112,7 @@ export async function PurchaseEntryForm({
                     name="due_date"
                     type="date"
                     required
-                    className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                    className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 </label>
               ) : null}
@@ -124,7 +124,7 @@ export async function PurchaseEntryForm({
                 <select
                   name="supplier_id"
                   required
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 >
                   <option value="">Pilih supplier</option>
                   {suppliers.map((supplier) => (
@@ -142,7 +142,7 @@ export async function PurchaseEntryForm({
                 <select
                   name="item_id"
                   required
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 >
                   <option value="">Pilih barang</option>
                   {items.map((item) => (
@@ -164,7 +164,7 @@ export async function PurchaseEntryForm({
                   step="0.01"
                   required
                   placeholder="Contoh: 10"
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -179,7 +179,7 @@ export async function PurchaseEntryForm({
                   step="0.01"
                   required
                   placeholder="Contoh: 150000"
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -193,7 +193,7 @@ export async function PurchaseEntryForm({
                   min="0"
                   step="0.01"
                   defaultValue="0"
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -207,7 +207,7 @@ export async function PurchaseEntryForm({
                   min="0"
                   step="0.01"
                   defaultValue="0"
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -219,7 +219,7 @@ export async function PurchaseEntryForm({
                   name="notes"
                   rows={2}
                   placeholder="Catatan pembelian"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
             </div>
@@ -232,14 +232,14 @@ export async function PurchaseEntryForm({
 
               <button
                 type="submit"
-                className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 sm:min-w-[260px]"
+                className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 sm:min-w-[260px]"
               >
                 {submitLabel}
               </button>
             </div>
           </section>
 
-          <aside className="w-full rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:w-[360px] lg:shrink-0">
+          <aside className="w-full rounded-3xl border border-slate-900 bg-white p-4 lg:w-[360px] lg:shrink-0">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">
               Ringkasan
             </p>
@@ -248,7 +248,7 @@ export async function PurchaseEntryForm({
               Ringkasan Pembelian
             </h2>
 
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <div className="mt-4 rounded-2xl border border-slate-900 bg-slate-50 p-3">
               <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                 Jenis Pembayaran
               </p>
@@ -257,7 +257,7 @@ export async function PurchaseEntryForm({
               </p>
             </div>
 
-            <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 p-3 text-sm">
+            <div className="mt-3 space-y-2 rounded-2xl border border-slate-900 p-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-slate-500">Barang</span>
                 <span className="font-bold text-slate-950">
@@ -302,3 +302,4 @@ export async function PurchaseEntryForm({
     </div>
   );
 }
+

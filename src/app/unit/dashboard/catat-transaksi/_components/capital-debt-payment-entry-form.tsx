@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+﻿import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import {
     CapitalDebtPaymentFormClient,
@@ -34,7 +34,7 @@ function ErrorState({ message }: { message: string }) {
 
 function PageHeader() {
     return (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-slate-900 bg-white p-6">
             <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
                 Catat Transaksi / Aset & Belanja Modal
             </p>
@@ -54,7 +54,7 @@ function PageHeader() {
 
 function PayableList({ payables }: { payables: CapitalPayable[] }) {
     return (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-slate-900 bg-white p-6">
             <h2 className="text-lg font-bold text-slate-950">
                 Daftar Hutang Belanja Modal Terbuka
             </h2>
@@ -66,7 +66,7 @@ function PayableList({ payables }: { payables: CapitalPayable[] }) {
                     payables.map((item) => (
                         <div
                             key={item.capital_expenditure_id}
-                            className="rounded-2xl border border-slate-200 p-4"
+                            className="rounded-2xl border border-slate-900 p-4"
                         >
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                 <div>
@@ -75,7 +75,7 @@ function PayableList({ payables }: { payables: CapitalPayable[] }) {
                                     </h3>
 
                                     <p className="mt-1 text-sm text-slate-600">
-                                        Supplier: {item.supplier_name || "-"} · Tanggal:{" "}
+                                        Supplier: {item.supplier_name || "-"} Â· Tanggal:{" "}
                                         {item.transaction_date}
                                     </p>
                                 </div>

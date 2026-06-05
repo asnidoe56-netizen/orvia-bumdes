@@ -77,7 +77,7 @@ export async function ExpenseEntrySection() {
     }));
 
   return (
-    <section className="rounded-2xl border bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-slate-900 bg-white p-6">
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-slate-900">
           Form Beban Operasional
@@ -95,3 +95,4 @@ export async function ExpenseEntrySection() {
     </section>
   );
 }
+

@@ -73,7 +73,7 @@ export async function CapitalExpenditureEntryForm() {
 
       <form action={createAndPostCapitalExpenditure}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-          <section className="w-full rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-1">
+          <section className="w-full rounded-3xl border border-slate-900 bg-white p-4 lg:flex-1">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
                 <PlusCircle className="h-5 w-5" />
@@ -99,7 +99,7 @@ export async function CapitalExpenditureEntryForm() {
                   name="transaction_date"
                   type="date"
                   required
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -110,7 +110,7 @@ export async function CapitalExpenditureEntryForm() {
                 <select
                   name="payment_type"
                   required
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   defaultValue=""
                 >
                   <option value="" disabled>
@@ -127,7 +127,7 @@ export async function CapitalExpenditureEntryForm() {
                 </span>
                 <select
                   name="supplier_id"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   defaultValue=""
                 >
                   <option value="">Tanpa supplier / belum didaftarkan</option>
@@ -145,7 +145,7 @@ export async function CapitalExpenditureEntryForm() {
                 </span>
                 <select
                   name="cash_bank_account_id"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   defaultValue=""
                 >
                   <option value="">Kosongkan jika pembayaran kredit</option>
@@ -167,7 +167,7 @@ export async function CapitalExpenditureEntryForm() {
                 <select
                   name="asset_category_id"
                   required
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   defaultValue=""
                 >
                   <option value="" disabled>
@@ -190,7 +190,7 @@ export async function CapitalExpenditureEntryForm() {
                   type="text"
                   required
                   placeholder="Contoh: Laptop admin unit, etalase toko, mesin penggiling"
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -206,7 +206,7 @@ export async function CapitalExpenditureEntryForm() {
                   required
                   defaultValue="1"
                   placeholder="Contoh: 1"
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -221,7 +221,7 @@ export async function CapitalExpenditureEntryForm() {
                   step="1"
                   required
                   placeholder="Contoh: 5000000"
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -236,7 +236,7 @@ export async function CapitalExpenditureEntryForm() {
                   step="1"
                   defaultValue="0"
                   placeholder="Contoh: 0"
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -250,7 +250,7 @@ export async function CapitalExpenditureEntryForm() {
                   min="0"
                   step="1"
                   placeholder="Kosongkan untuk default kategori"
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
                 <p className="text-xs leading-5 text-slate-500">
                   Kosongkan jika memakai default kategori.
@@ -264,7 +264,7 @@ export async function CapitalExpenditureEntryForm() {
                 <input
                   name="due_date"
                   type="date"
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
                 <p className="text-xs leading-5 text-slate-500">
                   Wajib diisi jika kredit. Untuk tunai, biarkan kosong.
@@ -279,7 +279,7 @@ export async function CapitalExpenditureEntryForm() {
                   name="description"
                   rows={2}
                   placeholder="Keterangan detail aset, lokasi, spesifikasi, atau nomor seri"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -291,7 +291,7 @@ export async function CapitalExpenditureEntryForm() {
                   name="notes"
                   rows={2}
                   placeholder="Catatan tambahan, nomor nota, atau keterangan lain"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
             </div>
@@ -304,14 +304,14 @@ export async function CapitalExpenditureEntryForm() {
 
               <button
                 type="submit"
-                className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 sm:min-w-[260px]"
+                className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 sm:min-w-[260px]"
               >
                 Simpan & Posting Belanja Modal
               </button>
             </div>
           </section>
 
-          <aside className="w-full rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:w-[360px] lg:shrink-0">
+          <aside className="w-full rounded-3xl border border-slate-900 bg-white p-4 lg:w-[360px] lg:shrink-0">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">
               Ringkasan
             </p>
@@ -320,7 +320,7 @@ export async function CapitalExpenditureEntryForm() {
               Ringkasan Belanja Modal
             </h2>
 
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <div className="mt-4 rounded-2xl border border-slate-900 bg-slate-50 p-3">
               <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                 Output Transaksi
               </p>
@@ -329,7 +329,7 @@ export async function CapitalExpenditureEntryForm() {
               </p>
             </div>
 
-            <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 p-3 text-sm">
+            <div className="mt-3 space-y-2 rounded-2xl border border-slate-900 p-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 text-slate-500">
                   <Wallet className="h-4 w-4 text-emerald-700" />
@@ -386,3 +386,4 @@ export async function CapitalExpenditureEntryForm() {
     </div>
   );
 }
+

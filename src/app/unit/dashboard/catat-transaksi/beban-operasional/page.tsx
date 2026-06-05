@@ -8,7 +8,7 @@ export default function BebanOperasionalPage() {
       <div className="flex items-center gap-3">
         <Link
           href="/unit/dashboard/catat-transaksi"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-white text-slate-600 shadow-sm hover:bg-slate-50"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-900 bg-white text-slate-700 hover:bg-slate-50"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
@@ -21,7 +21,7 @@ export default function BebanOperasionalPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border border-slate-900 bg-white p-5">
         <div className="flex items-start gap-4">
           <div className="rounded-2xl bg-rose-50 p-3 text-rose-600">
             <ReceiptText className="h-6 w-6" />
@@ -44,3 +44,4 @@ export default function BebanOperasionalPage() {
     </main>
   );
 }
+

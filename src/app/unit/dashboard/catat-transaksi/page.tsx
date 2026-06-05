@@ -135,7 +135,7 @@ function TransactionCard({
   return (
     <Link
       href={href}
-      className="group min-h-[126px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+      className="group min-h-[126px] rounded-2xl border border-slate-900 bg-white p-4 transition hover:-translate-y-0.5 hover:border-emerald-700 hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-3">
         <div
@@ -160,7 +160,7 @@ function TransactionCard({
 export default function CatatTransaksiPage() {
   return (
     <div className="space-y-4">
-      <section className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-slate-900 bg-white p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-blue-700">
@@ -208,4 +208,5 @@ export default function CatatTransaksiPage() {
     </div>
   );
 }
+
 

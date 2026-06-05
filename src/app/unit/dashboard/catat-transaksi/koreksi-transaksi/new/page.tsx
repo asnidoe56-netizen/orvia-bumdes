@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -152,7 +152,7 @@ export default async function NewUnitKoreksiTransaksiPage({
         </Link>
       </div>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-900 bg-white p-6">
         <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
           Admin Unit / Pengajuan Koreksi
         </p>
@@ -175,21 +175,21 @@ export default async function NewUnitKoreksiTransaksiPage({
         />
 
         <div className="grid gap-4 px-5 pb-5 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-2xl border border-slate-900 bg-slate-50 p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
               Nomor Transaksi
             </p>
             <p className="mt-2 font-bold text-slate-950">{entry.journal_no}</p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-2xl border border-slate-900 bg-slate-50 p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
               Tanggal
             </p>
             <p className="mt-2 font-bold text-slate-950">{entry.journal_date}</p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-2xl border border-slate-900 bg-slate-50 p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
               Nilai
             </p>
@@ -209,7 +209,7 @@ export default async function NewUnitKoreksiTransaksiPage({
                   <tr key={line.journal_line_id} className="hover:bg-slate-50">
                     <td className="px-4 py-4">
                       <div className="font-bold text-slate-950">
-                        {line.account_code} · {line.account_name}
+                        {line.account_code} Â· {line.account_name}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600">

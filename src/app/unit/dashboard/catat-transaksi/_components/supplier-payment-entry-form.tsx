@@ -94,7 +94,7 @@ export async function SupplierPaymentEntryForm() {
     <div className="space-y-5">
       <PageBackButton fallbackHref="/unit/dashboard/catat-transaksi" />
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-900 bg-white p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
@@ -118,7 +118,7 @@ export async function SupplierPaymentEntryForm() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-slate-900 bg-white p-5">
         <div className="mb-5 flex items-start gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
             <PlusCircle className="h-5 w-5" />
@@ -149,7 +149,7 @@ export async function SupplierPaymentEntryForm() {
                 <select
                   name="purchase_invoice_id"
                   required
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-xl border border-slate-900 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 >
                   <option value="">Pilih invoice hutang</option>
                   {payables.map((invoice) => (
@@ -175,7 +175,7 @@ export async function SupplierPaymentEntryForm() {
                   name="payment_date"
                   type="date"
                   required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -187,7 +187,7 @@ export async function SupplierPaymentEntryForm() {
                   name="payment_no"
                   type="text"
                   placeholder="Kosongkan untuk nomor otomatis"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm uppercase outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm uppercase outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -198,7 +198,7 @@ export async function SupplierPaymentEntryForm() {
                 <select
                   name="cash_bank_account_id"
                   required
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-xl border border-slate-900 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 >
                   <option value="">Pilih kas/bank unit</option>
                   {cashBankAccounts.map((account) => {
@@ -226,7 +226,7 @@ export async function SupplierPaymentEntryForm() {
                   step="1"
                   required
                   placeholder="Contoh: 150000"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
 
@@ -238,7 +238,7 @@ export async function SupplierPaymentEntryForm() {
                   name="notes"
                   rows={3}
                   placeholder="Catatan pembayaran hutang supplier"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </label>
             </div>
@@ -251,7 +251,7 @@ export async function SupplierPaymentEntryForm() {
 
               <button
                 type="submit"
-                className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700"
+                className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700"
               >
                 Simpan & Posting Pembayaran
               </button>
@@ -260,12 +260,12 @@ export async function SupplierPaymentEntryForm() {
         )}
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-slate-900 bg-white p-5">
         <h2 className="text-base font-bold text-slate-950">
           Daftar Hutang Terbuka
         </h2>
 
-        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-900">
           <div className="grid grid-cols-1 bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500 md:grid-cols-5">
             <div className="p-3">Invoice</div>
             <div className="p-3">Supplier</div>
@@ -305,3 +305,4 @@ export async function SupplierPaymentEntryForm() {
     </div>
   );
 }
+
