@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import {
   Boxes,
@@ -9,7 +9,9 @@ import {
   WalletCards,
 } from "lucide-react";
 import { redirect } from "next/navigation";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { PageBackButton } from "@/components/ui/page-back-button";
+import { ResponsiveRecordList } from "@/components/ui/responsive-record-list";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { postMonthlyFixedAssetDepreciation } from "./_actions/fixed-asset-actions";
@@ -333,76 +335,119 @@ export default async function FixedAssetsPage() {
           </div>
         </div>
 
-        {assets.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-            <p className="text-sm font-semibold text-slate-700">
-              Belum ada aset tetap.
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Aset akan muncul setelah transaksi Belanja Modal berhasil diposting.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1280px] text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3">Kode Aset</th>
-                    <th className="px-4 py-3">Nama Aset</th>
-                    <th className="px-4 py-3">Kategori Akun</th>
-                    <th className="px-4 py-3">Tanggal Perolehan</th>
-                    <th className="px-4 py-3 text-right">Nilai Perolehan</th>
-                    <th className="px-4 py-3 text-right">Akumulasi Susut</th>
-                    <th className="px-4 py-3 text-right">Nilai Buku</th>
-                    <th className="px-4 py-3 text-right">Susut/Bulan</th>
-                    <th className="px-4 py-3">Terakhir Susut</th>
-                    <th className="px-4 py-3">Status Periode</th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-200">
-                  {assets.map((asset) => (
-                    <tr key={asset.fixed_asset_id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-semibold text-slate-800">
-                        {asset.asset_code}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {asset.asset_name}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {asset.asset_account_code && asset.asset_account_name
-                          ? `${asset.asset_account_code} - ${asset.asset_account_name}`
-                          : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {formatDate(asset.acquisition_date)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                        {formatRupiah(asset.acquisition_cost)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-slate-700">
-                        {formatRupiah(asset.accumulated_depreciation_total)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                        {formatRupiah(asset.current_book_value)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-slate-700">
-                        {formatRupiah(asset.monthly_depreciation_estimate)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {formatDate(asset.last_depreciation_date)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={asset.depreciation_readiness_status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <ResponsiveRecordList
+          items={assets}
+          getKey={(asset) => asset.fixed_asset_id}
+          emptyState={
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+              <p className="text-sm font-semibold text-slate-700">
+                Belum ada aset tetap.
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Aset akan muncul setelah transaksi Belanja Modal berhasil diposting.
+              </p>
             </div>
-          </div>
-        )}
+          }
+          renderMobileCard={(asset) => (
+            <MobileRecordCard
+              title={asset.asset_name}
+              subtitle={`${asset.asset_code} · ${formatDate(asset.acquisition_date)}`}
+              badge={<StatusBadge status={asset.depreciation_readiness_status} />}
+              rows={[
+                {
+                  label: "Kategori Akun",
+                  value:
+                    asset.asset_account_code && asset.asset_account_name
+                      ? `${asset.asset_account_code} - ${asset.asset_account_name}`
+                      : "-",
+                  fullWidth: true,
+                },
+                {
+                  label: "Nilai Perolehan",
+                  value: formatRupiah(asset.acquisition_cost),
+                },
+                {
+                  label: "Akumulasi Susut",
+                  value: formatRupiah(asset.accumulated_depreciation_total),
+                },
+                {
+                  label: "Nilai Buku",
+                  value: formatRupiah(asset.current_book_value),
+                },
+                {
+                  label: "Susut/Bulan",
+                  value: formatRupiah(asset.monthly_depreciation_estimate),
+                },
+                {
+                  label: "Terakhir Susut",
+                  value: formatDate(asset.last_depreciation_date),
+                  fullWidth: true,
+                },
+              ]}
+            />
+          )}
+          renderDesktopTable={() => (
+            <div className="overflow-hidden rounded-2xl border border-slate-200">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1280px] text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Kode Aset</th>
+                      <th className="px-4 py-3">Nama Aset</th>
+                      <th className="px-4 py-3">Kategori Akun</th>
+                      <th className="px-4 py-3">Tanggal Perolehan</th>
+                      <th className="px-4 py-3 text-right">Nilai Perolehan</th>
+                      <th className="px-4 py-3 text-right">Akumulasi Susut</th>
+                      <th className="px-4 py-3 text-right">Nilai Buku</th>
+                      <th className="px-4 py-3 text-right">Susut/Bulan</th>
+                      <th className="px-4 py-3">Terakhir Susut</th>
+                      <th className="px-4 py-3">Status Periode</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-200">
+                    {assets.map((asset) => (
+                      <tr key={asset.fixed_asset_id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 font-semibold text-slate-800">
+                          {asset.asset_code}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {asset.asset_name}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {asset.asset_account_code && asset.asset_account_name
+                            ? `${asset.asset_account_code} - ${asset.asset_account_name}`
+                            : "-"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {formatDate(asset.acquisition_date)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-slate-800">
+                          {formatRupiah(asset.acquisition_cost)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-slate-700">
+                          {formatRupiah(asset.accumulated_depreciation_total)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-slate-800">
+                          {formatRupiah(asset.current_book_value)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-slate-700">
+                          {formatRupiah(asset.monthly_depreciation_estimate)}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {formatDate(asset.last_depreciation_date)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={asset.depreciation_readiness_status} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        />
       </section>
     </div>
   );
