@@ -2,6 +2,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
+import { ResponsiveRecordList } from "@/components/ui/responsive-record-list";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { createClient } from "@/lib/supabase/server";
@@ -233,39 +235,32 @@ export default async function UnitCashBankPage() {
           action={<Badge variant={transactions.length > 0 ? "success" : "warning"}>{transactions.length > 0 ? "Terhubung" : "Belum Ada Data"}</Badge>}
         />
 
-        <DataTable
-          columns={[
-            "Tanggal",
-            "Nomor Transaksi",
-            "Jenis",
-            "Akun Kas/Bank",
-            "Nominal",
-            "Status",
-            "Keterangan",
-          ]}
-          minWidthClassName="min-w-[980px]"
-          emptyText="Belum ada transaksi kas-bank."
-        >
-          {transactions.length > 0
-            ? transactions.map((row) => {
-                const account = getCashBankAccount(row);
-                const signedAmount = getSignedAmount(row);
+        <ResponsiveRecordList
+          items={transactions}
+          getKey={(row) => row.id}
+          emptyState={
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">
+              Belum ada transaksi kas-bank.
+            </div>
+          }
+          renderMobileCard={(row) => {
+            const account = getCashBankAccount(row);
+            const signedAmount = getSignedAmount(row);
 
-                return (
-                  <tr key={row.id}>
-                    <td className="px-4 py-3 align-top text-sm font-medium text-slate-700">
-                      {formatDate(row.transaction_date)}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <p className="font-semibold text-slate-900">
-                        {row.transaction_no}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {row.source_type ?? "-"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+            return (
+              <MobileRecordCard
+                title={row.transaction_no}
+                subtitle={`${formatDate(row.transaction_date)} · ${row.source_type ?? "-"}`}
+                badge={
+                  <Badge variant={getStatusVariant(row.status)}>
+                    {row.status}
+                  </Badge>
+                }
+                rows={[
+                  {
+                    label: "Jenis",
+                    value: (
+                      <span className="inline-flex items-center gap-1.5">
                         {signedAmount < 0 ? (
                           <ArrowUpRight className="h-3.5 w-3.5" />
                         ) : (
@@ -273,40 +268,122 @@ export default async function UnitCashBankPage() {
                         )}
                         {getTransactionTypeLabel(row.transaction_type)}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <p className="font-semibold text-slate-900">
+                    ),
+                    fullWidth: true,
+                  },
+                  {
+                    label: "Akun",
+                    value: (
+                      <span>
                         {account?.account_code ?? "-"}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {account?.account_name ?? "-"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 align-top">
+                        <span className="block text-xs font-medium text-slate-500">
+                          {account?.account_name ?? "-"}
+                        </span>
+                      </span>
+                    ),
+                    fullWidth: true,
+                  },
+                  {
+                    label: "Nominal",
+                    value: (
                       <span
                         className={[
-                          "font-bold",
+                          "font-black",
                           signedAmount < 0 ? "text-red-700" : "text-emerald-700",
                         ].join(" ")}
                       >
                         {signedAmount < 0 ? "-" : "+"}
                         {formatRupiah(Math.abs(signedAmount))}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <Badge variant={getStatusVariant(row.status)}>
-                        {row.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 align-top text-sm text-slate-600">
-                      {row.description ?? "-"}
-                    </td>
-                  </tr>
-                );
-              })
-            : null}
-        </DataTable>
+                    ),
+                  },
+                  {
+                    label: "Keterangan",
+                    value: row.description ?? "-",
+                    fullWidth: true,
+                  },
+                ]}
+              />
+            );
+          }}
+          renderDesktopTable={() => (
+            <DataTable
+              columns={[
+                "Tanggal",
+                "Nomor Transaksi",
+                "Jenis",
+                "Akun Kas/Bank",
+                "Nominal",
+                "Status",
+                "Keterangan",
+              ]}
+              minWidthClassName="min-w-[980px]"
+              emptyText="Belum ada transaksi kas-bank."
+            >
+              {transactions.length > 0
+                ? transactions.map((row) => {
+                    const account = getCashBankAccount(row);
+                    const signedAmount = getSignedAmount(row);
+
+                    return (
+                      <tr key={row.id}>
+                        <td className="px-4 py-3 align-top text-sm font-medium text-slate-700">
+                          {formatDate(row.transaction_date)}
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <p className="font-semibold text-slate-900">
+                            {row.transaction_no}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {row.source_type ?? "-"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+                            {signedAmount < 0 ? (
+                              <ArrowUpRight className="h-3.5 w-3.5" />
+                            ) : (
+                              <ArrowDownLeft className="h-3.5 w-3.5" />
+                            )}
+                            {getTransactionTypeLabel(row.transaction_type)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <p className="font-semibold text-slate-900">
+                            {account?.account_code ?? "-"}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {account?.account_name ?? "-"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <span
+                            className={[
+                              "font-bold",
+                              signedAmount < 0 ? "text-red-700" : "text-emerald-700",
+                            ].join(" ")}
+                          >
+                            {signedAmount < 0 ? "-" : "+"}
+                            {formatRupiah(Math.abs(signedAmount))}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <Badge variant={getStatusVariant(row.status)}>
+                            {row.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 align-top text-sm text-slate-600">
+                          {row.description ?? "-"}
+                        </td>
+                      </tr>
+                    );
+                  })
+                : null}
+            </DataTable>
+          )}
+        />
       </Card>
     </div>
   );
 }
+
