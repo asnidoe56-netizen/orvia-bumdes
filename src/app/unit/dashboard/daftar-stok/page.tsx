@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import {
   AlertTriangle,
@@ -9,7 +9,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { PageBackButton } from "@/components/ui/page-back-button";
+import { ResponsiveRecordList } from "@/components/ui/responsive-record-list";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
 
@@ -190,89 +192,153 @@ export default async function UnitDaftarStokPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="min-w-[1050px] w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Kode</th>
-                <th className="px-4 py-3">Nama Barang</th>
-                <th className="px-4 py-3">Tipe</th>
-                <th className="px-4 py-3 text-right">Sisa Stok</th>
-                <th className="px-4 py-3 text-right">Batas Min</th>
-                <th className="px-4 py-3 text-right">Harga Jual</th>
-                <th className="px-4 py-3 text-right">Harga Beli Terakhir</th>
-                <th className="px-4 py-3 text-right">Nilai Persediaan</th>
-                <th className="px-4 py-3">Status Stok</th>
-                <th className="px-4 py-3">Aksi</th>
-              </tr>
-            </thead>
+        <ResponsiveRecordList
+          items={stockList}
+          getKey={(item) => item.id}
+          emptyState={
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">
+              Belum ada barang stock aktif yang dapat ditampilkan.
+            </div>
+          }
+          renderMobileCard={(item) => {
+            const stockStatus = getStockStatus(item);
+            const StatusIcon = stockStatus.icon;
 
-            <tbody className="divide-y divide-slate-100">
-              {stockList.length > 0 ? (
-                stockList.map((item) => {
-                  const stockStatus = getStockStatus(item);
-                  const StatusIcon = stockStatus.icon;
+            return (
+              <MobileRecordCard
+                title={item.item_name}
+                subtitle={`${item.item_code} · Satuan: ${item.unit_of_measure}`}
+                badge={
+                  <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${stockStatus.className}`}>
+                    <StatusIcon className="h-3.5 w-3.5" />
+                    {stockStatus.label}
+                  </span>
+                }
+                rows={[
+                  {
+                    label: "Sisa Stok",
+                    value: formatNumber(item.current_stock),
+                  },
+                  {
+                    label: "Batas Min",
+                    value: formatNumber(item.minimum_stock),
+                  },
+                  {
+                    label: "Harga Jual",
+                    value: formatCurrency(item.default_sales_price),
+                  },
+                  {
+                    label: "Harga Beli Terakhir",
+                    value: formatCurrency(item.last_purchase_price),
+                  },
+                  {
+                    label: "Nilai Persediaan",
+                    value: formatCurrency(item.inventory_value),
+                    fullWidth: true,
+                  },
+                  {
+                    label: "Tipe",
+                    value: formatItemType(item.item_type),
+                  },
+                ]}
+                footer={
+                  <Link
+                    href={`/unit/dashboard/master-data/items/${item.id}/prices`}
+                    className="inline-flex rounded-full border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                  >
+                    Atur Harga
+                  </Link>
+                }
+              />
+            );
+          }}
+          renderDesktopTable={() => (
+            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+              <table className="min-w-[1050px] w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Kode</th>
+                    <th className="px-4 py-3">Nama Barang</th>
+                    <th className="px-4 py-3">Tipe</th>
+                    <th className="px-4 py-3 text-right">Sisa Stok</th>
+                    <th className="px-4 py-3 text-right">Batas Min</th>
+                    <th className="px-4 py-3 text-right">Harga Jual</th>
+                    <th className="px-4 py-3 text-right">Harga Beli Terakhir</th>
+                    <th className="px-4 py-3 text-right">Nilai Persediaan</th>
+                    <th className="px-4 py-3">Status Stok</th>
+                    <th className="px-4 py-3">Aksi</th>
+                  </tr>
+                </thead>
 
-                  return (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 font-bold text-slate-800">
-                        {item.item_code}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        <div className="font-semibold">{item.item_name}</div>
-                        <div className="text-xs text-slate-500">
-                          Satuan: {item.unit_of_measure}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {formatItemType(item.item_type)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold text-slate-900">
-                        {formatNumber(item.current_stock)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-slate-600">
-                        {formatNumber(item.minimum_stock)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-slate-700">
-                        {formatCurrency(item.default_sales_price)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-slate-700">
-                        {formatCurrency(item.last_purchase_price)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                        {formatCurrency(item.inventory_value)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${stockStatus.className}`}>
-                          <StatusIcon className="h-3.5 w-3.5" />
-                          {stockStatus.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/unit/dashboard/master-data/items/${item.id}/prices`}
-                          className="inline-flex rounded-full border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
-                        >
-                          Atur Harga
-                        </Link>
+                <tbody className="divide-y divide-slate-100">
+                  {stockList.length > 0 ? (
+                    stockList.map((item) => {
+                      const stockStatus = getStockStatus(item);
+                      const StatusIcon = stockStatus.icon;
+
+                      return (
+                        <tr key={item.id}>
+                          <td className="px-4 py-3 font-bold text-slate-800">
+                            {item.item_code}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">
+                            <div className="font-semibold">{item.item_name}</div>
+                            <div className="text-xs text-slate-500">
+                              Satuan: {item.unit_of_measure}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {formatItemType(item.item_type)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-slate-900">
+                            {formatNumber(item.current_stock)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-600">
+                            {formatNumber(item.minimum_stock)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-700">
+                            {formatCurrency(item.default_sales_price)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-700">
+                            {formatCurrency(item.last_purchase_price)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-slate-800">
+                            {formatCurrency(item.inventory_value)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${stockStatus.className}`}>
+                              <StatusIcon className="h-3.5 w-3.5" />
+                              {stockStatus.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Link
+                              href={`/unit/dashboard/master-data/items/${item.id}/prices`}
+                              className="inline-flex rounded-full border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                            >
+                              Atur Harga
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={10}
+                        className="px-4 py-10 text-center text-sm text-slate-500"
+                      >
+                        Belum ada barang stock aktif yang dapat ditampilkan.
                       </td>
                     </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="px-4 py-10 text-center text-sm text-slate-500"
-                  >
-                    Belum ada barang stock aktif yang dapat ditampilkan.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        />
       </section>
     </div>
   );
 }
+

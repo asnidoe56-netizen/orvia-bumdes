@@ -2,6 +2,8 @@
 
 import { CircleDollarSign, PackageCheck, Receipt } from "lucide-react";
 import { redirect } from "next/navigation";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
+import { ResponsiveRecordList } from "@/components/ui/responsive-record-list";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 
@@ -175,79 +177,128 @@ export default async function UnitSalesPage() {
           </span>
         </div>
 
-        <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-200">
-          <table className="min-w-[980px] w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Tanggal</th>
-                <th className="px-4 py-3">Nomor Transaksi</th>
-                <th className="px-4 py-3">Pelanggan</th>
-                <th className="px-4 py-3">Total</th>
-                <th className="px-4 py-3">Terbayar</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Audit</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-100">
-              {sales.length > 0 ? (
-                sales.map((row) => (
-                  <tr key={row.sales_invoice_id}>
-                    <td className="px-4 py-3 text-slate-600">
-                      {row.invoice_date}
-                    </td>
-
-                    <td className="px-4 py-3 text-slate-700">
-                      <div className="font-bold text-slate-800">
-                        {row.invoice_no}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        Penjualan {formatPaymentType(row.payment_type)}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-3 text-slate-600">
-                      {row.customer_name
-                        ? `${row.customer_code ?? "-"} - ${row.customer_name}`
-                        : "Pelanggan umum"}
-                    </td>
-
-                    <td className="px-4 py-3 font-semibold text-slate-700">
-                      {formatRupiah(row.total_amount)}
-                    </td>
-
-                    <td className="px-4 py-3 font-semibold text-slate-700">
-                      {formatRupiah(row.paid_amount)}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                        {formatStatus(row.invoice_status)}
-                      </span>
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                        {formatAuditResult(row.audit_result)}
-                      </span>
-                    </td>
+        <ResponsiveRecordList
+          items={sales}
+          getKey={(row) => row.sales_invoice_id}
+          emptyState={
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">
+              Belum ada histori penjualan. Transaksi baru dicatat melalui menu Catat Transaksi.
+            </div>
+          }
+          renderMobileCard={(row) => (
+            <MobileRecordCard
+              title={row.invoice_no}
+              subtitle={`${row.invoice_date} · Penjualan ${formatPaymentType(row.payment_type)}`}
+              badge={
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                  {formatStatus(row.invoice_status)}
+                </span>
+              }
+              rows={[
+                {
+                  label: "Pelanggan",
+                  value: row.customer_name
+                    ? `${row.customer_code ?? "-"} - ${row.customer_name}`
+                    : "Pelanggan umum",
+                  fullWidth: true,
+                },
+                {
+                  label: "Total",
+                  value: formatRupiah(row.total_amount),
+                },
+                {
+                  label: "Terbayar",
+                  value: formatRupiah(row.paid_amount),
+                },
+                {
+                  label: "Audit",
+                  value: (
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                      {formatAuditResult(row.audit_result)}
+                    </span>
+                  ),
+                  fullWidth: true,
+                },
+              ]}
+            />
+          )}
+          renderDesktopTable={() => (
+            <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-200">
+              <table className="min-w-[980px] w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Tanggal</th>
+                    <th className="px-4 py-3">Nomor Transaksi</th>
+                    <th className="px-4 py-3">Pelanggan</th>
+                    <th className="px-4 py-3">Total</th>
+                    <th className="px-4 py-3">Terbayar</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Audit</th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-4 py-10 text-center text-sm text-slate-500"
-                  >
-                    Belum ada histori penjualan. Transaksi baru dicatat melalui menu Catat Transaksi.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {sales.length > 0 ? (
+                    sales.map((row) => (
+                      <tr key={row.sales_invoice_id}>
+                        <td className="px-4 py-3 text-slate-600">
+                          {row.invoice_date}
+                        </td>
+
+                        <td className="px-4 py-3 text-slate-700">
+                          <div className="font-bold text-slate-800">
+                            {row.invoice_no}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            Penjualan {formatPaymentType(row.payment_type)}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3 text-slate-600">
+                          {row.customer_name
+                            ? `${row.customer_code ?? "-"} - ${row.customer_name}`
+                            : "Pelanggan umum"}
+                        </td>
+
+                        <td className="px-4 py-3 font-semibold text-slate-700">
+                          {formatRupiah(row.total_amount)}
+                        </td>
+
+                        <td className="px-4 py-3 font-semibold text-slate-700">
+                          {formatRupiah(row.paid_amount)}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                            {formatStatus(row.invoice_status)}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                            {formatAuditResult(row.audit_result)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-4 py-10 text-center text-sm text-slate-500"
+                      >
+                        Belum ada histori penjualan. Transaksi baru dicatat melalui menu Catat Transaksi.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        />
       </section>
     </div>
   );
 }
+
 

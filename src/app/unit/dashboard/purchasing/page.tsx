@@ -6,6 +6,8 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { redirect } from "next/navigation";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
+import { ResponsiveRecordList } from "@/components/ui/responsive-record-list";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 
@@ -182,63 +184,103 @@ export default async function UnitPurchasingPage() {
           </span>
         </div>
 
-        <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-200">
-          <table className="min-w-[760px] w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Tanggal</th>
-                <th className="px-4 py-3">Nomor Transaksi</th>
-                <th className="px-4 py-3">Supplier</th>
-                <th className="px-4 py-3">Total</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-100">
-              {invoices.length > 0 ? (
-                invoices.map((invoice) => (
-                  <tr key={invoice.id}>
-                    <td className="px-4 py-3 text-slate-600">
-                      {invoice.invoice_date}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      <div className="font-bold text-slate-800">
-                        {invoice.invoice_no}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {formatPaymentType(invoice.payment_type)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {invoice.supplier_id
-                        ? supplierNameById.get(invoice.supplier_id) ?? "-"
-                        : "-"}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-slate-700">
-                      {formatRupiah(Number(invoice.total_amount ?? 0))}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                        {formatStatus(invoice.status)}
-                      </span>
-                    </td>
+        <ResponsiveRecordList
+          items={invoices}
+          getKey={(invoice) => invoice.id}
+          emptyState={
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">
+              Belum ada histori pembelian. Transaksi baru dicatat melalui menu Catat Transaksi.
+            </div>
+          }
+          renderMobileCard={(invoice) => (
+            <MobileRecordCard
+              title={invoice.invoice_no}
+              subtitle={`${invoice.invoice_date} · ${formatPaymentType(invoice.payment_type)}`}
+              badge={
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                  {formatStatus(invoice.status)}
+                </span>
+              }
+              rows={[
+                {
+                  label: "Supplier",
+                  value: invoice.supplier_id
+                    ? supplierNameById.get(invoice.supplier_id) ?? "-"
+                    : "-",
+                  fullWidth: true,
+                },
+                {
+                  label: "Total",
+                  value: formatRupiah(Number(invoice.total_amount ?? 0)),
+                },
+                {
+                  label: "Terbayar",
+                  value: formatRupiah(Number(invoice.paid_amount ?? 0)),
+                },
+              ]}
+            />
+          )}
+          renderDesktopTable={() => (
+            <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-200">
+              <table className="min-w-[760px] w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Tanggal</th>
+                    <th className="px-4 py-3">Nomor Transaksi</th>
+                    <th className="px-4 py-3">Supplier</th>
+                    <th className="px-4 py-3">Total</th>
+                    <th className="px-4 py-3">Status</th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-10 text-center text-sm text-slate-500"
-                  >
-                    Belum ada histori pembelian. Transaksi baru dicatat melalui menu Catat Transaksi.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {invoices.length > 0 ? (
+                    invoices.map((invoice) => (
+                      <tr key={invoice.id}>
+                        <td className="px-4 py-3 text-slate-600">
+                          {invoice.invoice_date}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <div className="font-bold text-slate-800">
+                            {invoice.invoice_no}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {formatPaymentType(invoice.payment_type)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {invoice.supplier_id
+                            ? supplierNameById.get(invoice.supplier_id) ?? "-"
+                            : "-"}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-slate-700">
+                          {formatRupiah(Number(invoice.total_amount ?? 0))}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                            {formatStatus(invoice.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-10 text-center text-sm text-slate-500"
+                      >
+                        Belum ada histori pembelian. Transaksi baru dicatat melalui menu Catat Transaksi.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        />
       </section>
     </div>
   );
 }
+
 
