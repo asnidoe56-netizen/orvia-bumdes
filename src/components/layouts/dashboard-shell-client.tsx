@@ -79,32 +79,20 @@ export function DashboardShellClient({
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [pendingFromPathname, setPendingFromPathname] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isMobileMenuOpen) return;
+    if (!pendingHref) {
+      return;
+    }
 
-    const scrollY = window.scrollY;
-    const originalBodyOverflow = document.body.style.overflow;
-    const originalBodyPosition = document.body.style.position;
-    const originalBodyTop = document.body.style.top;
-    const originalBodyWidth = document.body.style.width;
-    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const timeoutId = window.setTimeout(() => {
+      setPendingHref(null);
+      setPendingFromPathname(null);
+    }, 3000);
 
-    document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
-    document.documentElement.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = originalBodyOverflow;
-      document.body.style.position = originalBodyPosition;
-      document.body.style.top = originalBodyTop;
-      document.body.style.width = originalBodyWidth;
-      document.documentElement.style.overflow = originalHtmlOverflow;
-      window.scrollTo(0, scrollY);
-    };
-  }, [isMobileMenuOpen]);
+    return () => window.clearTimeout(timeoutId);
+  }, [pendingHref]);
 
   function handleMobileNavClick(event: MouseEvent<HTMLElement>) {
     const target = event.target as HTMLElement;
@@ -125,7 +113,11 @@ export function DashboardShellClient({
     }
   }
 
-  const isRoutePending = Boolean(pendingHref && pendingHref !== pathname);
+  const isRoutePending = Boolean(
+    pendingHref &&
+      pendingFromPathname === pathname &&
+      pendingHref !== pathname
+  );
 
   const displayName = getDisplayName(loginContext);
   const initials = getInitials(displayName);
@@ -311,6 +303,7 @@ export function DashboardShellClient({
     </div>
   );
 }
+
 
 
 
