@@ -101,7 +101,17 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default async function FixedAssetsPage() {
+export default async function FixedAssetsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string }> | { error?: string };
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const pageError =
+    typeof resolvedSearchParams.error === "string"
+      ? resolvedSearchParams.error
+      : null;
+
   const context = await getLoginContext();
 
   if (!context?.tenant_id || !context.unit_id) {
@@ -171,6 +181,10 @@ export default async function FixedAssetsPage() {
     ? formatPeriod(firstAsset.current_period_year, firstAsset.current_period_month)
     : "-";
 
+  const canManageFixedAssets =
+    context.role === "manager_unit" ||
+    context.role === "super_admin_platform";
+
   return (
     <div className="space-y-5">
       <PageBackButton fallbackHref="/unit/dashboard" />
@@ -193,37 +207,64 @@ export default async function FixedAssetsPage() {
             </p>
           </div>
 
-          <form
-            action={postMonthlyFixedAssetDepreciation}
-            className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4"
-          >
-            <label
-              htmlFor="depreciation_date"
-              className="text-xs font-bold uppercase tracking-wide text-emerald-800"
-            >
-              Tanggal Penyusutan
-            </label>
+          <div className="space-y-3 lg:min-w-[320px]">
+            {pageError ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+                  Informasi Penyusutan
+                </p>
+                <p className="mt-2 text-sm leading-6 text-amber-900">
+                  {pageError}
+                </p>
+              </div>
+            ) : null}
 
-            <input
-              id="depreciation_date"
-              name="depreciation_date"
-              type="date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
-              className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-emerald-500"
-            />
+            {canManageFixedAssets ? (
+              <form
+                action={postMonthlyFixedAssetDepreciation}
+                className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4"
+              >
+                <label
+                  htmlFor="depreciation_date"
+                  className="text-xs font-bold uppercase tracking-wide text-emerald-800"
+                >
+                  Tanggal Penyusutan
+                </label>
 
-            <button
-              type="submit"
-              className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-800"
-            >
-              Proses Penyusutan Bulanan
-            </button>
+                <input
+                  id="depreciation_date"
+                  name="depreciation_date"
+                  type="date"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                  className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-emerald-500"
+                />
 
-            <p className="mt-2 text-xs leading-5 text-emerald-800">
-              Periode berjalan: {currentPeriodLabel}. Aset siap disusutkan:{" "}
-              {readyAssets}.
-            </p>
-          </form>
+                <button
+                  type="submit"
+                  className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-800"
+                >
+                  Proses Penyusutan
+                </button>
+
+                <p className="mt-2 text-xs leading-5 text-emerald-800">
+                  Periode berjalan: {currentPeriodLabel}. Aset siap disusutkan:{" "}
+                  {readyAssets}.
+                </p>
+              </form>
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-700">
+                  Akses Penyusutan Terbatas
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  Penyusutan aset tetap hanya dapat diproses oleh Manager Unit.
+                </p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Role aktif Anda: {context.role ?? "-"}.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -452,3 +493,4 @@ export default async function FixedAssetsPage() {
     </div>
   );
 }
+

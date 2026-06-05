@@ -19,7 +19,23 @@ export async function postMonthlyFixedAssetDepreciation(formData: FormData) {
   const context = await getLoginContext();
 
   if (!context?.tenant_id || !context.unit_id) {
-    throw new Error("Sesi unit tidak valid.");
+    redirect(
+      `/unit/dashboard/aset-tetap?error=${encodeURIComponent(
+        "Sesi unit tidak valid. Silakan login ulang."
+      )}`
+    );
+  }
+
+  const canManageFixedAssets =
+    context.role === "manager_unit" ||
+    context.role === "super_admin_platform";
+
+  if (!canManageFixedAssets) {
+    redirect(
+      `/unit/dashboard/aset-tetap?error=${encodeURIComponent(
+        "Penyusutan aset tetap hanya dapat diproses oleh Manager Unit."
+      )}`
+    );
   }
 
   const depreciationDate = getOptionalDate(formData, "depreciation_date");
@@ -32,7 +48,13 @@ export async function postMonthlyFixedAssetDepreciation(formData: FormData) {
   });
 
   if (error) {
-    throw new Error(error.message || "Penyusutan bulanan gagal diproses.");
+    const message = error.message?.includes("fixed_asset.manage")
+      ? "Penyusutan aset tetap hanya dapat diproses oleh Manager Unit."
+      : error.message || "Penyusutan aset tetap gagal diproses.";
+
+    redirect(
+      `/unit/dashboard/aset-tetap?error=${encodeURIComponent(message)}`
+    );
   }
 
   revalidatePath("/unit/dashboard/aset-tetap");
