@@ -101,15 +101,17 @@ export function DashboardShellClient({
     if (!link) return;
 
     const nextHref = link.getAttribute("href");
+    const nextPathname = nextHref?.split(/[?#]/)[0];
 
     setIsMobileMenuOpen(false);
 
     if (
-      nextHref &&
-      nextHref.startsWith("/") &&
-      nextHref !== pathname
+      nextPathname &&
+      nextPathname.startsWith("/") &&
+      nextPathname !== pathname
     ) {
-      setPendingHref(nextHref);
+      setPendingHref(nextPathname);
+      setPendingFromPathname(pathname);
     }
   }
 
@@ -303,6 +305,8 @@ export function DashboardShellClient({
     </div>
   );
 }
+
+
 
 
 
