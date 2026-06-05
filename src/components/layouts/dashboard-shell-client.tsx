@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Bell, Menu, UserRound, X } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { SidebarMenuItem } from "@/components/layouts/sidebar-menu-item";
@@ -77,6 +77,31 @@ export function DashboardShellClient({
 }: DashboardShellClientProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const scrollY = window.scrollY;
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalBodyPosition = document.body.style.position;
+    const originalBodyTop = document.body.style.top;
+    const originalBodyWidth = document.body.style.width;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.body.style.position = originalBodyPosition;
+      document.body.style.top = originalBodyTop;
+      document.body.style.width = originalBodyWidth;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isMobileMenuOpen]);
 
   const displayName = getDisplayName(loginContext);
   const initials = getInitials(displayName);
@@ -85,7 +110,7 @@ export function DashboardShellClient({
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-100">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden h-screen w-72 border-r border-slate-200 bg-white p-5 lg:flex lg:flex-col">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden h-dvh w-72 border-r border-slate-200 bg-white p-5 lg:flex lg:flex-col">
         <div className="shrink-0 rounded-2xl bg-emerald-700 p-4 text-white">
           <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
             ERP BUMDes
@@ -93,7 +118,7 @@ export function DashboardShellClient({
           <h1 className="mt-1 truncate text-lg font-bold">{title}</h1>
         </div>
 
-        <nav className="mt-6 flex-1 space-y-1 overflow-y-auto overflow-x-hidden pr-1">
+        <nav className="mt-6 min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-1">
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href ?? item.label} item={item} />
           ))}
@@ -114,7 +139,7 @@ export function DashboardShellClient({
       </aside>
 
       {isMobileMenuOpen ? (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-40 overflow-hidden overscroll-none lg:hidden">
           <button
             type="button"
             aria-label="Tutup menu"
@@ -122,45 +147,49 @@ export function DashboardShellClient({
             onClick={() => setIsMobileMenuOpen(false)}
           />
 
-          <aside className="relative flex h-full w-80 max-w-[85vw] flex-col overflow-hidden bg-white p-5 shadow-2xl">
-            <div className="flex shrink-0 items-start justify-between gap-3">
-              <div className="min-w-0 flex-1 rounded-2xl bg-emerald-700 p-4 text-white">
-                <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-                  ERP BUMDes
-                </p>
-                <h1 className="mt-1 truncate text-lg font-bold">{title}</h1>
+          <aside className="relative h-dvh max-h-dvh w-80 max-w-[85vw] overflow-hidden bg-white shadow-2xl">
+            <div className="flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden overscroll-contain p-5 pb-8">
+              <div className="flex shrink-0 items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 rounded-2xl bg-emerald-700 p-4 text-white">
+                  <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
+                    ERP BUMDes
+                  </p>
+                  <h1 className="mt-1 truncate text-lg font-bold">{title}</h1>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label="Tutup menu"
+                  className="shrink-0 rounded-xl p-2 text-slate-600 hover:bg-slate-100"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              <button
-                type="button"
-                aria-label="Tutup menu"
-                className="shrink-0 rounded-xl p-2 text-slate-600 hover:bg-slate-100"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+              <nav className="mt-6 shrink-0 space-y-1 pr-1">
+                {navItems.map((item) => (
+                  <div
+                    key={item.href ?? item.label}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <SidebarMenuItem item={item} />
+                  </div>
+                ))}
+              </nav>
 
-            <nav
-              className="mt-6 flex-1 space-y-1 overflow-y-auto overflow-x-hidden pr-1"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.href ?? item.label} item={item} />
-              ))}
-            </nav>
+              <div className="mt-4 shrink-0 border-t border-slate-200 pt-4">
+                <div className="mb-3 rounded-2xl bg-slate-50 p-3">
+                  <p className="truncate text-sm font-black text-slate-950">
+                    {displayName}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                    {roleLabel}
+                  </p>
+                </div>
 
-            <div className="mt-4 shrink-0 border-t border-slate-200 pt-4">
-              <div className="mb-3 rounded-2xl bg-slate-50 p-3">
-                <p className="truncate text-sm font-black text-slate-950">
-                  {displayName}
-                </p>
-                <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
-                  {roleLabel}
-                </p>
+                <LogoutButton />
               </div>
-
-              <LogoutButton />
             </div>
           </aside>
         </div>
@@ -193,7 +222,6 @@ export function DashboardShellClient({
               </div>
             </div>
 
-
             <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
@@ -217,8 +245,6 @@ export function DashboardShellClient({
                   </p>
                 </div>
               </div>
-
-
             </div>
           </div>
         </header>
@@ -230,6 +256,3 @@ export function DashboardShellClient({
     </div>
   );
 }
-
-
-
