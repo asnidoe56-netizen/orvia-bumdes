@@ -78,10 +78,8 @@ function amountClass(value: string | number | null | undefined) {
   return "text-slate-500";
 }
 
-function getPresentationModeLabel(mode: BalanceSheetPresentationMode) {
-  return mode === "net_book_value"
-    ? "Mode Desa - Nilai Buku Bersih"
-    : "Mode Profesional - Detail Kontra Aset";
+function absoluteMoneyValue(value: string | number | null | undefined) {
+  return Math.abs(toNumber(value));
 }
 
 function ReportLine({
@@ -171,7 +169,14 @@ function AccountRows({
   return (
     <>
       {rows.map((row, index) => {
-        const value = row.presentation_neraca_amount ?? row.neraca_amount;
+        const isNetBookValueContraInfo =
+          row.presentation_mode === "net_book_value" &&
+          row.presentation_operator === "subtract";
+
+        const rawValue = row.presentation_neraca_amount ?? row.neraca_amount;
+        const value = isNetBookValueContraInfo
+          ? absoluteMoneyValue(row.neraca_amount)
+          : rawValue;
         const label = row.presentation_label ?? row.account_name;
 
         return (
@@ -248,9 +253,7 @@ export default async function NeracaReportPage({ searchParams }: PageProps) {
     .eq("unit_id", context.unit_id)
     .order("account_code", { ascending: true });
 
-  const detailRows = ((detailData ?? []) as NeracaDetail[]).filter(
-    (row) => row.show_in_neraca_presentation !== false
-  );
+  const detailRows = (detailData ?? []) as NeracaDetail[];
 
   const asetRows = detailRows.filter((row) => row.neraca_group === "ASET");
   const kewajibanRows = detailRows.filter(
@@ -265,7 +268,6 @@ export default async function NeracaReportPage({ searchParams }: PageProps) {
     summary?.presentation_mode ??
     detailRows[0]?.presentation_mode ??
     "contra_asset_detail";
-  const presentationModeLabel = getPresentationModeLabel(presentationMode);
 
   return (
     <div className="space-y-5">
@@ -286,7 +288,23 @@ export default async function NeracaReportPage({ searchParams }: PageProps) {
             </p>
           </div>
 
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="flex flex-row gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-2">
+              <PresentationModeButton
+                mode="contra_asset_detail"
+                activeMode={presentationMode}
+              >
+                Detail Kontra Aset
+              </PresentationModeButton>
+
+              <PresentationModeButton
+                mode="net_book_value"
+                activeMode={presentationMode}
+              >
+                Nilai Buku Bersih
+              </PresentationModeButton>
+            </div>
+
             <ExportPdfButton
               fileName={`neraca-${new Date().toISOString().slice(0, 10)}.pdf`}
               reportData={{
@@ -414,39 +432,7 @@ export default async function NeracaReportPage({ searchParams }: PageProps) {
                     Akun kosong tidak ditampilkan.
                   </p>
 
-                  <div className="mt-4 rounded-2xl border border-emerald-200 bg-white p-4 print:hidden">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                          Mode Penyajian Neraca
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">
-                          {presentationModeLabel}
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                          Mode ini hanya mengubah penyajian laporan. Jurnal,
-                          akun akumulasi penyusutan, dan saldo engine akuntansi
-                          tidak berubah.
-                        </p>
-                      </div>
 
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <PresentationModeButton
-                          mode="contra_asset_detail"
-                          activeMode={presentationMode}
-                        >
-                          Detail Kontra Aset
-                        </PresentationModeButton>
-
-                        <PresentationModeButton
-                          mode="net_book_value"
-                          activeMode={presentationMode}
-                        >
-                          Nilai Buku Bersih
-                        </PresentationModeButton>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="p-6">
@@ -522,3 +508,8 @@ export default async function NeracaReportPage({ searchParams }: PageProps) {
     </div>
   );
 }
+
+
+
+
+
