@@ -1,4 +1,4 @@
-﻿export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -14,8 +14,10 @@ import {
 } from "../actions";
 import { CashBankLineForm } from "./cash-bank-line-form";
 import { InventoryLineForm } from "./inventory-line-form";
+import { SavingsLoanLineForm } from "./savings-loan-line-form";
 import { FixedAssetLineForm } from "./fixed-asset-line-form";
 import { OtherAssetLineForm } from "./other-asset-line-form";
+import { LiabilityLineForm } from "./liability-line-form";
 import { EquityLineForm } from "./equity-line-form";
 
 type AnyRow = Record<string, unknown>;
@@ -148,9 +150,60 @@ export default async function UnitCutoffMigrasiDetailPage({
     (option) => option.account_id
   );
 
-  const [
+  const { data: liabilityAccountOptionData, error: liabilityAccountOptionError } =
+    await supabase
+      .from("chart_of_accounts")
+      .select("id, kode, nama, normal_balance")
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .eq("account_type", "KEWAJIBAN")
+      .eq("is_active", true)
+      .eq("is_postable", true)
+      .order("kode", { ascending: true });
+
+  if (liabilityAccountOptionError) {
+    return (
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-5 text-sm font-semibold text-red-700">
+        Gagal membaca daftar akun kewajiban ORVIA: {liabilityAccountOptionError.message}
+      </div>
+    );
+  }
+
+  const liabilityAccountOptions = liabilityAccountOptionData ?? [];
+
+
+  const { data: unitData } = await supabase
+    .from("business_units")
+    .select("jenis_unit, template_id")
+    .eq("tenant_id", context.tenant_id)
+    .eq("id", context.unit_id)
+    .maybeSingle();
+
+  let templateCode: string | null = null;
+  const jenisUnit = unitData?.jenis_unit ?? null;
+
+  if (unitData?.template_id) {
+    const { data: templateData } = await supabase
+      .from("unit_templates")
+      .select("kode_template")
+      .eq("id", unitData.template_id)
+      .maybeSingle();
+
+    templateCode = templateData?.kode_template ?? null;
+  }
+
+  const normalizedTemplateCode = templateCode?.trim().toUpperCase() ?? "";
+  const normalizedJenisUnit =
+    jenisUnit?.trim().toUpperCase().replace(/\s+/g, "_") ?? "";
+
+  const isSavingsLoanCutoff =
+    normalizedTemplateCode === "SIMPAN_PINJAM" ||
+    normalizedJenisUnit.includes("SIMPAN_PINJAM") ||
+    normalizedJenisUnit === "USP";
+const [
     cashBankResult,
     inventoryResult,
+    savingsLoanResult,
     assetResult,
     otherAssetResult,
     liabilityResult,
@@ -165,6 +218,11 @@ export default async function UnitCutoffMigrasiDetailPage({
       .order("created_at", { ascending: true }),
     supabase
       .from("unit_cutoff_migration_inventory_lines")
+      .select("*")
+      .eq("cutoff_migration_id", cutoffMigrationId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("v_unit_cutoff_migration_savings_loan_lines")
       .select("*")
       .eq("cutoff_migration_id", cutoffMigrationId)
       .order("created_at", { ascending: true }),
@@ -203,6 +261,7 @@ export default async function UnitCutoffMigrasiDetailPage({
   const queryError =
     cashBankResult.error ||
     inventoryResult.error ||
+    savingsLoanResult.error ||
     assetResult.error ||
     otherAssetResult.error ||
     liabilityResult.error ||
@@ -220,6 +279,7 @@ export default async function UnitCutoffMigrasiDetailPage({
 
   const cashBankRows = safeRows(cashBankResult.data);
   const inventoryRows = safeRows(inventoryResult.data);
+  const savingsLoanRows = safeRows(savingsLoanResult.data);
   const assetRows = safeRows(assetResult.data);
   const otherAssetRows = safeRows(otherAssetResult.data);
   const liabilityRows = safeRows(liabilityResult.data);
@@ -464,47 +524,99 @@ export default async function UnitCutoffMigrasiDetailPage({
         </DataTable>
       </Card>
 
-      <Card>
-        <CardHeader
-          title="Persediaan"
-          description="Barang yang akan menjadi saldo awal inventory ORVIA."
-          action={<Badge variant="neutral">{inventoryRows.length} baris</Badge>}
-        />
+      {isSavingsLoanCutoff ? (
+        <Card>
+          <CardHeader
+            title="Piutang Pinjaman Awal"
+            description="Saldo pokok, jasa/margin, dan tunggakan pinjaman yang sudah berjalan sebelum ORVIA."
+            action={<Badge variant="neutral">{savingsLoanRows.length} baris</Badge>}
+          />
 
-        <InventoryLineForm
-          cutoffMigrationId={cutoffMigrationId}
-          canEdit={isDraft || status === "rejected"}
-        />
+          <SavingsLoanLineForm
+            cutoffMigrationId={cutoffMigrationId}
+            canEdit={isDraft || status === "rejected"}
+          />
 
-        <DataTable
-          columns={["Kode Barang", "Nama", "Satuan", "Qty", "Harga", "Total"]}
-          emptyText="Belum ada saldo persediaan."
-        >
-          {inventoryRows.map((row, index) => (
-            <tr key={`${asText(row.id)}-${index}`} className="hover:bg-slate-50">
-              <td className="px-4 py-4 font-bold text-slate-950">
-                {asText(row.item_code)}
-              </td>
-              <td className="px-4 py-4 text-slate-700">
-                {asText(row.item_name)}
-              </td>
-              <td className="px-4 py-4 text-slate-700">
-                {asText(row.unit_of_measure)}
-              </td>
-              <td className="px-4 py-4 font-semibold text-slate-700">
-                {asText(row.quantity)}
-              </td>
-              <td className="px-4 py-4 font-semibold text-slate-700">
-                {formatRupiah(row.unit_cost)}
-              </td>
-              <td className="px-4 py-4 font-semibold text-slate-900">
-                {formatRupiah(row.total_cost)}
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      </Card>
+          <DataTable
+            columns={["No Pinjaman", "Peminjam", "Pokok", "Jasa/Margin", "Denda", "Kolektibilitas"]}
+            emptyText="Belum ada piutang pinjaman awal."
+          >
+            {savingsLoanRows.map((row, index) => (
+              <tr key={`${asText(row.id)}-${index}`} className="hover:bg-slate-50">
+                <td className="px-4 py-4">
+                  <div className="font-bold text-slate-950">
+                    {asText(row.loan_no)}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Mulai {formatDate(row.loan_start_date)}
+                  </div>
+                </td>
+                <td className="px-4 py-4">
+                  <div className="font-semibold text-slate-800">
+                    {asText(row.borrower_name)}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {asText(row.borrower_identity_number)}
+                  </div>
+                </td>
+                <td className="px-4 py-4 font-semibold text-slate-900">
+                  {formatRupiah(row.outstanding_principal_amount)}
+                </td>
+                <td className="px-4 py-4 font-semibold text-slate-700">
+                  {formatRupiah(row.outstanding_service_amount)}
+                </td>
+                <td className="px-4 py-4 font-semibold text-slate-700">
+                  {formatRupiah(row.outstanding_penalty_amount)}
+                </td>
+                <td className="px-4 py-4 text-slate-700">
+                  {asText(row.collectibility_status)}
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader
+            title="Persediaan"
+            description="Barang yang akan menjadi saldo awal inventory ORVIA."
+            action={<Badge variant="neutral">{inventoryRows.length} baris</Badge>}
+          />
 
+          <InventoryLineForm
+            cutoffMigrationId={cutoffMigrationId}
+            canEdit={isDraft || status === "rejected"}
+          />
+
+          <DataTable
+            columns={["Kode Barang", "Nama", "Satuan", "Qty", "Harga", "Total"]}
+            emptyText="Belum ada saldo persediaan."
+          >
+            {inventoryRows.map((row, index) => (
+              <tr key={`${asText(row.id)}-${index}`} className="hover:bg-slate-50">
+                <td className="px-4 py-4 font-bold text-slate-950">
+                  {asText(row.item_code)}
+                </td>
+                <td className="px-4 py-4 text-slate-700">
+                  {asText(row.item_name)}
+                </td>
+                <td className="px-4 py-4 text-slate-700">
+                  {asText(row.unit_of_measure)}
+                </td>
+                <td className="px-4 py-4 font-semibold text-slate-700">
+                  {asText(row.quantity)}
+                </td>
+                <td className="px-4 py-4 font-semibold text-slate-700">
+                  {formatRupiah(row.unit_cost)}
+                </td>
+                <td className="px-4 py-4 font-semibold text-slate-900">
+                  {formatRupiah(row.total_cost)}
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </Card>
+      )}
       <Card>
         <CardHeader
           title="Aset Tetap"
@@ -587,6 +699,12 @@ export default async function UnitCutoffMigrasiDetailPage({
             title="Kewajiban"
             description="Utang dan kewajiban yang masih terbuka saat cut-off."
             action={<Badge variant="neutral">{liabilityRows.length} baris</Badge>}
+          />
+
+          <LiabilityLineForm
+            cutoffMigrationId={cutoffMigrationId}
+            options={liabilityAccountOptions}
+            canEdit={isDraft || status === "rejected"}
           />
 
           <DataTable

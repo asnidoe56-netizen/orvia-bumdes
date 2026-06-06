@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -755,6 +755,243 @@ export async function createUnitCutoffEquityLineAction(formData: FormData) {
 
   revalidatePath(`/unit/dashboard/cutoff-migrasi/${cutoffMigrationId}`);
   revalidatePath("/unit/dashboard/cutoff-migrasi");
+
+  redirect(`/unit/dashboard/cutoff-migrasi/${cutoffMigrationId}`);
+}
+
+export async function createUnitCutoffSavingsLoanLineAction(formData: FormData) {
+  const context = await getLoginContext();
+  const role = context?.role ?? "";
+
+  if (!context?.user_id || !context.tenant_id || !context.unit_id) {
+    throw new Error("Konteks login unit tidak valid.");
+  }
+
+  assertUnitCutoffRole(role);
+
+  const cutoffMigrationId = getRequiredString(
+    formData,
+    "cutoff_migration_id",
+    "ID cut-off migrasi tidak ditemukan."
+  );
+
+  const borrowerName = getRequiredString(
+    formData,
+    "borrower_name",
+    "Nama peminjam wajib diisi."
+  );
+
+  const loanNo = getRequiredString(
+    formData,
+    "loan_no",
+    "Nomor pinjaman wajib diisi."
+  );
+
+  const loanStartDate = getRequiredString(
+    formData,
+    "loan_start_date",
+    "Tanggal pinjaman wajib diisi."
+  );
+
+  const originalPrincipalAmount = parseMoney(
+    formData.get("original_principal_amount"),
+    "Pokok awal wajib lebih besar dari nol."
+  );
+
+  const outstandingPrincipalAmount = parseMoney(
+    formData.get("outstanding_principal_amount"),
+    "Sisa pokok wajib lebih besar dari nol."
+  );
+
+  function parseOptionalMoney(value: FormDataEntryValue | null) {
+    const raw = String(value ?? "")
+      .replace(/Rp/gi, "")
+      .replace(/\s/g, "")
+      .replace(/\./g, "")
+      .replace(/,/g, ".")
+      .trim();
+
+    if (!raw) return 0;
+
+    const parsed = Number(raw);
+
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new Error("Nominal opsional tidak valid.");
+    }
+
+    return parsed;
+  }
+
+  function parseOptionalInteger(value: FormDataEntryValue | null) {
+    const raw = String(value ?? "").trim();
+
+    if (!raw) return null;
+
+    const parsed = Number(raw);
+
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      throw new Error("Sisa tenor harus berupa angka bulat nol atau lebih.");
+    }
+
+    return parsed;
+  }
+
+  const outstandingServiceAmount = parseOptionalMoney(
+    formData.get("outstanding_service_amount")
+  );
+  const outstandingPenaltyAmount = parseOptionalMoney(
+    formData.get("outstanding_penalty_amount")
+  );
+  const installmentAmount = parseOptionalMoney(formData.get("installment_amount"));
+  const remainingTenorMonths = parseOptionalInteger(
+    formData.get("remaining_tenor_months")
+  );
+
+  const collectibilityStatus =
+    String(formData.get("collectibility_status") ?? "current").trim() || "current";
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("create_unit_cutoff_savings_loan_line", {
+    p_cutoff_migration_id: cutoffMigrationId,
+    p_borrower_name: borrowerName,
+    p_loan_no: loanNo,
+    p_loan_start_date: loanStartDate,
+    p_original_principal_amount: originalPrincipalAmount,
+    p_outstanding_principal_amount: outstandingPrincipalAmount,
+    p_outstanding_service_amount: outstandingServiceAmount,
+    p_outstanding_penalty_amount: outstandingPenaltyAmount,
+    p_member_id: null,
+    p_group_id: null,
+    p_old_account_code: String(formData.get("old_account_code") ?? "").trim() || null,
+    p_old_account_name: String(formData.get("old_account_name") ?? "").trim() || null,
+    p_borrower_identity_number:
+      String(formData.get("borrower_identity_number") ?? "").trim() || null,
+    p_borrower_phone: String(formData.get("borrower_phone") ?? "").trim() || null,
+    p_borrower_address: String(formData.get("borrower_address") ?? "").trim() || null,
+    p_maturity_date: String(formData.get("maturity_date") ?? "").trim() || null,
+    p_installment_amount: installmentAmount || null,
+    p_remaining_tenor_months: remainingTenorMonths,
+    p_collectibility_status: collectibilityStatus,
+    p_notes: String(formData.get("notes") ?? "").trim() || null,
+  });
+
+  if (error) {
+    throw new Error(error.message || "Gagal menambahkan piutang pinjaman awal.");
+  }
+
+  revalidatePath(`/unit/dashboard/cutoff-migrasi/${cutoffMigrationId}`);
+
+  redirect(`/unit/dashboard/cutoff-migrasi/${cutoffMigrationId}`);
+}
+
+export async function createUnitCutoffLiabilityLineAction(formData: FormData) {
+  const context = await getLoginContext();
+  const role = context?.role ?? "";
+
+  if (!context?.user_id || !context.tenant_id || !context.unit_id) {
+    throw new Error("Konteks login unit tidak valid.");
+  }
+
+  assertUnitCutoffRole(role);
+
+  const cutoffMigrationId = getRequiredString(
+    formData,
+    "cutoff_migration_id",
+    "ID cut-off migrasi tidak ditemukan."
+  );
+
+  const liabilityName = getRequiredString(
+    formData,
+    "liability_name",
+    "Nama kewajiban wajib diisi."
+  );
+
+  const orviaAccountId = getRequiredString(
+    formData,
+    "orvia_account_id",
+    "Akun kewajiban ORVIA wajib dipilih."
+  );
+
+  const amount = parseMoney(
+    formData.get("amount"),
+    "Nominal kewajiban wajib lebih besar dari nol."
+  );
+
+  const oldAccountCode = String(formData.get("old_account_code") ?? "").trim();
+  const oldAccountName = String(formData.get("old_account_name") ?? "").trim();
+  const counterpartyName = String(formData.get("counterparty_name") ?? "").trim();
+  const dueDate = String(formData.get("due_date") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  const supabase = await createClient();
+
+  const { data: header, error: headerError } = await supabase
+    .from("unit_cutoff_migrations")
+    .select("id, status")
+    .eq("id", cutoffMigrationId)
+    .eq("tenant_id", context.tenant_id)
+    .eq("unit_id", context.unit_id)
+    .maybeSingle();
+
+  if (headerError || !header) {
+    throw new Error(headerError?.message || "Draft cut-off migrasi tidak ditemukan.");
+  }
+
+  if (header.status !== "draft" && header.status !== "rejected") {
+    throw new Error("Kewajiban hanya dapat ditambahkan saat status draft atau rejected.");
+  }
+
+  const { data: liabilityAccount, error: liabilityAccountError } = await supabase
+    .from("chart_of_accounts")
+    .select("id, kode, nama, tipe, account_type, normal_balance, is_postable, is_active")
+    .eq("id", orviaAccountId)
+    .eq("tenant_id", context.tenant_id)
+    .eq("unit_id", context.unit_id)
+    .eq("is_active", true)
+    .eq("is_postable", true)
+    .maybeSingle();
+
+  if (liabilityAccountError || !liabilityAccount) {
+    throw new Error(
+      liabilityAccountError?.message ||
+        "Akun kewajiban ORVIA tidak ditemukan atau tidak aktif."
+    );
+  }
+
+  const accountType = String(liabilityAccount.account_type ?? "").toUpperCase();
+  const tipe = String(liabilityAccount.tipe ?? "").toLowerCase();
+  const normalBalance = String(liabilityAccount.normal_balance ?? "").toLowerCase();
+
+  if (accountType !== "KEWAJIBAN" && tipe !== "kewajiban") {
+    throw new Error("Akun yang dipilih bukan akun kewajiban.");
+  }
+
+  if (normalBalance !== "credit") {
+    throw new Error("Akun kewajiban harus memiliki normal balance credit.");
+  }
+
+  const { error } = await supabase
+    .from("unit_cutoff_migration_liability_lines")
+    .insert({
+      cutoff_migration_id: cutoffMigrationId,
+      old_account_code: oldAccountCode || null,
+      old_account_name: oldAccountName || null,
+      liability_name: liabilityName,
+      orvia_account_id: liabilityAccount.id,
+      counterparty_name: counterpartyName || null,
+      amount,
+      due_date: dueDate || null,
+      notes:
+        notes ||
+        `Auto mapping ke ${liabilityAccount.kode} - ${liabilityAccount.nama}.`,
+    });
+
+  if (error) {
+    throw new Error(error.message || "Gagal menambahkan kewajiban cut-off.");
+  }
+
+  revalidatePath(`/unit/dashboard/cutoff-migrasi/${cutoffMigrationId}`);
 
   redirect(`/unit/dashboard/cutoff-migrasi/${cutoffMigrationId}`);
 }

@@ -1,15 +1,25 @@
-import type { NavItem } from "@/lib/navigation/dashboard-config";
+﻿import type { NavItem } from "@/lib/navigation/dashboard-config";
 import { unitNav } from "@/lib/navigation/dashboard-config";
 
 export const savingsLoanUnitNav: NavItem[] = [
   { label: "Ringkasan Unit", href: "/unit/dashboard" },
+
+  // Core Simpan Pinjam
   { label: "Data Anggota", href: "/unit/dashboard/simpan-pinjam/anggota" },
   { label: "Kelompok Anggota", href: "/unit/dashboard/simpan-pinjam/kelompok" },
   { label: "Pengajuan Pinjaman", href: "/unit/dashboard/simpan-pinjam/pengajuan" },
   { label: "Simpanan Anggota", href: "/unit/dashboard/simpan-pinjam/simpanan" },
   { label: "Pencairan Pinjaman", href: "/unit/dashboard/simpan-pinjam/pencairan" },
   { label: "Angsuran Pinjaman", href: "/unit/dashboard/simpan-pinjam/angsuran" },
+
+  // Fitur global unit
+  { label: "Master Data", href: "/unit/dashboard/master-data" },
+  { label: "Cut-off Migrasi", href: "/unit/dashboard/cutoff-migrasi" },
+  { label: "Catat Transaksi", href: "/unit/dashboard/catat-transaksi" },
   { label: "Kas & Bank", href: "/unit/dashboard/cash-bank" },
+  { label: "Aset Tetap", href: "/unit/dashboard/aset-tetap" },
+
+  // Audit & laporan
   { label: "Buku Jurnal", href: "/unit/dashboard/reports/buku-jurnal" },
   { label: "Laporan", href: "/unit/dashboard/reports" },
 ];
