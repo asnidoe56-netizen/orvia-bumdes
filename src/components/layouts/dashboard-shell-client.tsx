@@ -133,29 +133,8 @@ export function DashboardShellClient({
 
       {isRoutePending ? (
         <div className="fixed inset-x-0 top-0 z-[60]">
-          <style>
-            {`
-              @keyframes dashboard-route-progress {
-                0% {
-                  transform: translateX(-120%);
-                }
-                55% {
-                  transform: translateX(85%);
-                }
-                100% {
-                  transform: translateX(260%);
-                }
-              }
-            `}
-          </style>
-
           <div className="h-1 w-full overflow-hidden bg-emerald-100">
-            <div
-              className="h-full w-1/3 rounded-r-full bg-emerald-600 shadow-sm shadow-emerald-300"
-              style={{
-                animation: "dashboard-route-progress 1.1s ease-in-out infinite",
-              }}
-            />
+            <div className="h-full w-full rounded-r-full bg-emerald-600 shadow-sm shadow-emerald-300" />
           </div>
 
           <div className="mx-auto mt-2 w-fit rounded-full border border-emerald-100 bg-white/95 px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm backdrop-blur">
@@ -308,6 +287,7 @@ export function DashboardShellClient({
     </div>
   );
 }
+
 
 
 
