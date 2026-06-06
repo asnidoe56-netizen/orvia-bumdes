@@ -7,15 +7,17 @@ export default async function DinasPmdDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["dinas_pmd"]);
+  const loginContext = await requireRole(["dinas_pmd"]);
 
   return (
     <DashboardShell
       title="Dashboard Dinas PMD"
       subtitle="Monitoring BUMDes di wilayah pemerintahan daerah."
       navItems={dinasPmdNav}
+      loginContext={loginContext}
     >
       {children}
     </DashboardShell>
   );
 }
+

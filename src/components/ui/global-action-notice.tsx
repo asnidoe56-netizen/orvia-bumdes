@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -137,14 +138,6 @@ function buildNoticeFromSearch(search: string): NoticeState | null {
   return null;
 }
 
-function getInitialNotice() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return buildNoticeFromSearch(window.location.search);
-}
-
 function cleanNoticeQueryFromUrl() {
   const url = new URL(window.location.href);
 
@@ -176,20 +169,36 @@ function NoticeIcon({ variant }: { variant: NoticeVariant }) {
 }
 
 export function GlobalActionNotice() {
-  const [notice, setNotice] = useState<NoticeState | null>(getInitialNotice);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [notice, setNotice] = useState<NoticeState | null>(null);
+
+  useEffect(() => {
+    const search = searchParams.toString();
+    const nextNotice = buildNoticeFromSearch(search);
+
+    if (!nextNotice) {
+      return;
+    }
+
+    const showTimeoutId = window.setTimeout(() => {
+      setNotice(nextNotice);
+      cleanNoticeQueryFromUrl();
+    }, 0);
+
+    return () => window.clearTimeout(showTimeoutId);
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     if (!notice) {
       return;
     }
 
-    cleanNoticeQueryFromUrl();
-
-    const timeoutId = window.setTimeout(() => {
+    const hideTimeoutId = window.setTimeout(() => {
       setNotice(null);
     }, 4500);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => window.clearTimeout(hideTimeoutId);
   }, [notice]);
 
   if (!notice) {
@@ -197,13 +206,13 @@ export function GlobalActionNotice() {
   }
 
   return (
-    <div className="fixed inset-x-4 top-20 z-[80] flex justify-end print:hidden sm:inset-x-auto sm:right-5 sm:w-[420px]">
+    <div className="pointer-events-none fixed left-1/2 top-24 z-[1000] -translate-x-1/2 print:hidden">
       <div
-        className={`w-full rounded-3xl border p-4 shadow-xl shadow-slate-900/10 backdrop-blur ${variantStyles[notice.variant]}`}
+        className={`pointer-events-auto w-[360px] max-w-[calc(100vw-2rem)] rounded-2xl border px-4 py-3 shadow-2xl shadow-slate-900/15 backdrop-blur ${variantStyles[notice.variant]}`}
       >
         <div className="flex items-start gap-3">
           <div
-            className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${iconStyles[notice.variant]}`}
+            className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconStyles[notice.variant]}`}
           >
             <NoticeIcon variant={notice.variant} />
           </div>
@@ -228,3 +237,5 @@ export function GlobalActionNotice() {
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -210,6 +210,14 @@ export async function createAndPostPurchaseInvoice(formData: FormData) {
   revalidatePath("/unit/dashboard/cash-bank");
   revalidatePath("/unit/dashboard/reports");
   revalidatePath("/unit/dashboard");
+
+  if (paymentType === "cash") {
+    redirect(
+      `/unit/dashboard/catat-transaksi?success=${encodeURIComponent(
+        "Pembelian tunai berhasil diproses."
+      )}`
+    );
+  }
 
   redirect("/unit/dashboard/purchasing");
 }

@@ -19,6 +19,9 @@ export function LoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (isSubmitting) return;
+
     setErrorMessage("");
     setIsSubmitting(true);
 
@@ -27,15 +30,13 @@ export function LoginForm() {
       password,
     });
 
-    setIsSubmitting(false);
-
     if (error) {
+      setIsSubmitting(false);
       setErrorMessage(error.message);
       return;
     }
 
-    router.push("/auth/redirect");
-    router.refresh();
+    router.replace("/auth/redirect");
   }
 
   return (
@@ -95,7 +96,7 @@ export function LoginForm() {
         {isSubmitting ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Memproses...
+            Mengarahkan...
           </>
         ) : (
           "Masuk"

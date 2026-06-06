@@ -7,16 +7,18 @@ export default async function PendampingDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["pendamping_kecamatan"]);
+  const loginContext = await requireRole(["pendamping_kecamatan"]);
 
   return (
     <DashboardShell
       title="Dashboard Pendamping Kecamatan"
       subtitle="Review proposal, pendampingan, dan progress pengembangan BUMDes di wilayah kerja."
       navItems={pendampingNav}
+      loginContext={loginContext}
     >
       {children}
     </DashboardShell>
   );
 }
+
 

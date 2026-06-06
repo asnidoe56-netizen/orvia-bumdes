@@ -7,15 +7,17 @@ export default async function BumdesDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["direktur_bumdes", "admin_bumdes"]);
+  const loginContext = await requireRole(["direktur_bumdes", "admin_bumdes"]);
 
   return (
     <DashboardShell
       title="Dashboard BUMDes"
       subtitle="Monitoring tenant, unit usaha, user, dan laporan konsolidasi."
       navItems={bumdesNav}
+      loginContext={loginContext}
     >
       {children}
     </DashboardShell>
   );
 }
+

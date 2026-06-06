@@ -1,6 +1,5 @@
 ﻿import { DashboardShell } from "@/components/layouts/dashboard-shell";
 import { requireRole } from "@/lib/auth/require-role";
-import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
 import {
   getUnitDashboardNav,
@@ -12,9 +11,7 @@ export default async function UnitDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["manager_unit", "operator_unit", "viewer_unit"]);
-
-  const context = await getLoginContext();
+  const context = await requireRole(["manager_unit", "operator_unit", "viewer_unit"]);
   const supabase = await createClient();
 
   let templateCode: string | null = null;
@@ -54,8 +51,10 @@ export default async function UnitDashboardLayout({
           : "Operasional unit: pembelian, penjualan, inventory, kas-bank, dan laporan."
       }
       navItems={navItems}
+      loginContext={context}
     >
       {children}
     </DashboardShell>
   );
 }
+

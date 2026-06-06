@@ -7,15 +7,17 @@ export default async function BupatiDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["bupati"]);
+  const loginContext = await requireRole(["bupati"]);
 
   return (
     <DashboardShell
       title="Dashboard Bupati"
       subtitle="Executive summary dan performa BUMDes daerah."
       navItems={bupatiNav}
+      loginContext={loginContext}
     >
       {children}
     </DashboardShell>
   );
 }
+

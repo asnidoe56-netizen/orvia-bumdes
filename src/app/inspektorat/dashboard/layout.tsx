@@ -7,15 +7,17 @@ export default async function InspektoratDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["inspektorat"]);
+  const loginContext = await requireRole(["inspektorat"]);
 
   return (
     <DashboardShell
       title="Dashboard Inspektorat"
       subtitle="Audit findings dan compliance monitoring."
       navItems={inspektoratNav}
+      loginContext={loginContext}
     >
       {children}
     </DashboardShell>
   );
 }
+

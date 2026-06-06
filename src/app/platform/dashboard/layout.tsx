@@ -7,15 +7,17 @@ export default async function PlatformDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["super_admin_platform"]);
+  const loginContext = await requireRole(["super_admin_platform"]);
 
   return (
     <DashboardShell
       title="Dashboard Platform"
       subtitle="Kontrol registrasi, tenant, user, dan governance global."
       navItems={platformNav}
+      loginContext={loginContext}
     >
       {children}
     </DashboardShell>
   );
 }
+
