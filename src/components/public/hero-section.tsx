@@ -32,16 +32,16 @@ export function HeroSection({ section, featureItems }: HeroSectionProps) {
     <section id="beranda" className="relative overflow-hidden pt-20">
       <div className="absolute right-0 top-20 h-72 w-72 rounded-full bg-emerald-100/70 blur-3xl" />
       <div className="absolute bottom-0 left-1/2 h-80 w-80 rounded-full bg-orange-100/70 blur-3xl" />
-      <div className="absolute right-16 top-48 hidden h-44 w-44 rounded-full border border-emerald-100 lg:block" />
+      <div className="absolute right-16 top-48 hidden h-44 w-44 rounded-full border border-emerald-100 2xl:block" />
 
-      <div className="relative mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.86fr_1.14fr] lg:px-8 lg:py-20">
+      <div className="relative mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 2xl:grid-cols-[0.86fr_1.14fr] lg:px-8 lg:py-20">
         <section className="relative z-10">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800">
             <span className="h-2 w-2 rounded-full bg-emerald-600" />
             {eyebrow}
           </div>
 
-          <h1 className="mt-7 max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+          <h1 className="mt-7 max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl 2xl:text-6xl">
             {title}
           </h1>
 
@@ -87,19 +87,19 @@ export function HeroSection({ section, featureItems }: HeroSectionProps) {
           </div>
         </section>
 
-        <section className="relative min-h-[360px] sm:min-h-[430px] lg:min-h-[560px]">
-          <div className="absolute -right-10 top-2 hidden h-72 w-72 rounded-full bg-emerald-100/80 lg:block" />
-          <div className="absolute -right-20 top-64 hidden h-40 w-40 rounded-full bg-orange-100/90 lg:block" />
-          <div className="absolute bottom-20 right-4 hidden h-32 w-32 bg-[radial-gradient(circle,#cbd5e1_1px,transparent_1px)] [background-size:14px_14px] opacity-35 lg:block" />
+        <section className="relative min-h-[360px] sm:min-h-[430px] 2xl:min-h-[560px]">
+          <div className="absolute -right-10 top-2 hidden h-72 w-72 rounded-full bg-emerald-100/80 2xl:block" />
+          <div className="absolute -right-20 top-64 hidden h-40 w-40 rounded-full bg-orange-100/90 2xl:block" />
+          <div className="absolute bottom-20 right-4 hidden h-32 w-32 bg-[radial-gradient(circle,#cbd5e1_1px,transparent_1px)] [background-size:14px_14px] opacity-35 2xl:block" />
 
-          <div className="relative h-[360px] w-full sm:h-[430px] lg:absolute lg:right-[-96px] lg:top-[-10px] lg:h-[455px] lg:w-[820px] xl:right-[-230px] xl:h-[470px] xl:w-[900px]">
+          <div className="relative h-[360px] w-full sm:h-[430px] 2xl:absolute 2xl:right-[-180px] 2xl:top-[-10px] 2xl:h-[470px] 2xl:w-[880px]">
             <Image
               src={imageUrl}
               alt="Visual forum laporan dan dashboard kesehatan keuangan BUMDes"
               fill
               unoptimized
               priority
-              sizes="(max-width: 1024px) 100vw, 58vw"
+              sizes="(max-width: 1536px) 100vw, 58vw"
               className="object-contain object-center"
             />
           </div>
@@ -108,3 +108,6 @@ export function HeroSection({ section, featureItems }: HeroSectionProps) {
     </section>
   );
 }
+
+
+
