@@ -305,6 +305,7 @@ export function ExpenseEntryForm({
   const [assistantResult, setAssistantResult] = useState<AssistantResult | null>(
     null
   );
+  const [isAssistantLoading, setIsAssistantLoading] = useState(false);
 
   const selectedCashBankAccount = useMemo(
     () =>
@@ -313,7 +314,7 @@ export function ExpenseEntryForm({
     [cashBankAccountId, cashBankAccounts]
   );
 
-  function handleAssistantFill() {
+  async function handleAssistantFill() {
     const prompt = assistantPrompt.trim();
 
     if (!prompt) {
@@ -323,6 +324,54 @@ export function ExpenseEntryForm({
           "Tulis dulu transaksi dengan bahasa biasa. Contoh: Bayar bensin motor Rp50.000 dari kas hari ini.",
       });
       return;
+    }
+
+    setIsAssistantLoading(true);
+
+    try {
+      const response = await fetch("/api/unit/assistant", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          module: "operational_expense",
+          prompt,
+          client_today: today,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (response.ok && payload?.success && payload?.draft) {
+        const draft = payload.draft;
+
+        setExpenseDate(String(draft.expense_date ?? today));
+        setExpenseAccountId(String(draft.expense_account_id ?? ""));
+        setCashBankAccountId(String(draft.cash_bank_account_id ?? ""));
+        setTotalAmount(String(draft.total_amount ?? ""));
+        setDescription(String(draft.description ?? ""));
+        setOperatorReason(String(draft.operator_reason ?? ""));
+
+        const warnings = Array.isArray(payload.warnings)
+          ? payload.warnings.filter(Boolean)
+          : [];
+
+        setAssistantResult({
+          tone: warnings.length > 0 ? "warning" : "success",
+          message: [
+            String(payload.summary ?? "Form sudah dibantu isi oleh assistant backend."),
+            ...warnings,
+            "Silakan periksa kembali sebelum menekan tombol posting.",
+          ].join(" "),
+        });
+
+        return;
+      }
+    } catch {
+      // Jika endpoint gagal, parser lokal tetap dipakai sebagai cadangan.
+    } finally {
+      setIsAssistantLoading(false);
     }
 
     const parsedAmount = parseAmountFromText(prompt);
@@ -422,11 +471,15 @@ export function ExpenseEntryForm({
               type="button"
               onClick={handleAssistantFill}
               disabled={
-                expenseAccounts.length === 0 || cashBankAccounts.length === 0
+                isAssistantLoading ||
+                expenseAccounts.length === 0 ||
+                cashBankAccounts.length === 0
               }
               className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Gunakan Asisten untuk Isi Form
+              {isAssistantLoading
+                ? "Assistant membaca database..."
+                : "Gunakan Asisten untuk Isi Form"}
             </button>
 
             <p className="text-xs leading-5 text-emerald-800">
@@ -650,6 +703,7 @@ export function ExpenseEntryForm({
     </form>
   );
 }
+
 
 
 
