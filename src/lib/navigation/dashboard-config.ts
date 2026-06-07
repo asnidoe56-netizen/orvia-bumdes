@@ -20,6 +20,7 @@ export const bumdesNav: NavItem[] = [
   { label: "Ringkasan BUMDes", href: "/bumdes/dashboard" },
   { label: "Master Plan", href: "/bumdes/dashboard/master-plan" },
   { label: "Unit Usaha", href: "/bumdes/dashboard/units" },
+  { label: "Pengaturan", href: "/bumdes/dashboard/pengaturan" },
   { label: "Pengguna", href: "/bumdes/dashboard/users" },
   { label: "Laporan Konsolidasi", href: "/bumdes/dashboard/reports" },
   { label: "Monitoring", href: "/bumdes/dashboard/monitoring" },
@@ -74,6 +75,7 @@ export const bupatiNav: NavItem[] = [
   { label: "Executive Summary", href: "/bupati/dashboard" },
   { label: "Kinerja Daerah", href: "/bupati/dashboard/regional-performance" },
 ];
+
 
 
 

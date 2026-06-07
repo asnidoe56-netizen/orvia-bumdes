@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Store,
+  Settings,
   TrendingUp,
   Truck,
   UserRoundCheck,
@@ -48,6 +49,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Ringkasan BUMDes": LayoutDashboard,
   "Master Plan": ClipboardList,
   "Unit Usaha": Store,
+  "Pengaturan": Settings,
   Pengguna: UsersRound,
   "Laporan Konsolidasi": BarChart3,
   Monitoring: Activity,
@@ -211,6 +213,9 @@ export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
     </Link>
   );
 }
+
+
+
 
 
 

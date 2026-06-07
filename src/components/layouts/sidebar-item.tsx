@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Store,
+  Settings,
   TrendingUp,
   UsersRound,
   WalletCards,
@@ -36,6 +37,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Ringkasan BUMDes": LayoutDashboard,
   "Master Plan": ClipboardList,
   "Unit Usaha": Store,
+  "Pengaturan": Settings,
   "Laporan BUMDes": BarChart3,
   Monitoring: Activity,
 
@@ -94,5 +96,8 @@ export function SidebarItem({ href, label }: SidebarItemProps) {
     </Link>
   );
 }
+
+
+
 
 
