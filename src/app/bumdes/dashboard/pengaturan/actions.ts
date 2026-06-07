@@ -62,6 +62,47 @@ async function revalidatePengaturanAndPublicPage(tenantId: string) {
   }
 }
 
+
+export async function updatePublicProfileSettingAction(formData: FormData) {
+  const context = await getLoginContext();
+
+  if (!context?.tenant_id) {
+    throw new Error("Konteks BUMDes tidak ditemukan.");
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isPublished = formData.get("is_published") === "on";
+
+  const { error } = await supabase
+    .from("tenant_public_profiles")
+    .update({
+      is_published: isPublished,
+      hero_title: cleanText(formData.get("hero_title")),
+      hero_subtitle: cleanText(formData.get("hero_subtitle")),
+      tagline: cleanText(formData.get("tagline")),
+      profile_description: cleanText(formData.get("profile_description")),
+      contact_phone: cleanText(formData.get("contact_phone")),
+      contact_email: cleanText(formData.get("contact_email")),
+      contact_address: cleanText(formData.get("contact_address")),
+      about_history: cleanText(formData.get("about_history")),
+      vision: cleanText(formData.get("vision")),
+      mission: cleanText(formData.get("mission")),
+      service_goals: cleanText(formData.get("service_goals")),
+      updated_by: user?.id ?? null,
+    })
+    .eq("tenant_id", context.tenant_id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await revalidatePengaturanAndPublicPage(context.tenant_id);
+}
+
 export async function updatePublicUnitSettingAction(formData: FormData) {
   const context = await getLoginContext();
 
@@ -209,4 +250,5 @@ export async function updatePublicMemberSettingAction(formData: FormData) {
 
   await revalidatePengaturanAndPublicPage(context.tenant_id);
 }
+
 

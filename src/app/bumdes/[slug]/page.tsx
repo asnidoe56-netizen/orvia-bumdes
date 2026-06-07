@@ -8,7 +8,7 @@ import {
   Download,
   FileText,
   Landmark,
-  Mail,
+  Mail, MessageCircle,
   MapPin,
   Phone,
   ShieldCheck,
@@ -250,6 +250,27 @@ function InactivePublicServicePage({
 }
 
 
+
+function buildWhatsappHref(phone: string | null, namaBumdes: string) {
+  const digits = String(phone ?? "").replace(/\D/g, "");
+
+  if (!digits) {
+    return null;
+  }
+
+  const normalizedPhone = digits.startsWith("0")
+    ? `62${digits.slice(1)}`
+    : digits.startsWith("62")
+      ? digits
+      : `62${digits}`;
+
+  const message = encodeURIComponent(
+    `Halo, saya ingin menghubungi ${namaBumdes}.`,
+  );
+
+  return `https://wa.me/${normalizedPhone}?text=${message}`;
+}
+
 function isSafePublicDocumentUrl(fileUrl: string | null | undefined) {
   const trimmedUrl = fileUrl?.trim();
 
@@ -327,6 +348,7 @@ export default async function PublicBumdesPage({
     isSafePublicDocumentUrl(document.file_url),
   );
   const documentCount = publicDocuments.length;
+  const whatsappHref = buildWhatsappHref(profile.contact_phone, profile.nama_bumdes);
 
   return (
     <main className={styles.page}>
@@ -656,6 +678,22 @@ export default async function PublicBumdesPage({
           </footer>
         </div>
       </section>
+      {whatsappHref ? (
+        <a
+          href={whatsappHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.floatingWhatsapp}
+          aria-label={`Hubungi ${profile.nama_bumdes} melalui WhatsApp`}
+        >
+          <span className={styles.floatingWhatsappIcon}>
+            <MessageCircle size={22} />
+          </span>
+          <span className={styles.floatingWhatsappText}>Hubungi Kami</span>
+        </a>
+      ) : null}
     </main>
   );
 }
+
+

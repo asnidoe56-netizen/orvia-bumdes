@@ -8,6 +8,7 @@ import { getLoginContext } from "@/lib/auth/get-login-context";
 import {
   createPublicMemberSettingAction,
   updatePublicMemberSettingAction,
+  updatePublicProfileSettingAction,
   updatePublicUnitSettingAction,
 } from "./actions";
 
@@ -30,6 +31,17 @@ type PublicUnitRow = {
 type PublicProfileRow = {
   public_slug: string;
   is_published: boolean;
+  hero_title: string | null;
+  hero_subtitle: string | null;
+  tagline: string | null;
+  profile_description: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  contact_address: string | null;
+  about_history: string | null;
+  vision: string | null;
+  mission: string | null;
+  service_goals: string | null;
 };
 
 type PublicMemberRow = {
@@ -89,7 +101,7 @@ export default async function BumdesPengaturanPage() {
         .eq("tenant_id", context.tenant_id),
       supabase
         .from("tenant_public_profiles")
-        .select("public_slug, is_published")
+        .select("public_slug, is_published, hero_title, hero_subtitle, tagline, profile_description, contact_phone, contact_email, contact_address, about_history, vision, mission, service_goals")
         .eq("tenant_id", context.tenant_id)
         .maybeSingle<PublicProfileRow>(),
       supabase
@@ -132,6 +144,188 @@ export default async function BumdesPengaturanPage() {
         }
       />
 
+      <Card>
+        <CardHeader
+          title="Profil Publik BUMDes"
+          description="Atur tulisan utama, kontak, sejarah, visi, misi, dan tujuan layanan yang tampil pada halaman publik."
+          action={<Badge variant="success">Tahap 3</Badge>}
+        />
+
+        <form action={updatePublicProfileSettingAction} className="mt-6 space-y-6">
+          <div className="rounded-3xl border border-emerald-100 bg-emerald-50/50 p-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h3 className="text-lg font-black text-slate-950">
+                  Status Halaman Publik
+                </h3>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Jika dimatikan, halaman publik BUMDes tidak akan menampilkan profil lengkap kepada masyarakat.
+                </p>
+              </div>
+
+              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">
+                <input
+                  type="checkbox"
+                  name="is_published"
+                  defaultChecked={publicProfile?.is_published ?? false}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-700"
+                />
+                Publikasikan Profil
+              </label>
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Judul Utama
+              </span>
+              <input
+                name="hero_title"
+                defaultValue={publicProfile?.hero_title ?? ""}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Contoh: BUMDes BUHUTA WALAMA"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Subjudul Utama
+              </span>
+              <input
+                name="hero_subtitle"
+                defaultValue={publicProfile?.hero_subtitle ?? ""}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Contoh: Desa Tolango, Kecamatan Anggrek"
+              />
+            </label>
+
+            <label className="block lg:col-span-2">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Kalimat Pembuka / Tagline
+              </span>
+              <textarea
+                name="tagline"
+                defaultValue={publicProfile?.tagline ?? ""}
+                rows={3}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Tuliskan kalimat pendek yang menggambarkan wajah BUMDes kepada masyarakat."
+              />
+            </label>
+
+            <label className="block lg:col-span-2">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Deskripsi Singkat
+              </span>
+              <textarea
+                name="profile_description"
+                defaultValue={publicProfile?.profile_description ?? ""}
+                rows={4}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Ceritakan secara singkat profil BUMDes dengan bahasa yang mudah dipahami masyarakat."
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Telepon Publik
+              </span>
+              <input
+                name="contact_phone"
+                defaultValue={publicProfile?.contact_phone ?? ""}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Nomor layanan publik"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Email Publik
+              </span>
+              <input
+                name="contact_email"
+                defaultValue={publicProfile?.contact_email ?? ""}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Email layanan publik"
+              />
+            </label>
+
+            <label className="block lg:col-span-2">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Alamat Publik
+              </span>
+              <textarea
+                name="contact_address"
+                defaultValue={publicProfile?.contact_address ?? ""}
+                rows={3}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Alamat kantor atau alamat layanan BUMDes."
+              />
+            </label>
+
+            <label className="block lg:col-span-2">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Sejarah Singkat
+              </span>
+              <textarea
+                name="about_history"
+                defaultValue={publicProfile?.about_history ?? ""}
+                rows={4}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Tulis sejarah singkat berdirinya BUMDes."
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Visi
+              </span>
+              <textarea
+                name="vision"
+                defaultValue={publicProfile?.vision ?? ""}
+                rows={4}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Tulis visi BUMDes."
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Misi
+              </span>
+              <textarea
+                name="mission"
+                defaultValue={publicProfile?.mission ?? ""}
+                rows={4}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Tulis misi BUMDes."
+              />
+            </label>
+
+            <label className="block lg:col-span-2">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Tujuan Layanan
+              </span>
+              <textarea
+                name="service_goals"
+                defaultValue={publicProfile?.service_goals ?? ""}
+                rows={4}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Tulis tujuan layanan BUMDes untuk masyarakat desa."
+              />
+            </label>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="rounded-2xl bg-emerald-700 px-6 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-800"
+            >
+              Simpan Profil Publik
+            </button>
+          </div>
+        </form>
+      </Card>
       <section className="grid gap-4 md:grid-cols-4">
         <Card>
           <div className="flex items-start justify-between gap-4">
@@ -562,6 +756,7 @@ export default async function BumdesPengaturanPage() {
     </div>
   );
 }
+
 
 
 
