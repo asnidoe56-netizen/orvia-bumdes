@@ -33,19 +33,6 @@ export async function submitPengawasRegistration(
   if (password.length < 8) return { success: false, message: "Password minimal 8 karakter." };
   if (password !== confirmPassword) return { success: false, message: "Konfirmasi password tidak sama." };
 
-  const { data: tenant, error: tenantError } = await admin
-    .from("tenants")
-    .select("id")
-    .eq("id", tenantId)
-    .maybeSingle();
-
-  if (tenantError || !tenant?.id) {
-    return {
-      success: false,
-      message: tenantError?.message || "BUMDes yang dipilih tidak ditemukan.",
-    };
-  }
-
   const { data: createdUser, error: createUserError } =
     await admin.auth.admin.createUser({
       email,
@@ -71,19 +58,14 @@ export async function submitPengawasRegistration(
 
   const userId = createdUser.user.id;
 
-  const { data, error } = await admin
-    .from("pengawas_registrations")
-    .insert({
-      full_name: fullName,
-      email,
-      phone: phone || null,
-      tenant_id: tenantId,
-      notes: notes || null,
-      submitted_by: userId,
-      status: "pending",
-    })
-    .select("id")
-    .single();
+  const { data, error } = await admin.rpc("submit_pengawas_registration", {
+    p_full_name: fullName,
+    p_email: email,
+    p_phone: phone || null,
+    p_tenant_id: tenantId,
+    p_notes: notes || null,
+    p_submitted_by: userId,
+  });
 
   if (error) {
     await admin.auth.admin.deleteUser(userId);
@@ -101,6 +83,6 @@ export async function submitPengawasRegistration(
     success: true,
     message:
       "Pendaftaran Pengawas berhasil dikirim. Setelah disetujui Platform, akun dapat login sebagai Pengawas BUMDes.",
-    registrationId: data.id,
+    registrationId: data,
   };
 }
