@@ -1,11 +1,15 @@
 ﻿import Link from "next/link";
-import { ArrowRight, Eye, EyeOff, Globe2, Settings, Store } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Globe2, Settings, Store, UserRound, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
-import { updatePublicUnitSettingAction } from "./actions";
+import {
+  createPublicMemberSettingAction,
+  updatePublicMemberSettingAction,
+  updatePublicUnitSettingAction,
+} from "./actions";
 
 type BusinessUnitRow = {
   id: string;
@@ -28,6 +32,32 @@ type PublicProfileRow = {
   is_published: boolean;
 };
 
+type PublicMemberRow = {
+  id: string;
+  name: string;
+  position: string;
+  role_group: string;
+  photo_url: string | null;
+  display_order: number;
+  is_published: boolean;
+};
+
+const ROLE_GROUP_OPTIONS = [
+  { value: "penasihat", label: "Penasihat" },
+  { value: "pengawas", label: "Pengawas" },
+  { value: "pengurus", label: "Pengurus" },
+  { value: "manager_unit", label: "Manager Unit" },
+  { value: "lainnya", label: "Lainnya" },
+  { value: "pelaksana_operasional", label: "Pelaksana Operasional" },
+];
+
+function roleGroupLabel(value: string) {
+  return (
+    ROLE_GROUP_OPTIONS.find((option) => option.value === value)?.label ??
+    "Pengurus"
+  );
+}
+
 export default async function BumdesPengaturanPage() {
   const context = await getLoginContext();
 
@@ -41,8 +71,12 @@ export default async function BumdesPengaturanPage() {
 
   const supabase = await createClient();
 
-  const [{ data: units }, { data: publicUnits }, { data: publicProfile }] =
-    await Promise.all([
+  const [
+    { data: units },
+    { data: publicUnits },
+    { data: publicProfile },
+    { data: publicMembers },
+  ] = await Promise.all([
       supabase
         .from("business_units")
         .select("id, kode_unit, nama_unit, jenis_unit, status, created_at")
@@ -58,6 +92,12 @@ export default async function BumdesPengaturanPage() {
         .select("public_slug, is_published")
         .eq("tenant_id", context.tenant_id)
         .maybeSingle<PublicProfileRow>(),
+      supabase
+        .from("tenant_public_organizational_members")
+        .select("id, name, position, role_group, photo_url, display_order, is_published")
+        .eq("tenant_id", context.tenant_id)
+        .order("display_order", { ascending: true })
+        .order("created_at", { ascending: true }),
     ]);
 
   const publicUnitMap = new Map(
@@ -65,9 +105,11 @@ export default async function BumdesPengaturanPage() {
   );
 
   const activeUnits = (units ?? []) as BusinessUnitRow[];
+  const members = (publicMembers ?? []) as PublicMemberRow[];
   const publishedCount = activeUnits.filter(
     (unit) => publicUnitMap.get(unit.id)?.is_published,
   ).length;
+  const publishedMemberCount = members.filter((member) => member.is_published).length;
 
   return (
     <div className="space-y-6">
@@ -90,7 +132,7 @@ export default async function BumdesPengaturanPage() {
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-4">
         <Card>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -123,6 +165,25 @@ export default async function BumdesPengaturanPage() {
             </div>
             <div className="rounded-2xl bg-cyan-50 p-3 text-cyan-700">
               <Globe2 className="h-5 w-5" />
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-500">
+                Pengurus Publik
+              </p>
+              <p className="mt-2 text-3xl font-black text-slate-950">
+                {publishedMemberCount}
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                Struktur yang tampil di halaman publik.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-violet-50 p-3 text-violet-700">
+              <Users className="h-5 w-5" />
             </div>
           </div>
         </Card>
@@ -258,7 +319,249 @@ export default async function BumdesPengaturanPage() {
           )}
         </div>
       </Card>
+
+      <Card>
+        <CardHeader
+          title="Struktur Pengurus Publik"
+          description="Atur siapa saja pengurus BUMDes yang boleh tampil di halaman publik. Data ini menjadi wajah resmi BUMDes di hadapan masyarakat."
+          action={<Badge variant="success">Tahap 2</Badge>}
+        />
+
+        <form
+          action={createPublicMemberSettingAction}
+          className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50/50 p-5"
+        >
+          <div className="mb-4 flex items-center gap-3">
+            <div className="rounded-2xl bg-white p-3 text-emerald-700 shadow-sm">
+              <UserRound className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-slate-950">
+                Tambah Pengurus Publik
+              </h3>
+              <p className="text-sm text-slate-600">
+                Masukkan nama pengurus yang akan tampil pada halaman publik.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[1fr_1fr_180px_1fr_120px_150px]">
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Nama
+              </span>
+              <input
+                name="name"
+                required
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Nama pengurus"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Jabatan
+              </span>
+              <input
+                name="position"
+                required
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Contoh: Direktur"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Kelompok
+              </span>
+              <select
+                name="role_group"
+                defaultValue="pengurus"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+              >
+                {ROLE_GROUP_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                URL Foto
+              </span>
+              <input
+                name="photo_url"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                placeholder="Opsional"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Urutan
+              </span>
+              <input
+                type="number"
+                name="display_order"
+                defaultValue={100}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+              />
+            </label>
+
+            <div className="space-y-3">
+              <label className="mt-6 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">
+                <input
+                  type="checkbox"
+                  name="is_published"
+                  defaultChecked
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-700"
+                />
+                Tampilkan
+              </label>
+
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-800"
+              >
+                Tambah
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <div className="mt-6 space-y-4">
+          {members.length > 0 ? (
+            members.map((member) => (
+              <form
+                key={member.id}
+                action={updatePublicMemberSettingAction}
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+              >
+                <input type="hidden" name="member_id" value={member.id} />
+
+                <div className="grid gap-5 lg:grid-cols-[1fr_1fr_180px_1fr_120px_150px] lg:items-start">
+                  <div>
+                    <label className="block">
+                      <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                        Nama
+                      </span>
+                      <input
+                        name="name"
+                        defaultValue={member.name}
+                        required
+                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                      />
+                    </label>
+
+                    <div className="mt-3">
+                      {member.is_published ? (
+                        <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
+                          <Eye className="h-3.5 w-3.5" />
+                          Tampil di Publik
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-2 rounded-full bg-slate-200 px-3 py-1 text-xs font-black text-slate-600">
+                          <EyeOff className="h-3.5 w-3.5" />
+                          Disembunyikan
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <label className="block">
+                    <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      Jabatan
+                    </span>
+                    <input
+                      name="position"
+                      defaultValue={member.position}
+                      required
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      Kelompok
+                    </span>
+                    <select
+                      name="role_group"
+                      defaultValue={member.role_group}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                    >
+                      {ROLE_GROUP_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-2 text-xs font-semibold text-slate-500">
+                      Saat ini: {roleGroupLabel(member.role_group)}
+                    </p>
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      URL Foto
+                    </span>
+                    <input
+                      name="photo_url"
+                      defaultValue={member.photo_url ?? ""}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                      placeholder="Opsional"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      Urutan
+                    </span>
+                    <input
+                      type="number"
+                      name="display_order"
+                      defaultValue={member.display_order}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
+                    />
+                  </label>
+
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">
+                      <input
+                        type="checkbox"
+                        name="is_published"
+                        defaultChecked={member.is_published}
+                        className="h-4 w-4 rounded border-slate-300 text-emerald-700"
+                      />
+                      Tampilkan
+                    </label>
+
+                    <button
+                      type="submit"
+                      className="w-full rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-800"
+                    >
+                      Simpan
+                    </button>
+                  </div>
+                </div>
+              </form>
+            ))
+          ) : (
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+              <h3 className="text-xl font-black text-slate-950">
+                Struktur pengurus belum diisi.
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600">
+                Tambahkan pengurus agar masyarakat dapat melihat struktur resmi BUMDes.
+              </p>
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
+
+
 
