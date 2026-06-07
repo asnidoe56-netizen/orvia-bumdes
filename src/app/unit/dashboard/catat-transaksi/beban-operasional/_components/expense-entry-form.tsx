@@ -204,6 +204,82 @@ function buildDescription(text: string) {
   return `${firstLetter}${cleaned.slice(1)}`;
 }
 
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateInput(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function parseTransactionDateFromText(text: string, today: string) {
+  const normalized = normalizeText(text);
+  const todayDate = parseDateInput(today);
+
+  if (normalized.includes("hari ini")) {
+    return {
+      expenseDate: today,
+      operatorReason: "",
+      warning: "",
+    };
+  }
+
+  if (normalized.includes("kemarin")) {
+    const yesterday = new Date(todayDate);
+    yesterday.setDate(todayDate.getDate() - 1);
+
+    return {
+      expenseDate: formatDateInput(yesterday),
+      operatorReason: "Transaksi terjadi kemarin dan baru dicatat hari ini.",
+      warning: "",
+    };
+  }
+
+  const dayOnlyMatch = normalized.match(/\b(?:tanggal|tgl)\s+(\d{1,2})\b/);
+
+  if (dayOnlyMatch?.[1]) {
+    const day = Number(dayOnlyMatch[1]);
+
+    if (day >= 1 && day <= 31) {
+      const parsedDate = new Date(todayDate);
+      const todayDay = todayDate.getDate();
+
+      if (day > todayDay) {
+        parsedDate.setMonth(todayDate.getMonth() - 1);
+      }
+
+      parsedDate.setDate(day);
+
+      const expenseDate = formatDateInput(parsedDate);
+      const isPreviousMonth = day > todayDay;
+
+      return {
+        expenseDate,
+        operatorReason:
+          expenseDate === today
+            ? ""
+            : isPreviousMonth
+              ? `Transaksi disebut terjadi pada tanggal ${day} bulan sebelumnya dan baru dicatat hari ini.`
+              : `Transaksi disebut terjadi pada tanggal ${day} dan baru dicatat hari ini.`,
+        warning: isPreviousMonth
+          ? `Tanggal ${day} lebih besar dari tanggal hari ini, maka sistem membaca transaksi ini sebagai tanggal ${day} bulan sebelumnya. Silakan periksa kembali sebelum posting.`
+          : "",
+      };
+    }
+  }
+
+  return {
+    expenseDate: today,
+    operatorReason: "",
+    warning: "",
+  };
+}
+
 export function ExpenseEntryForm({
   expenseAccounts,
   cashBankAccounts,
@@ -216,7 +292,7 @@ export function ExpenseEntryForm({
     initialState
   );
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = formatDateInput(new Date());
 
   const [expenseDate, setExpenseDate] = useState(today);
   const [expenseNo, setExpenseNo] = useState("");
@@ -275,7 +351,10 @@ export function ExpenseEntryForm({
       return;
     }
 
-    setExpenseDate(today);
+    const parsedDate = parseTransactionDateFromText(prompt, today);
+
+    setExpenseDate(parsedDate.expenseDate);
+    setOperatorReason(parsedDate.operatorReason);
     setExpenseAccountId(pickedExpenseAccount.id);
     setCashBankAccountId(pickedCashBankAccount.id);
 
@@ -297,9 +376,10 @@ export function ExpenseEntryForm({
     }
 
     setAssistantResult({
-      tone: "success",
-      message:
-        "Form sudah dibantu isi. Silakan periksa tanggal, jenis beban, sumber dana, nominal, dan keterangan sebelum menekan tombol posting.",
+      tone: parsedDate.warning ? "warning" : "success",
+      message: parsedDate.warning
+        ? `Form sudah dibantu isi. ${parsedDate.warning}`
+        : "Form sudah dibantu isi. Silakan periksa tanggal, jenis beban, sumber dana, nominal, dan keterangan sebelum menekan tombol posting.",
     });
   }
 
@@ -570,4 +650,7 @@ export function ExpenseEntryForm({
     </form>
   );
 }
+
+
+
 
