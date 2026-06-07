@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowRight,
@@ -249,6 +249,17 @@ function InactivePublicServicePage({
   );
 }
 
+
+function isSafePublicDocumentUrl(fileUrl: string | null | undefined) {
+  const trimmedUrl = fileUrl?.trim();
+
+  if (!trimmedUrl) {
+    return false;
+  }
+
+  return trimmedUrl.startsWith("https://") || trimmedUrl.startsWith("/");
+}
+
 export default async function PublicBumdesPage({
   params,
 }: {
@@ -312,7 +323,10 @@ export default async function PublicBumdesPage({
     `Desa ${profile.nama_desa}, Kecamatan ${profile.nama_kecamatan}`;
   const unitCount = units?.length ?? 0;
   const memberCount = members?.length ?? 0;
-  const documentCount = documents?.length ?? 0;
+  const publicDocuments = (documents ?? []).filter((document) =>
+    isSafePublicDocumentUrl(document.file_url),
+  );
+  const documentCount = publicDocuments.length;
 
   return (
     <main className={styles.page}>
@@ -515,7 +529,7 @@ export default async function PublicBumdesPage({
                   </div>
                   <h3>{unit.nama_unit}</h3>
                   <span className={styles.unitPill}>
-                    {unit.kode_unit} Ã‚Â· {unit.jenis_unit}
+                    {unit.kode_unit} · {unit.jenis_unit}
                   </span>
                   <p>
                     {unit.public_description ??
@@ -586,9 +600,9 @@ export default async function PublicBumdesPage({
                 </div>
               </div>
 
-              {documents && documents.length > 0 ? (
+              {publicDocuments.length > 0 ? (
                 <div className={styles.documentList}>
-                  {documents.map((document) => (
+                  {publicDocuments.map((document) => (
                     <Link
                       key={document.id}
                       href={document.file_url}
