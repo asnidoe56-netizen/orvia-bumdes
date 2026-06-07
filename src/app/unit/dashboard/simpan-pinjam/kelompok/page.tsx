@@ -249,7 +249,7 @@ export default async function SavingsLoanGroupsPage() {
 
           {!groupsResult.error && groups.length > 0 ? (
             <>
-              <div className="mt-4 grid gap-3 md:hidden">
+              <div className="mt-4 grid gap-3 xl:hidden">
                 {groups.map((group) => (
                   <GroupMobileCard
                     key={group.id}
@@ -261,7 +261,7 @@ export default async function SavingsLoanGroupsPage() {
                 ))}
               </div>
 
-              <div className="mt-4 hidden min-w-0 overflow-x-auto md:block">
+              <div className="mt-4 hidden min-w-0 overflow-x-auto xl:block">
                 <table className="w-full min-w-[900px] border-separate border-spacing-0 text-left text-sm">
                   <thead>
                     <tr className="text-xs uppercase tracking-wide text-slate-500">
@@ -324,3 +324,4 @@ export default async function SavingsLoanGroupsPage() {
     </div>
   );
 }
+

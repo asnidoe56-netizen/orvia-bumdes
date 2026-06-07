@@ -257,7 +257,7 @@ export default async function BukuJurnalPage({
                       {row.account_code ?? "-"} - {row.account_name ?? "-"}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {row.account_type ?? "-"} Ã‚Â· Normal {row.normal_balance ?? "-"}
+                      {row.account_type ?? "-"}  -  Normal {row.normal_balance ?? "-"}
                     </p>
                   </td>
                   <td className="border-b border-slate-100 px-4 py-3 text-right font-semibold text-emerald-700">

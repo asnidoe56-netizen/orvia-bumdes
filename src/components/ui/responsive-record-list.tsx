@@ -25,7 +25,7 @@ export function ResponsiveRecordList<T>({
 }: ResponsiveRecordListProps<T>) {
   return (
     <>
-      <div className={joinClassNames("space-y-3 md:hidden", mobileClassName)}>
+      <div className={joinClassNames("space-y-3 xl:hidden", mobileClassName)}>
         {items.length > 0
           ? items.map((item, index) => (
               <div key={getKey(item, index)}>
@@ -35,9 +35,10 @@ export function ResponsiveRecordList<T>({
           : emptyState}
       </div>
 
-      <div className={joinClassNames("hidden md:block", desktopClassName)}>
+      <div className={joinClassNames("hidden xl:block", desktopClassName)}>
         {renderDesktopTable()}
       </div>
     </>
   );
 }
+

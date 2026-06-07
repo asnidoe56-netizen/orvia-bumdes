@@ -83,7 +83,7 @@ export default async function UnitMasterSuppliersPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
             <label className="space-y-2">
               <span className="text-sm font-semibold text-slate-700">
                 Kode Supplier
@@ -131,7 +131,7 @@ export default async function UnitMasterSuppliersPage() {
               />
             </label>
 
-            <label className="space-y-2 md:col-span-2">
+            <label className="space-y-2 col-span-full">
               <span className="text-sm font-semibold text-slate-700">
                 Alamat
               </span>
@@ -169,7 +169,7 @@ export default async function UnitMasterSuppliersPage() {
               </p>
             </div>
           </div>
-          <div className="space-y-3 md:hidden">
+          <div className="space-y-3 xl:hidden">
             {supplierList.length > 0 ? (
               supplierList.map((supplier) => (
                 <article
@@ -222,7 +222,7 @@ export default async function UnitMasterSuppliersPage() {
             )}
           </div>
 
-          <ResponsiveTableShell className="hidden md:block">
+          <ResponsiveTableShell className="hidden xl:block">
             <table className="min-w-[760px] w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
@@ -277,6 +277,8 @@ export default async function UnitMasterSuppliersPage() {
     </div>
   );
 }
+
+
 
 
 

@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import { Package, PlusCircle } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -96,7 +96,7 @@ export default async function UnitInventoryPage() {
           </div>
 
           <form action={createInventoryItem} className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-slate-700">
                   Kode Item *
@@ -164,7 +164,7 @@ export default async function UnitInventoryPage() {
                 />
               </label>
 
-              <label className="space-y-2 md:col-span-2">
+              <label className="space-y-2 col-span-full">
                 <span className="text-sm font-semibold text-slate-700">
                   Deskripsi
                 </span>
@@ -182,7 +182,7 @@ export default async function UnitInventoryPage() {
                 Akun Akuntansi Opsional
               </h3>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
                 <label className="space-y-2">
                   <span className="text-sm font-semibold text-slate-700">
                     Akun Persediaan
@@ -318,3 +318,5 @@ export default async function UnitInventoryPage() {
     </div>
   );
 }
+
+

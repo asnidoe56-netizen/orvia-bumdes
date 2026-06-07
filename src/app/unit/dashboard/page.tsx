@@ -1,4 +1,4 @@
-﻿import { ResponsiveTableShell } from "@/components/ui/responsive-table-shell";
+import { ResponsiveTableShell } from "@/components/ui/responsive-table-shell";
 export const dynamic = "force-dynamic";
 
 import {
@@ -130,8 +130,8 @@ export default async function UnitDashboardPage() {
             </h1>
 
             <p className="mt-1 text-sm text-slate-600">
-              {tenantData?.nama_bumdes ?? "BUMDes"} Â· Desa{" "}
-              {tenantData?.nama_desa ?? "-"} Â· Kecamatan{" "}
+              {tenantData?.nama_bumdes ?? "BUMDes"}  -  Desa{" "}
+              {tenantData?.nama_desa ?? "-"}  -  Kecamatan{" "}
               {tenantData?.nama_kecamatan ?? "-"}
             </p>
           </div>
@@ -241,7 +241,7 @@ export default async function UnitDashboardPage() {
               </p>
             </div>
           </div>
-          <div className="space-y-3 md:hidden">
+          <div className="space-y-3 xl:hidden">
             <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-black text-slate-950">Accounting Scope</h3>
@@ -279,7 +279,7 @@ export default async function UnitDashboardPage() {
             </article>
           </div>
 
-          <ResponsiveTableShell className="hidden md:block">
+          <ResponsiveTableShell className="hidden xl:block">
             <table className="min-w-[720px] w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
@@ -339,6 +339,7 @@ export default async function UnitDashboardPage() {
     </div>
   );
 }
+
 
 
 

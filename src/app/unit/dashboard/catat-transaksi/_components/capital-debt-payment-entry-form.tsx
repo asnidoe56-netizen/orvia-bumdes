@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import {
     CapitalDebtPaymentFormClient,
@@ -75,7 +75,7 @@ function PayableList({ payables }: { payables: CapitalPayable[] }) {
                                     </h3>
 
                                     <p className="mt-1 text-sm text-slate-600">
-                                        Supplier: {item.supplier_name || "-"} Â· Tanggal:{" "}
+                                        Supplier: {item.supplier_name || "-"}  -  Tanggal:{" "}
                                         {item.transaction_date}
                                     </p>
                                 </div>

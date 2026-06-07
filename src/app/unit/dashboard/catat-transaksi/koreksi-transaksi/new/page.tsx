@@ -1,4 +1,4 @@
-﻿export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -209,7 +209,7 @@ export default async function NewUnitKoreksiTransaksiPage({
                   <tr key={line.journal_line_id} className="hover:bg-slate-50">
                     <td className="px-4 py-4">
                       <div className="font-bold text-slate-950">
-                        {line.account_code} Â· {line.account_name}
+                        {line.account_code}  -  {line.account_name}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600">

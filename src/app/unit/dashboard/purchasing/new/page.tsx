@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import { PlusCircle, ShoppingBag } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -97,7 +97,7 @@ export default async function NewPurchaseInvoicePage() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
           <label className="space-y-2">
             <span className="text-sm font-semibold text-slate-700">
               Nomor Invoice
@@ -122,7 +122,7 @@ export default async function NewPurchaseInvoicePage() {
             />
           </label>
 
-          <label className="space-y-2 md:col-span-2">
+          <label className="space-y-2 col-span-full">
             <span className="text-sm font-semibold text-slate-700">
               Supplier
             </span>
@@ -165,7 +165,7 @@ export default async function NewPurchaseInvoicePage() {
             />
           </label>
 
-          <label className="space-y-2 md:col-span-2">
+          <label className="space-y-2 col-span-full">
             <span className="text-sm font-semibold text-slate-700">
               Item Barang
             </span>
@@ -241,7 +241,7 @@ export default async function NewPurchaseInvoicePage() {
             />
           </label>
 
-          <label className="space-y-2 md:col-span-2">
+          <label className="space-y-2 col-span-full">
             <span className="text-sm font-semibold text-slate-700">
               Catatan
             </span>
@@ -266,3 +266,4 @@ export default async function NewPurchaseInvoicePage() {
     </div>
   );
 }
+

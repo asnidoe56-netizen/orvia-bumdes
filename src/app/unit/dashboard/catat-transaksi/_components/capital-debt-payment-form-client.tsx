@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useActionState, useState } from "react";
 import {
@@ -113,7 +113,7 @@ function CashBankSelect({ cashBanks }: { cashBanks: CashBankBalance[] }) {
                         key={account.cash_bank_account_id}
                         value={account.cash_bank_account_id}
                     >
-                        {account.account_code} â€” {account.account_name} â€” Saldo:{" "}
+                        {account.account_code}  -  {account.account_name}  -  Saldo:{" "}
                         {formatRupiah(account.current_balance)}
                     </option>
                 ))}
@@ -189,8 +189,8 @@ export function CapitalDebtPaymentFormClient({
                                 key={item.capital_expenditure_id}
                                 value={item.capital_expenditure_id}
                             >
-                                {item.transaction_no} â€” Hutang Aset/Belanja Modal â€” Supplier:{" "}
-                                {item.supplier_name || "-"} â€” Sisa:{" "}
+                                {item.transaction_no}  -  Hutang Aset/Belanja Modal  -  Supplier:{" "}
+                                {item.supplier_name || "-"}  -  Sisa:{" "}
                                 {formatRupiah(item.outstanding_amount)}
                             </option>
                         ))}

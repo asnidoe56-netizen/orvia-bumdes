@@ -1,4 +1,4 @@
-﻿export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 
 import { FileSpreadsheet } from "lucide-react";
 import { PageBackButton } from "@/components/ui/page-back-button";
@@ -480,7 +480,7 @@ export default async function LabaRugiReportPage({ searchParams }: PageProps) {
 
               <p className="mt-1 text-sm text-slate-500">
                 {tenant?.nama_desa ? `Desa ${tenant.nama_desa}` : null}
-                {tenant?.nama_desa && tenant?.nama_kecamatan ? " Â· " : null}
+                {tenant?.nama_desa && tenant?.nama_kecamatan ? "  -  " : null}
                 {tenant?.nama_kecamatan
                   ? `Kecamatan ${tenant.nama_kecamatan}`
                   : null}

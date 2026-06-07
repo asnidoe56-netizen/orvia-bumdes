@@ -162,7 +162,7 @@ export default async function UnitMasterItemsPage() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-        <form action={createMasterItem} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <form action={createMasterItem} className="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-start gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
               <PlusCircle className="h-5 w-5" />
@@ -178,7 +178,7 @@ export default async function UnitMasterItemsPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
             <label className="space-y-2">
               <span className="text-sm font-semibold text-slate-700">
                 Kode Item
@@ -265,7 +265,7 @@ export default async function UnitMasterItemsPage() {
               </span>
             </label>
 
-            <label className="space-y-2 md:col-span-2">
+            <label className="space-y-2 col-span-full">
               <span className="text-sm font-semibold text-slate-700">
                 Deskripsi
               </span>
@@ -288,7 +288,7 @@ export default async function UnitMasterItemsPage() {
           </div>
         </form>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
@@ -310,7 +310,7 @@ export default async function UnitMasterItemsPage() {
               <div className="text-sm font-black text-slate-900">{formatCurrency(totalInventoryValue)}</div>
             </div>
           </div>
-          <div className="space-y-3 md:hidden">
+          <div className="space-y-3 xl:hidden">
             {itemList.length > 0 ? (
               itemList.map((item) => {
                 const stockStatus = getStockStatusLabel(item);
@@ -407,7 +407,7 @@ export default async function UnitMasterItemsPage() {
             )}
           </div>
 
-          <ResponsiveTableShell className="hidden md:block">
+          <ResponsiveTableShell className="hidden xl:block">
             <table className="min-w-[1100px] w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
@@ -489,4 +489,6 @@ export default async function UnitMasterItemsPage() {
     </div>
   );
 }
+
+
 

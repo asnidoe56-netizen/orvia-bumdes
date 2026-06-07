@@ -86,7 +86,7 @@ export default async function MasterDataCustomersPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
             <label className="space-y-2">
               <span className="text-sm font-semibold text-slate-700">
                 Kode Customer
@@ -134,7 +134,7 @@ export default async function MasterDataCustomersPage() {
               />
             </label>
 
-            <label className="space-y-2 md:col-span-2">
+            <label className="space-y-2 col-span-full">
               <span className="text-sm font-semibold text-slate-700">
                 Alamat
               </span>
@@ -179,7 +179,7 @@ export default async function MasterDataCustomersPage() {
               Data aktif
             </div>
           </div>
-          <div className="space-y-3 md:hidden">
+          <div className="space-y-3 xl:hidden">
             {customers.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
                 Belum ada customer. Simpan customer pertama dari form di sebelah kiri.
@@ -238,7 +238,7 @@ export default async function MasterDataCustomersPage() {
             )}
           </div>
 
-          <ResponsiveTableShell className="hidden md:block">
+          <ResponsiveTableShell className="hidden xl:block">
             <table className="min-w-[760px] w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
@@ -301,5 +301,7 @@ export default async function MasterDataCustomersPage() {
     </div>
   );
 }
+
+
 
 
