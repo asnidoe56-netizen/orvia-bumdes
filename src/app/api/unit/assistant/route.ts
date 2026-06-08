@@ -20,7 +20,8 @@ type AssistantModule =
   | "revenue_receipt"
   | "cash_purchase"
   | "credit_purchase"
-  | "cash_sale";
+  | "cash_sale"
+  | "credit_sale";
 
 type ExpenseAccountOption = AssistantExpenseAccountOption;
 type RevenueAccountOption = AssistantRevenueAccountOption;
@@ -1175,6 +1176,132 @@ async function handleCashSale({
 
   return NextResponse.json(responsePayload);
 }
+async function handleCreditSale({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const { customers, items } = await getCashSaleAssistantOptions(
+    supabase,
+    context
+  );
+
+  if (items.length === 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        module: assistantModule,
+        draft: null,
+        summary: "Data barang penjualan belum tersedia.",
+        warnings: ["Periksa barang stok aktif unit terlebih dahulu."],
+        requires_user_confirmation: true,
+      },
+      { status: 422 }
+    );
+  }
+
+  const parsedDate = parseTransactionDateFromText(prompt, today);
+  const dueDate = parseCreditDueDateFromText(prompt, today);
+  const quantity = parseQuantityFromText(prompt);
+  const discountPercent = parseDiscountPercentFromText(prompt);
+  const taxAmount = parseTaxAmountFromText(prompt);
+  const pickedCustomer = pickSaleCustomer(prompt, customers);
+  const pickedItem = pickSaleItem(prompt, items);
+  const warnings: string[] = [];
+
+  if (!pickedItem) {
+    warnings.push("Barang belum terbaca. Pilih barang secara manual.");
+  }
+
+  if (!quantity || !Number.isFinite(quantity) || quantity <= 0) {
+    warnings.push("Jumlah barang belum terbaca. Isi jumlah secara manual.");
+  }
+
+  if (pickedItem && pickedItem.current_stock <= 0) {
+    warnings.push(
+      "Stok barang yang terbaca sedang kosong. Periksa stok sebelum posting."
+    );
+  }
+
+  if (pickedItem && quantity > pickedItem.current_stock) {
+    warnings.push(
+      "Jumlah penjualan melebihi stok terbaca. Database akan memvalidasi ulang saat posting."
+    );
+  }
+
+  if (!dueDate) {
+    warnings.push(
+      "Tanggal jatuh tempo belum terbaca. Isi tanggal jatuh tempo secara manual."
+    );
+  }
+
+  if (parsedDate.warning) {
+    warnings.push(parsedDate.warning);
+  }
+
+  const responsePayload = {
+    success: true,
+    module: assistantModule,
+    draft: {
+      invoice_date: parsedDate.date,
+      due_date: dueDate,
+      customer_id: pickedCustomer?.id ?? "",
+      item_id: pickedItem?.id ?? "",
+      quantity: quantity > 0 ? quantity : "",
+      discount_percent: discountPercent,
+      tax_amount: taxAmount,
+      notes: buildDescription(prompt),
+    },
+    summary: `Assistant backend membaca jual kredit sebagai ${
+      pickedItem
+        ? `${pickedItem.item_code} - ${pickedItem.item_name}`
+        : "barang belum dipilih"
+    }, jumlah ${quantity > 0 ? quantity : "belum terbaca"}, pelanggan ${
+      pickedCustomer ? pickedCustomer.customer_name : "umum / belum dipilih"
+    }, jatuh tempo ${dueDate || "belum terbaca"}. Harga jual tetap mengikuti database.`,
+    warnings,
+    requires_user_confirmation: true,
+  };
+
+  const { error: assistantAuditError } = await supabase.rpc("log_audit_event", {
+    p_tenant_id: context.tenant_id,
+    p_unit_id: context.unit_id,
+    p_actor_id: context.user_id,
+    p_actor_role: context.role,
+    p_event_type: "assistant_draft_generated",
+    p_entity_type: "credit_sale_assistant",
+    p_entity_id: null,
+    p_source_type: "unit_assistant_endpoint",
+    p_source_id: null,
+    p_description:
+      "Assistant backend read-only menyusun draft form Jual Kredit.",
+    p_metadata: {
+      module: assistantModule,
+      prompt,
+      draft: responsePayload.draft,
+      warnings,
+      requires_user_confirmation: true,
+      assistant_mode: "read_only_form_draft",
+      tool_name: "getCashSaleAssistantOptions",
+    },
+  });
+
+  if (assistantAuditError) {
+    responsePayload.warnings.push(
+      "Draft berhasil dibuat, tetapi catatan audit assistant belum berhasil disimpan."
+    );
+  }
+
+  return NextResponse.json(responsePayload);
+}
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -1188,7 +1315,8 @@ export async function POST(request: Request) {
       assistantModule !== "revenue_receipt" &&
       assistantModule !== "cash_purchase" &&
       assistantModule !== "credit_purchase" &&
-      assistantModule !== "cash_sale"
+      assistantModule !== "cash_sale" &&
+      assistantModule !== "credit_sale"
     ) {
       return NextResponse.json(
         {
@@ -1260,6 +1388,16 @@ export async function POST(request: Request) {
       });
     }
 
+    if (assistantModule === "credit_sale") {
+      return handleCreditSale({
+        supabase,
+        context,
+        assistantModule,
+        prompt,
+        today,
+      });
+    }
+
     if (assistantModule === "cash_sale") {
       return handleCashSale({
         supabase,
@@ -1305,6 +1443,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 
 

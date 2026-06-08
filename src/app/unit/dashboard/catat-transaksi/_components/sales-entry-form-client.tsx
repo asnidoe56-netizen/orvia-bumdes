@@ -89,6 +89,7 @@ export function SalesEntryFormClient({
   const [isAssistantLoading, setIsAssistantLoading] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [quantityInput, setQuantityInput] = useState("1");
   const [discountPercentInput, setDiscountPercentInput] = useState("0");
@@ -193,7 +194,7 @@ export function SalesEntryFormClient({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          module: "cash_sale",
+          module: isCredit ? "credit_sale" : "cash_sale",
           prompt,
           client_today: today,
         }),
@@ -205,6 +206,11 @@ export function SalesEntryFormClient({
         const draft = payload.draft;
 
         setInvoiceDate(String(draft.invoice_date ?? today));
+
+        if (isCredit) {
+          setDueDate(String(draft.due_date ?? ""));
+        }
+
         setCustomerId(String(draft.customer_id ?? ""));
         setSelectedItemId(String(draft.item_id ?? ""));
         setQuantityInput(String(draft.quantity ?? ""));
@@ -341,6 +347,8 @@ export function SalesEntryFormClient({
                 <input
                   name="due_date"
                   type="date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
                   required
                   className="h-10 w-full rounded-xl border border-slate-900 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
@@ -565,6 +573,7 @@ export function SalesEntryFormClient({
     </form>
   );
 }
+
 
 
 
