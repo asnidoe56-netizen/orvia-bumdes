@@ -41,7 +41,9 @@ export function PurchaseEntryClientForm({
 }) {
   const today = formatDateInput(new Date());
   const isCredit = paymentType === "credit";
-  const isAssistantAvailable = paymentType === "cash";
+  const isAssistantAvailable = paymentType === "cash" || paymentType === "credit";
+  const assistantModule =
+    paymentType === "credit" ? "credit_purchase" : "cash_purchase";
 
   const [invoiceDate, setInvoiceDate] = useState(today);
   const [dueDate, setDueDate] = useState("");
@@ -88,7 +90,7 @@ export function PurchaseEntryClientForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          module: "cash_purchase",
+          module: assistantModule,
           prompt,
           client_today: today,
         }),
@@ -100,6 +102,11 @@ export function PurchaseEntryClientForm({
         const draft = payload.draft;
 
         setInvoiceDate(String(draft.invoice_date ?? today));
+
+        if (isCredit) {
+          setDueDate(String(draft.due_date ?? ""));
+        }
+
         setSupplierId(String(draft.supplier_id ?? ""));
         setItemId(String(draft.item_id ?? ""));
         setQuantity(String(draft.quantity ?? ""));
@@ -171,7 +178,9 @@ export function PurchaseEntryClientForm({
             <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-emerald-950">
-                  Asisten Isi Pembelian Tunai
+                  {isCredit
+                    ? "Asisten Isi Pembelian Kredit"
+                    : "Asisten Isi Pembelian Tunai"}
                 </p>
                 <p className="text-sm leading-6 text-emerald-800">
                   Tulis pembelian dengan bahasa biasa. Asisten hanya mengisi
@@ -469,5 +478,7 @@ export function PurchaseEntryClientForm({
     </form>
   );
 }
+
+
 
 

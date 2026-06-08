@@ -15,7 +15,8 @@ import {
 type AssistantModule =
   | "operational_expense"
   | "revenue_receipt"
-  | "cash_purchase";
+  | "cash_purchase"
+  | "credit_purchase";
 
 type ExpenseAccountOption = AssistantExpenseAccountOption;
 type RevenueAccountOption = AssistantRevenueAccountOption;
@@ -672,6 +673,65 @@ async function handleRevenueReceipt({
   return NextResponse.json(responsePayload);
 }
 
+function parseCreditDueDateFromText(text: string, today: string) {
+  const normalized = normalizeText(text);
+  const todayDate = parseDateInput(today);
+
+  if (!todayDate) {
+    return "";
+  }
+
+  const dayOffsetMatch = normalized.match(
+    /\b(?:jatuh tempo|tempo|bayar)\s*(\d{1,3})\s*(?:hari)\b/
+  );
+
+  if (dayOffsetMatch?.[1]) {
+    const offset = Number(dayOffsetMatch[1]);
+
+    if (Number.isFinite(offset) && offset > 0) {
+      const dueDate = new Date(todayDate);
+      dueDate.setDate(dueDate.getDate() + offset);
+
+      return formatDateInput(dueDate);
+    }
+  }
+
+  const nextMonthDateMatch = normalized.match(
+    /\b(?:bulan depan)\s*(?:tanggal|tgl)?\s*(\d{1,2})\b/
+  );
+
+  if (nextMonthDateMatch?.[1]) {
+    const day = Number(nextMonthDateMatch[1]);
+
+    if (Number.isFinite(day) && day >= 1 && day <= 31) {
+      const dueDate = new Date(todayDate);
+      dueDate.setMonth(dueDate.getMonth() + 1, day);
+
+      return formatDateInput(dueDate);
+    }
+  }
+
+  const dateMatch = normalized.match(
+    /\b(?:jatuh tempo|tempo|bayar)\s*(?:tanggal|tgl)?\s*(\d{1,2})\b/
+  );
+
+  if (dateMatch?.[1]) {
+    const day = Number(dateMatch[1]);
+
+    if (Number.isFinite(day) && day >= 1 && day <= 31) {
+      const dueDate = new Date(todayDate);
+      dueDate.setDate(day);
+
+      if (dueDate < todayDate) {
+        dueDate.setMonth(dueDate.getMonth() + 1);
+      }
+
+      return formatDateInput(dueDate);
+    }
+  }
+
+  return "";
+}
 async function handleCashPurchase({
   supabase,
   context,
@@ -788,6 +848,123 @@ async function handleCashPurchase({
 
   return NextResponse.json(responsePayload);
 }
+async function handleCreditPurchase({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const { suppliers, items } = await getCashPurchaseAssistantOptions(
+    supabase,
+    context
+  );
+
+  if (!suppliers.length || !items.length) {
+    return NextResponse.json(
+      {
+        success: false,
+        module: assistantModule,
+        draft: null,
+        summary: "Data referensi belum lengkap.",
+        warnings: ["Periksa supplier dan barang persediaan aktif unit."],
+        requires_user_confirmation: true,
+      },
+      { status: 422 }
+    );
+  }
+
+  const parsedDate = parseTransactionDateFromText(prompt, today);
+  const dueDate = parseCreditDueDateFromText(prompt, today);
+  const quantity = parseQuantityFromText(prompt);
+  const unitCost = parseAmountFromText(prompt);
+  const pickedSupplier = pickPurchaseSupplier(prompt, suppliers);
+  const pickedItem = pickPurchaseItem(prompt, items);
+  const warnings: string[] = [];
+
+  if (!pickedSupplier) {
+    warnings.push("Supplier belum terbaca. Pilih supplier secara manual.");
+  }
+
+  if (!pickedItem) {
+    warnings.push("Barang belum terbaca. Pilih barang secara manual.");
+  }
+
+  if (!quantity || !Number.isFinite(quantity) || quantity <= 0) {
+    warnings.push("Jumlah barang belum terbaca. Isi jumlah secara manual.");
+  }
+
+  if (!unitCost || !Number.isFinite(unitCost) || unitCost <= 0) {
+    warnings.push("Harga beli belum terbaca. Isi harga secara manual.");
+  }
+
+  if (!dueDate) {
+    warnings.push(
+      "Tanggal jatuh tempo belum terbaca. Isi tanggal jatuh tempo secara manual."
+    );
+  }
+
+  if (parsedDate.warning) {
+    warnings.push(parsedDate.warning);
+  }
+
+  const responsePayload = {
+    success: true,
+    module: assistantModule,
+    draft: {
+      invoice_date: parsedDate.date,
+      due_date: dueDate,
+      supplier_id: pickedSupplier?.id ?? "",
+      item_id: pickedItem?.id ?? "",
+      quantity: quantity > 0 ? quantity : "",
+      unit_cost: unitCost > 0 ? unitCost : "",
+      discount_amount: 0,
+      tax_amount: 0,
+      notes: buildDescription(prompt),
+    },
+    summary: `Assistant backend membaca pembelian kredit sebagai ${
+      pickedItem
+        ? `${pickedItem.item_code} - ${pickedItem.item_name}`
+        : "barang belum dipilih"
+    }, jumlah ${quantity > 0 ? quantity : "belum terbaca"}, harga ${
+      unitCost > 0 ? unitCost : "belum terbaca"
+    }, supplier ${
+      pickedSupplier ? pickedSupplier.supplier_name : "belum dipilih"
+    }, jatuh tempo ${dueDate || "belum terbaca"}.`,
+    warnings,
+    requires_user_confirmation: true,
+  };
+
+  await supabase.rpc("log_audit_event", {
+    p_tenant_id: context.tenant_id,
+    p_unit_id: context.unit_id,
+    p_actor_role: context.role,
+    p_event_type: "assistant_draft_generated",
+    p_entity_type: "credit_purchase_assistant",
+    p_entity_id: null,
+    p_source_type: "unit_assistant_endpoint",
+    p_source_id: null,
+    p_description:
+      "Assistant backend read-only menyusun draft form Pembelian Kredit.",
+    p_metadata: {
+      module: assistantModule,
+      prompt,
+      draft: responsePayload.draft,
+      warnings,
+      requires_user_confirmation: true,
+      assistant_mode: "read_only_form_draft",
+      tool_name: "getCashPurchaseAssistantOptions",
+    },
+  });
+
+  return NextResponse.json(responsePayload);
+}
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -799,7 +976,8 @@ export async function POST(request: Request) {
     if (
       assistantModule !== "operational_expense" &&
       assistantModule !== "revenue_receipt" &&
-      assistantModule !== "cash_purchase"
+      assistantModule !== "cash_purchase" &&
+      assistantModule !== "credit_purchase"
     ) {
       return NextResponse.json(
         {
@@ -871,6 +1049,16 @@ export async function POST(request: Request) {
       });
     }
 
+    if (assistantModule === "credit_purchase") {
+      return handleCreditPurchase({
+        supabase,
+        context,
+        assistantModule,
+        prompt,
+        today,
+      });
+    }
+
     return handleCashPurchase({
       supabase,
       context,
@@ -896,6 +1084,10 @@ export async function POST(request: Request) {
     );
   }
 }
+
+
+
+
 
 
 
