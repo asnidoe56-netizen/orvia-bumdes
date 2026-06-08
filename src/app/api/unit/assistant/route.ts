@@ -389,7 +389,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({
+    const responsePayload = {
       success: true,
       module: assistantModule,
       draft: {
@@ -403,7 +403,38 @@ export async function POST(request: Request) {
       summary: `Assistant backend membaca ini sebagai ${pickedExpenseAccount.kode} - ${pickedExpenseAccount.nama} melalui ${pickedCashBankAccount.account_name}.`,
       warnings,
       requires_user_confirmation: true,
+    };
+
+    const { error: assistantAuditError } = await supabase.rpc("log_audit_event", {
+      p_tenant_id: context.tenant_id,
+      p_unit_id: context.unit_id,
+      p_actor_id: context.user_id,
+      p_actor_role: context.role,
+      p_event_type: "assistant_draft_generated",
+      p_entity_type: "operational_expense_assistant",
+      p_entity_id: null,
+      p_source_type: "unit_assistant_endpoint",
+      p_source_id: null,
+      p_description:
+        "Assistant backend read-only menyusun draft form Beban Operasional.",
+      p_metadata: {
+        module: assistantModule,
+        prompt,
+        draft: responsePayload.draft,
+        warnings,
+        requires_user_confirmation: true,
+        assistant_mode: "read_only_form_draft",
+        tool_name: "getOperationalExpenseAssistantOptions",
+      },
     });
+
+    if (assistantAuditError) {
+      responsePayload.warnings.push(
+        "Draft berhasil dibuat, tetapi catatan audit assistant belum berhasil disimpan."
+      );
+    }
+
+    return NextResponse.json(responsePayload);
   } catch (error) {
     return NextResponse.json(
       {
@@ -422,6 +453,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 
 
