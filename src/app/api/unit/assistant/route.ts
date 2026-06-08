@@ -1,22 +1,16 @@
 ﻿import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
+import {
+  getOperationalExpenseAssistantOptions,
+  type AssistantCashBankAccountOption,
+  type AssistantExpenseAccountOption,
+} from "@/lib/assistant/unit-assistant-tools";
 
 type AssistantModule = "operational_expense";
 
-type ExpenseAccountOption = {
-  id: string;
-  kode: string;
-  nama: string;
-};
-
-type CashBankAccountOption = {
-  id: string;
-  account_code: string;
-  account_name: string;
-  account_kind: string;
-  current_balance: number;
-};
+type ExpenseAccountOption = AssistantExpenseAccountOption;
+type CashBankAccountOption = AssistantCashBankAccountOption;
 
 function normalizeText(value: string) {
   return value.toLowerCase().trim();
@@ -330,45 +324,10 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
-    const { data: expenseAccounts, error: expenseAccountsError } =
-      await supabase
-        .from("chart_of_accounts")
-        .select("id, kode, nama")
-        .eq("tenant_id", context.tenant_id)
-        .eq("unit_id", context.unit_id)
-        .eq("tipe", "beban")
-        .eq("account_type", "BEBAN")
-        .eq("normal_balance", "debit")
-        .eq("is_active", true)
-        .eq("is_postable", true)
-        .order("kode", { ascending: true });
-
-    if (expenseAccountsError) {
-      throw new Error(expenseAccountsError.message);
-    }
-
-    const { data: cashBankAccounts, error: cashBankAccountsError } =
-      await supabase
-        .from("v_cash_bank_balance")
-        .select("cash_bank_account_id, account_code, account_name, account_kind, current_balance")
-        .eq("tenant_id", context.tenant_id)
-        .eq("unit_id", context.unit_id)
-        .order("account_code", { ascending: true });
-
-    if (cashBankAccountsError) {
-      throw new Error(cashBankAccountsError.message);
-    }
-
-    const safeExpenseAccounts = (expenseAccounts ?? []) as ExpenseAccountOption[];
-    const safeCashBankAccounts = (cashBankAccounts ?? [])
-      .filter((account) => Boolean(account.cash_bank_account_id))
-      .map((account) => ({
-        id: account.cash_bank_account_id as string,
-        account_code: account.account_code ?? "",
-        account_name: account.account_name ?? "",
-        account_kind: account.account_kind ?? "",
-        current_balance: Number(account.current_balance ?? 0),
-      })) as CashBankAccountOption[];
+    const {
+      expenseAccounts: safeExpenseAccounts,
+      cashBankAccounts: safeCashBankAccounts,
+    } = await getOperationalExpenseAssistantOptions(supabase, context);
 
     if (safeExpenseAccounts.length === 0 || safeCashBankAccounts.length === 0) {
       return NextResponse.json(
@@ -463,5 +422,6 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 
