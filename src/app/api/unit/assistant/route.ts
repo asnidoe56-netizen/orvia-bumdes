@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import {
   getCashPurchaseAssistantOptions,
+  getCashSaleAssistantOptions,
   getOperationalExpenseAssistantOptions,
   getRevenueReceiptAssistantOptions,
   type AssistantCashBankAccountOption,
@@ -10,19 +11,24 @@ import {
   type AssistantPurchaseInventoryItemOption,
   type AssistantPurchaseSupplierOption,
   type AssistantRevenueAccountOption,
+  type AssistantSaleCustomerOption,
+  type AssistantSaleInventoryItemOption,
 } from "@/lib/assistant/unit-assistant-tools";
 
 type AssistantModule =
   | "operational_expense"
   | "revenue_receipt"
   | "cash_purchase"
-  | "credit_purchase";
+  | "credit_purchase"
+  | "cash_sale";
 
 type ExpenseAccountOption = AssistantExpenseAccountOption;
 type RevenueAccountOption = AssistantRevenueAccountOption;
 type CashBankAccountOption = AssistantCashBankAccountOption;
 type PurchaseSupplierOption = AssistantPurchaseSupplierOption;
 type PurchaseInventoryItemOption = AssistantPurchaseInventoryItemOption;
+type SaleCustomerOption = AssistantSaleCustomerOption;
+type SaleInventoryItemOption = AssistantSaleInventoryItemOption;
 
 function normalizeText(value: string) {
   return value.toLowerCase().trim();
@@ -732,6 +738,92 @@ function parseCreditDueDateFromText(text: string, today: string) {
 
   return "";
 }
+function pickSaleCustomer(text: string, customers: SaleCustomerOption[]) {
+  const normalized = normalizeText(text);
+
+  const scoredCustomers = customers
+    .map((customer) => {
+      const customerName = normalizeText(customer.customer_name);
+      const customerLabel = normalizeText(
+        `${customer.customer_code} ${customer.customer_name}`
+      );
+
+      let score = 0;
+
+      if (normalized.includes(customerLabel)) score += 6;
+      if (normalized.includes(customerName)) score += 5;
+
+      for (const word of customerName.split(" ")) {
+        if (word.length >= 3 && normalized.includes(word)) {
+          score += 1;
+        }
+      }
+
+      return { customer, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return scoredCustomers[0]?.score > 0 ? scoredCustomers[0].customer : null;
+}
+
+function pickSaleItem(text: string, items: SaleInventoryItemOption[]) {
+  const normalized = normalizeText(text);
+
+  const scoredItems = items
+    .map((item) => {
+      const itemName = normalizeText(item.item_name);
+      const itemLabel = normalizeText(`${item.item_code} ${item.item_name}`);
+
+      let score = 0;
+
+      if (normalized.includes(itemLabel)) score += 6;
+      if (normalized.includes(itemName)) score += 5;
+
+      for (const word of itemName.split(" ")) {
+        if (word.length >= 3 && normalized.includes(word)) {
+          score += 1;
+        }
+      }
+
+      return { item, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return scoredItems[0]?.score > 0 ? scoredItems[0].item : null;
+}
+
+function parseDiscountPercentFromText(text: string) {
+  const normalized = normalizeText(text);
+  const discountMatch = normalized.match(
+    /\b(?:diskon|potongan)\s*(\d+(?:[.,]\d+)?)\s*(?:persen|%)?\b/
+  );
+
+  if (!discountMatch?.[1]) {
+    return 0;
+  }
+
+  const value = Number(discountMatch[1].replace(",", "."));
+
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    return 0;
+  }
+
+  return value;
+}
+
+function parseTaxAmountFromText(text: string) {
+  const normalized = normalizeText(text);
+
+  const taxMatch = normalized.match(
+    /\b(?:pajak|ppn)\s*(rp\.?\s*)?(\d+(?:[.,]\d+)?(?:\s*(?:ribu|rb|juta))?)\b/
+  );
+
+  if (!taxMatch?.[2]) {
+    return 0;
+  }
+
+  return parseAmountFromText(taxMatch[2]);
+}
 async function handleCashPurchase({
   supabase,
   context,
@@ -965,6 +1057,124 @@ async function handleCreditPurchase({
 
   return NextResponse.json(responsePayload);
 }
+async function handleCashSale({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const { customers, items } = await getCashSaleAssistantOptions(
+    supabase,
+    context
+  );
+
+  if (items.length === 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        module: assistantModule,
+        draft: null,
+        summary: "Data barang penjualan belum tersedia.",
+        warnings: ["Periksa barang stok aktif unit terlebih dahulu."],
+        requires_user_confirmation: true,
+      },
+      { status: 422 }
+    );
+  }
+
+  const parsedDate = parseTransactionDateFromText(prompt, today);
+  const quantity = parseQuantityFromText(prompt);
+  const discountPercent = parseDiscountPercentFromText(prompt);
+  const taxAmount = parseTaxAmountFromText(prompt);
+  const pickedCustomer = pickSaleCustomer(prompt, customers);
+  const pickedItem = pickSaleItem(prompt, items);
+  const warnings: string[] = [];
+
+  if (!pickedItem) {
+    warnings.push("Barang belum terbaca. Pilih barang secara manual.");
+  }
+
+  if (!quantity || !Number.isFinite(quantity) || quantity <= 0) {
+    warnings.push("Jumlah barang belum terbaca. Isi jumlah secara manual.");
+  }
+
+  if (pickedItem && pickedItem.current_stock <= 0) {
+    warnings.push(
+      "Stok barang yang terbaca sedang kosong. Periksa stok sebelum posting."
+    );
+  }
+
+  if (pickedItem && quantity > pickedItem.current_stock) {
+    warnings.push(
+      "Jumlah penjualan melebihi stok terbaca. Database akan memvalidasi ulang saat posting."
+    );
+  }
+
+  if (parsedDate.warning) {
+    warnings.push(parsedDate.warning);
+  }
+
+  const responsePayload = {
+    success: true,
+    module: assistantModule,
+    draft: {
+      invoice_date: parsedDate.date,
+      customer_id: pickedCustomer?.id ?? "",
+      item_id: pickedItem?.id ?? "",
+      quantity: quantity > 0 ? quantity : "",
+      discount_percent: discountPercent,
+      tax_amount: taxAmount,
+      notes: buildDescription(prompt),
+    },
+    summary: `Assistant backend membaca jual tunai sebagai ${
+      pickedItem
+        ? `${pickedItem.item_code} - ${pickedItem.item_name}`
+        : "barang belum dipilih"
+    }, jumlah ${quantity > 0 ? quantity : "belum terbaca"}, pelanggan ${
+      pickedCustomer ? pickedCustomer.customer_name : "umum / belum dipilih"
+    }. Harga jual tetap mengikuti database.`,
+    warnings,
+    requires_user_confirmation: true,
+  };
+
+  const { error: assistantAuditError } = await supabase.rpc("log_audit_event", {
+    p_tenant_id: context.tenant_id,
+    p_unit_id: context.unit_id,
+    p_actor_id: context.user_id,
+    p_actor_role: context.role,
+    p_event_type: "assistant_draft_generated",
+    p_entity_type: "cash_sale_assistant",
+    p_entity_id: null,
+    p_source_type: "unit_assistant_endpoint",
+    p_source_id: null,
+    p_description:
+      "Assistant backend read-only menyusun draft form Jual Tunai.",
+    p_metadata: {
+      module: assistantModule,
+      prompt,
+      draft: responsePayload.draft,
+      warnings,
+      requires_user_confirmation: true,
+      assistant_mode: "read_only_form_draft",
+      tool_name: "getCashSaleAssistantOptions",
+    },
+  });
+
+  if (assistantAuditError) {
+    responsePayload.warnings.push(
+      "Draft berhasil dibuat, tetapi catatan audit assistant belum berhasil disimpan."
+    );
+  }
+
+  return NextResponse.json(responsePayload);
+}
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -977,7 +1187,8 @@ export async function POST(request: Request) {
       assistantModule !== "operational_expense" &&
       assistantModule !== "revenue_receipt" &&
       assistantModule !== "cash_purchase" &&
-      assistantModule !== "credit_purchase"
+      assistantModule !== "credit_purchase" &&
+      assistantModule !== "cash_sale"
     ) {
       return NextResponse.json(
         {
@@ -1049,6 +1260,16 @@ export async function POST(request: Request) {
       });
     }
 
+    if (assistantModule === "cash_sale") {
+      return handleCashSale({
+        supabase,
+        context,
+        assistantModule,
+        prompt,
+        today,
+      });
+    }
+
     if (assistantModule === "credit_purchase") {
       return handleCreditPurchase({
         supabase,
@@ -1084,6 +1305,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 
 

@@ -246,3 +246,93 @@ export async function getCashPurchaseAssistantOptions(
     })),
   };
 }
+
+export type AssistantSaleCustomerOption = {
+  id: string;
+  customer_code: string;
+  customer_name: string;
+};
+
+export type AssistantSaleInventoryItemOption = {
+  id: string;
+  item_code: string;
+  item_name: string;
+  unit_of_measure: string;
+  default_sales_price: number;
+  active_sales_price: number | null;
+  current_stock: number;
+};
+
+export type CashSaleAssistantOptions = {
+  customers: AssistantSaleCustomerOption[];
+  items: AssistantSaleInventoryItemOption[];
+};
+
+/**
+ * Read-only assistant tool untuk Jual Tunai.
+ *
+ * Batas keras:
+ * - hanya membaca pelanggan aktif
+ * - hanya membaca barang stok aktif dan saldo stok ringkas
+ * - tidak membaca/mengubah harga jual sebagai input bebas
+ * - tidak insert
+ * - tidak update
+ * - tidak delete
+ * - tidak posting
+ * - tidak memanggil RPC transaksi
+ */
+export async function getCashSaleAssistantOptions(
+  supabase: SupabaseClient,
+  context: LoginContext | null
+): Promise<CashSaleAssistantOptions> {
+  const { tenantId, unitId } = assertUnitContext(context);
+
+  const [customerResult, itemResult] = await Promise.all([
+    supabase
+      .from("customers")
+      .select("id, customer_code, customer_name")
+      .eq("tenant_id", tenantId)
+      .or(`unit_id.eq.${unitId},unit_id.is.null`)
+      .eq("is_active", true)
+      .order("customer_name", { ascending: true }),
+
+    supabase
+      .from("v_inventory_item_stock_summary")
+      .select(
+        "id, item_code, item_name, unit_of_measure, default_sales_price, active_sales_price, current_stock"
+      )
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .eq("is_active", true)
+      .eq("item_type", "stock")
+      .order("item_name", { ascending: true }),
+  ]);
+
+  if (customerResult.error) {
+    throw new Error(customerResult.error.message);
+  }
+
+  if (itemResult.error) {
+    throw new Error(itemResult.error.message);
+  }
+
+  return {
+    customers: (customerResult.data ?? []).map((customer) => ({
+      id: customer.id,
+      customer_code: customer.customer_code ?? "",
+      customer_name: customer.customer_name ?? "",
+    })),
+    items: (itemResult.data ?? []).map((item) => ({
+      id: item.id,
+      item_code: item.item_code ?? "",
+      item_name: item.item_name ?? "",
+      unit_of_measure: item.unit_of_measure ?? "",
+      default_sales_price: Number(item.default_sales_price ?? 0),
+      active_sales_price:
+        item.active_sales_price === null || item.active_sales_price === undefined
+          ? null
+          : Number(item.active_sales_price),
+      current_stock: Number(item.current_stock ?? 0),
+    })),
+  };
+}

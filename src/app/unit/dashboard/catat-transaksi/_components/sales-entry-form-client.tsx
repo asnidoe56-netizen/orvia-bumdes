@@ -37,6 +37,11 @@ type SalesLinePreview = {
   gross_profit: number;
 };
 
+type AssistantResult = {
+  tone: "success" | "warning" | "info";
+  message: string;
+};
+
 type SalesEntryFormClientProps = {
   paymentType: PaymentType;
   submitLabel: string;
@@ -63,17 +68,32 @@ function formatNumber(value: number) {
   }).format(Number(value || 0));
 }
 
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
 export function SalesEntryFormClient({
   paymentType,
   submitLabel,
   customers,
   items,
 }: SalesEntryFormClientProps) {
+  const today = formatDateInput(new Date());
+  const [assistantPrompt, setAssistantPrompt] = useState("");
+  const [assistantResult, setAssistantResult] = useState<AssistantResult | null>(
+    null
+  );
+  const [isAssistantLoading, setIsAssistantLoading] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
+  const [customerId, setCustomerId] = useState("");
   const [quantityInput, setQuantityInput] = useState("1");
   const [discountPercentInput, setDiscountPercentInput] = useState("0");
   const [taxAmountInput, setTaxAmountInput] = useState("0");
+  const [notesInput, setNotesInput] = useState("");
   const [preview, setPreview] = useState<SalesLinePreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewPending, startPreviewTransition] = useTransition();
@@ -152,6 +172,82 @@ export function SalesEntryFormClient({
     });
   }, [selectedItemId, quantity, discountPercent, taxAmount, invoiceDate]);
 
+  async function handleAssistantFill() {
+    const prompt = assistantPrompt.trim();
+
+    if (!prompt) {
+      setAssistantResult({
+        tone: "warning",
+        message:
+          "Tulis dulu penjualan dengan bahasa biasa. Contoh: Hari ini jual jagung 2 dos ke Budi diskon 5 persen.",
+      });
+      return;
+    }
+
+    setIsAssistantLoading(true);
+
+    try {
+      const response = await fetch("/api/unit/assistant", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          module: "cash_sale",
+          prompt,
+          client_today: today,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (response.ok && payload?.success && payload?.draft) {
+        const draft = payload.draft;
+
+        setInvoiceDate(String(draft.invoice_date ?? today));
+        setCustomerId(String(draft.customer_id ?? ""));
+        setSelectedItemId(String(draft.item_id ?? ""));
+        setQuantityInput(String(draft.quantity ?? ""));
+        setDiscountPercentInput(String(draft.discount_percent ?? 0));
+        setTaxAmountInput(String(draft.tax_amount ?? 0));
+        setNotesInput(String(draft.notes ?? ""));
+
+        const warnings = Array.isArray(payload.warnings)
+          ? payload.warnings.filter(Boolean)
+          : [];
+
+        setAssistantResult({
+          tone: warnings.length > 0 ? "warning" : "success",
+          message: [
+            String(
+              payload.summary ??
+                "Form jual tunai sudah dibantu isi oleh assistant backend."
+            ),
+            ...warnings,
+            "Silakan periksa kembali sebelum menekan tombol posting.",
+          ].join(" "),
+        });
+
+        return;
+      }
+
+      setAssistantResult({
+        tone: "warning",
+        message:
+          payload?.summary ??
+          "Assistant belum bisa membaca penjualan. Isi form secara manual.",
+      });
+    } catch {
+      setAssistantResult({
+        tone: "warning",
+        message:
+          "Assistant belum bisa dihubungi. Isi form secara manual, posting tetap aman lewat tombol resmi.",
+      });
+    } finally {
+      setIsAssistantLoading(false);
+    }
+  }
+
   return (
     <form action={formAction}>
       <input type="hidden" name="payment_type" value={paymentType} />
@@ -172,6 +268,54 @@ export function SalesEntryFormClient({
                 jurnal dihitung ulang oleh database.
               </p>
             </div>
+          </div>
+
+          <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <div className="mb-3">
+              <p className="text-xs font-bold text-emerald-950">
+                Asisten Isi Penjualan
+              </p>
+              <p className="mt-1 text-xs leading-5 text-emerald-800">
+                Tulis penjualan dengan bahasa biasa. Asisten hanya membantu isi form. Posting tetap dilakukan petugas lewat tombol resmi.
+              </p>
+            </div>
+
+            <textarea
+              value={assistantPrompt}
+              onChange={(event) => setAssistantPrompt(event.target.value)}
+              rows={3}
+              placeholder="Contoh: Hari ini jual jagung 2 dos ke Budi diskon 5 persen"
+              className="w-full rounded-xl border border-emerald-400 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+            />
+
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={handleAssistantFill}
+                disabled={isAssistantLoading}
+                className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isAssistantLoading
+                  ? "Assistant membaca database..."
+                  : "Gunakan Asisten untuk Isi Form"}
+              </button>
+
+              <p className="text-[11px] font-medium text-emerald-800">
+                Asisten tidak menyimpan, tidak memposting, dan tidak mengubah stok.
+              </p>
+            </div>
+
+            {assistantResult ? (
+              <div
+                className={`mt-3 rounded-xl border px-3 py-2 text-sm font-semibold leading-6 ${
+                  assistantResult.tone === "success"
+                    ? "border-emerald-300 bg-white text-emerald-800"
+                    : "border-amber-300 bg-amber-50 text-amber-800"
+                }`}
+              >
+                {assistantResult.message}
+              </div>
+            ) : null}
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
@@ -209,6 +353,8 @@ export function SalesEntryFormClient({
               </span>
               <select
                 name="customer_id"
+                value={customerId}
+                onChange={(event) => setCustomerId(event.target.value)}
                 className="h-10 w-full rounded-xl border border-slate-900 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
               >
                 <option value="">Umum / tanpa pelanggan</option>
@@ -306,6 +452,8 @@ export function SalesEntryFormClient({
               <textarea
                 name="notes"
                 rows={2}
+                value={notesInput}
+                onChange={(event) => setNotesInput(event.target.value)}
                 placeholder="Catatan penjualan"
                 className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
               />
@@ -417,4 +565,6 @@ export function SalesEntryFormClient({
     </form>
   );
 }
+
+
 
