@@ -201,7 +201,16 @@ export async function createAndPostPurchaseInvoice(formData: FormData) {
   });
 
   if (error) {
-    throw new Error(error.message || "Transaksi pembelian gagal disimpan dan diposting.");
+    const message =
+      error.message || "Transaksi pembelian gagal disimpan dan diposting.";
+
+    if (paymentType === "cash") {
+      redirect(
+        `/unit/dashboard/catat-transaksi?error=${encodeURIComponent(message)}`
+      );
+    }
+
+    redirect(`/unit/dashboard/purchasing?error=${encodeURIComponent(message)}`);
   }
 
   revalidatePath("/unit/dashboard/catat-transaksi");
@@ -247,6 +256,8 @@ export async function postPurchaseInvoice(formData: FormData) {
   revalidatePath("/unit/dashboard");
   redirect("/unit/dashboard/purchasing");
 }
+
+
 
 
 

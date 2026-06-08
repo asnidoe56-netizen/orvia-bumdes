@@ -157,9 +157,34 @@ function TransactionCard({
   );
 }
 
-export default function CatatTransaksiPage() {
+type CatatTransaksiPageProps = {
+  searchParams?: Promise<{
+    success?: string;
+    error?: string;
+  }>;
+};
+
+export default async function CatatTransaksiPage({
+  searchParams,
+}: CatatTransaksiPageProps) {
+  const params = await searchParams;
+  const successMessage = params?.success;
+  const errorMessage = params?.error;
+
   return (
     <div className="space-y-4">
+      {successMessage ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold leading-6 text-emerald-800">
+          {successMessage}
+        </div>
+      ) : null}
+
+      {errorMessage ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-800">
+          {errorMessage}
+        </div>
+      ) : null}
+
       <section className="rounded-3xl border border-slate-900 bg-white p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -208,5 +233,6 @@ export default function CatatTransaksiPage() {
     </div>
   );
 }
+
 
 

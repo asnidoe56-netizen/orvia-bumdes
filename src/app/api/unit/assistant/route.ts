@@ -48,11 +48,13 @@ function parseAmountFromText(text: string) {
   const normalized = text
     .toLowerCase()
     .replace(/\brp\.?\s?/g, "")
+    .replace(/(\d)(juta|ribu|rb)\b/g, "$1 $2")
+    .replace(/\b(juta|ribu|rb)(\d)/g, "$1 $2")
     .replace(/\s+/g, " ")
     .trim();
 
   const jutaRibuMatch = normalized.match(
-    /(\d+(?:[.,]\d+)?)\s*juta(?:\s+(\d+(?:[.,]\d+)?)(?:\s*(ribu|rb))?)?/
+    /(\d+(?:[.,]\d+)?)\s*juta(?:\s*(\d+(?:[.,]\d+)?)(?:\s*(ribu|rb))?)?/
   );
 
   if (jutaRibuMatch?.[1]) {
@@ -186,25 +188,24 @@ function buildDescription(text: string) {
 function parseQuantityFromText(text: string) {
   const normalized = normalizeText(text);
 
+  const keywordMatch = normalized.match(
+    /\b(jumlah|sebanyak|satuan|qty|kuantitas)\s*(?:barang|item|produk)?\s*(\d+(?:[.,]\d+)?)\b/
+  );
+
+  if (keywordMatch?.[2]) {
+    return Number(keywordMatch[2].replace(",", "."));
+  }
+
   const unitMatch = normalized.match(
-    /\b(\d+(?:[.,]\d+)?)\s*(sak|karung|dus|box|pcs|buah|unit|kg|kilo|liter|ltr|botol|ikat|pak|pack)\b/
+    /\b(\d+(?:[.,]\d+)?)\s*(sak|karung|dus|dos|box|pcs|buah|unit|kg|kilo|liter|ltr|botol|ikat|pak|pack)\b/
   );
 
   if (unitMatch?.[1]) {
     return Number(unitMatch[1].replace(",", "."));
   }
 
-  const beliMatch = normalized.match(
-    /\b(?:beli|membeli|ambil)\s+(\d+(?:[.,]\d+)?)\b/
-  );
-
-  if (beliMatch?.[1]) {
-    return Number(beliMatch[1].replace(",", "."));
-  }
-
   return 0;
 }
-
 function pickPurchaseSupplier(
   text: string,
   suppliers: PurchaseSupplierOption[]
@@ -895,5 +896,6 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 
