@@ -3,13 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import {
   getOperationalExpenseAssistantOptions,
+  getRevenueReceiptAssistantOptions,
   type AssistantCashBankAccountOption,
   type AssistantExpenseAccountOption,
+  type AssistantRevenueAccountOption,
 } from "@/lib/assistant/unit-assistant-tools";
 
-type AssistantModule = "operational_expense";
+type AssistantModule = "operational_expense" | "revenue_receipt";
 
 type ExpenseAccountOption = AssistantExpenseAccountOption;
+type RevenueAccountOption = AssistantRevenueAccountOption;
 type CashBankAccountOption = AssistantCashBankAccountOption;
 
 function normalizeText(value: string) {
@@ -77,7 +80,7 @@ function parseTransactionDateFromText(text: string, today: string) {
 
   if (normalized.includes("hari ini")) {
     return {
-      expense_date: today,
+      date: today,
       operator_reason: "",
       warning: "",
     };
@@ -88,9 +91,9 @@ function parseTransactionDateFromText(text: string, today: string) {
     yesterday.setDate(todayDate.getDate() - 1);
 
     return {
-      expense_date: formatDateInput(yesterday),
+      date: formatDateInput(yesterday),
       operator_reason: "Transaksi terjadi kemarin dan baru dicatat hari ini.",
-      warning: "",
+      warning: "Tanggal transaksi dibaca sebagai kemarin.",
     };
   }
 
@@ -109,13 +112,13 @@ function parseTransactionDateFromText(text: string, today: string) {
 
       parsedDate.setDate(day);
 
-      const expenseDate = formatDateInput(parsedDate);
+      const parsedInputDate = formatDateInput(parsedDate);
       const isPreviousMonth = day > todayDay;
 
       return {
-        expense_date: expenseDate,
+        date: parsedInputDate,
         operator_reason:
-          expenseDate === today
+          parsedInputDate === today
             ? ""
             : isPreviousMonth
               ? `Transaksi disebut terjadi pada tanggal ${day} bulan sebelumnya dan baru dicatat hari ini.`
@@ -128,7 +131,7 @@ function parseTransactionDateFromText(text: string, today: string) {
   }
 
   return {
-    expense_date: today,
+    date: today,
     operator_reason: "",
     warning: "",
   };
@@ -225,6 +228,52 @@ function pickExpenseAccount(
   return operationalFallback ?? expenseAccounts[0] ?? null;
 }
 
+function pickRevenueAccount(
+  text: string,
+  revenueAccounts: RevenueAccountOption[]
+) {
+  const normalized = normalizeText(text);
+
+  const rules: Array<{ keywords: string[]; accountName: string }> = [
+    {
+      keywords: ["jasa", "sewa", "layanan", "servis", "service"],
+      accountName: "jasa",
+    },
+    {
+      keywords: ["jual", "penjualan", "dagang", "barang"],
+      accountName: "penjualan",
+    },
+    {
+      keywords: ["lain-lain", "lain lain", "lainnya", "denda", "bonus"],
+      accountName: "lain",
+    },
+  ];
+
+  for (const rule of rules) {
+    const hasKeyword = rule.keywords.some((keyword) =>
+      normalized.includes(keyword)
+    );
+
+    if (!hasKeyword) {
+      continue;
+    }
+
+    const matched = revenueAccounts.find((account) =>
+      normalizeText(`${account.kode} ${account.nama}`).includes(rule.accountName)
+    );
+
+    if (matched) {
+      return matched;
+    }
+  }
+
+  const jasaFallback = revenueAccounts.find((account) =>
+    normalizeText(`${account.kode} ${account.nama}`).includes("jasa")
+  );
+
+  return jasaFallback ?? revenueAccounts[0] ?? null;
+}
+
 function pickCashBankAccount(
   text: string,
   cashBankAccounts: CashBankAccountOption[],
@@ -270,6 +319,240 @@ function pickCashBankAccount(
   return source[0] ?? cashBankAccounts[0] ?? null;
 }
 
+async function handleOperationalExpense({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const {
+    expenseAccounts: safeExpenseAccounts,
+    cashBankAccounts: safeCashBankAccounts,
+  } = await getOperationalExpenseAssistantOptions(supabase, context);
+
+  if (safeExpenseAccounts.length === 0 || safeCashBankAccounts.length === 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        module: assistantModule,
+        draft: null,
+        summary: "Data referensi belum lengkap.",
+        warnings: ["Periksa akun beban dan akun kas/bank unit."],
+        requires_user_confirmation: true,
+      },
+      { status: 422 }
+    );
+  }
+
+  const amount = parseAmountFromText(prompt);
+  const pickedExpenseAccount = pickExpenseAccount(prompt, safeExpenseAccounts);
+  const pickedCashBankAccount = pickCashBankAccount(
+    prompt,
+    safeCashBankAccounts,
+    amount
+  );
+  const parsedDate = parseTransactionDateFromText(prompt, today);
+
+  if (!pickedExpenseAccount || !pickedCashBankAccount) {
+    return NextResponse.json(
+      {
+        success: false,
+        module: assistantModule,
+        draft: null,
+        summary: "Assistant belum bisa menentukan akun.",
+        warnings: ["Silakan pilih akun secara manual."],
+        requires_user_confirmation: true,
+      },
+      { status: 422 }
+    );
+  }
+
+  const warnings: string[] = [];
+
+  if (!amount) {
+    warnings.push("Nominal belum terbaca. Isi nominal secara manual sebelum posting.");
+  }
+
+  if (parsedDate.warning) {
+    warnings.push(parsedDate.warning);
+  }
+
+  if (
+    amount > 0 &&
+    Number(pickedCashBankAccount.current_balance ?? 0) < amount
+  ) {
+    warnings.push(
+      `Saldo ${pickedCashBankAccount.account_name} belum cukup untuk nominal yang dibaca.`
+    );
+  }
+
+  const responsePayload = {
+    success: true,
+    module: assistantModule,
+    draft: {
+      expense_date: parsedDate.date,
+      expense_account_id: pickedExpenseAccount.id,
+      cash_bank_account_id: pickedCashBankAccount.id,
+      total_amount: amount > 0 ? amount : "",
+      description: buildDescription(prompt),
+      operator_reason: parsedDate.operator_reason,
+    },
+    summary: `Assistant backend membaca ini sebagai ${pickedExpenseAccount.kode} - ${pickedExpenseAccount.nama} melalui ${pickedCashBankAccount.account_name}.`,
+    warnings,
+    requires_user_confirmation: true,
+  };
+
+  const { error: assistantAuditError } = await supabase.rpc("log_audit_event", {
+    p_tenant_id: context.tenant_id,
+    p_unit_id: context.unit_id,
+    p_actor_id: context.user_id,
+    p_actor_role: context.role,
+    p_event_type: "assistant_draft_generated",
+    p_entity_type: "operational_expense_assistant",
+    p_entity_id: null,
+    p_source_type: "unit_assistant_endpoint",
+    p_source_id: null,
+    p_description:
+      "Assistant backend read-only menyusun draft form Beban Operasional.",
+    p_metadata: {
+      module: assistantModule,
+      prompt,
+      draft: responsePayload.draft,
+      warnings,
+      requires_user_confirmation: true,
+      assistant_mode: "read_only_form_draft",
+      tool_name: "getOperationalExpenseAssistantOptions",
+    },
+  });
+
+  if (assistantAuditError) {
+    responsePayload.warnings.push(
+      "Draft berhasil dibuat, tetapi catatan audit assistant belum berhasil disimpan."
+    );
+  }
+
+  return NextResponse.json(responsePayload);
+}
+
+async function handleRevenueReceipt({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const {
+    revenueAccounts: safeRevenueAccounts,
+    cashBankAccounts: safeCashBankAccounts,
+  } = await getRevenueReceiptAssistantOptions(supabase, context);
+
+  if (safeRevenueAccounts.length === 0 || safeCashBankAccounts.length === 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        module: assistantModule,
+        draft: null,
+        summary: "Data referensi belum lengkap.",
+        warnings: ["Periksa akun pendapatan dan akun kas/bank unit."],
+        requires_user_confirmation: true,
+      },
+      { status: 422 }
+    );
+  }
+
+  const amount = parseAmountFromText(prompt);
+  const pickedRevenueAccount = pickRevenueAccount(prompt, safeRevenueAccounts);
+  const pickedCashBankAccount = pickCashBankAccount(
+    prompt,
+    safeCashBankAccounts,
+    amount
+  );
+  const parsedDate = parseTransactionDateFromText(prompt, today);
+
+  if (!pickedRevenueAccount || !pickedCashBankAccount) {
+    return NextResponse.json(
+      {
+        success: false,
+        module: assistantModule,
+        draft: null,
+        summary: "Assistant belum bisa menentukan akun.",
+        warnings: ["Silakan pilih akun secara manual."],
+        requires_user_confirmation: true,
+      },
+      { status: 422 }
+    );
+  }
+
+  const warnings: string[] = [];
+
+  if (!amount) {
+    warnings.push("Nominal belum terbaca. Isi nominal secara manual sebelum posting.");
+  }
+
+  if (parsedDate.warning) {
+    warnings.push(parsedDate.warning);
+  }
+
+  const responsePayload = {
+    success: true,
+    module: assistantModule,
+    draft: {
+      receipt_date: parsedDate.date,
+      revenue_account_id: pickedRevenueAccount.id,
+      cash_bank_account_id: pickedCashBankAccount.id,
+      total_amount: amount > 0 ? amount : "",
+      description: buildDescription(prompt),
+    },
+    summary: `Assistant backend membaca ini sebagai ${pickedRevenueAccount.kode} - ${pickedRevenueAccount.nama} diterima ke ${pickedCashBankAccount.account_name}.`,
+    warnings,
+    requires_user_confirmation: true,
+  };
+
+  const { error: assistantAuditError } = await supabase.rpc("log_audit_event", {
+    p_tenant_id: context.tenant_id,
+    p_unit_id: context.unit_id,
+    p_actor_id: context.user_id,
+    p_actor_role: context.role,
+    p_event_type: "assistant_draft_generated",
+    p_entity_type: "revenue_receipt_assistant",
+    p_entity_id: null,
+    p_source_type: "unit_assistant_endpoint",
+    p_source_id: null,
+    p_description:
+      "Assistant backend read-only menyusun draft form Terima Pendapatan.",
+    p_metadata: {
+      module: assistantModule,
+      prompt,
+      draft: responsePayload.draft,
+      warnings,
+      requires_user_confirmation: true,
+      assistant_mode: "read_only_form_draft",
+      tool_name: "getRevenueReceiptAssistantOptions",
+    },
+  });
+
+  if (assistantAuditError) {
+    responsePayload.warnings.push(
+      "Draft berhasil dibuat, tetapi catatan audit assistant belum berhasil disimpan."
+    );
+  }
+
+  return NextResponse.json(responsePayload);
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -278,14 +561,19 @@ export async function POST(request: Request) {
     const prompt = String(body?.prompt ?? "").trim();
     const clientToday = String(body?.client_today ?? "").trim();
 
-    if (assistantModule !== "operational_expense") {
+    if (
+      assistantModule !== "operational_expense" &&
+      assistantModule !== "revenue_receipt"
+    ) {
       return NextResponse.json(
         {
           success: false,
           module: assistantModule,
           draft: null,
           summary: "Modul assistant belum tersedia.",
-          warnings: ["Untuk tahap awal, endpoint baru mendukung Beban Operasional."],
+          warnings: [
+            "Untuk tahap ini, endpoint mendukung Beban Operasional dan Terima Pendapatan.",
+          ],
           requires_user_confirmation: true,
         },
         { status: 400 }
@@ -323,123 +611,32 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-
-    const {
-      expenseAccounts: safeExpenseAccounts,
-      cashBankAccounts: safeCashBankAccounts,
-    } = await getOperationalExpenseAssistantOptions(supabase, context);
-
-    if (safeExpenseAccounts.length === 0 || safeCashBankAccounts.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          module: assistantModule,
-          draft: null,
-          summary: "Data referensi belum lengkap.",
-          warnings: ["Periksa akun beban dan akun kas/bank unit."],
-          requires_user_confirmation: true,
-        },
-        { status: 422 }
-      );
-    }
-
     const today = isValidDateInput(clientToday)
       ? clientToday
       : formatDateInput(new Date());
 
-    const amount = parseAmountFromText(prompt);
-    const pickedExpenseAccount = pickExpenseAccount(prompt, safeExpenseAccounts);
-    const pickedCashBankAccount = pickCashBankAccount(
-      prompt,
-      safeCashBankAccounts,
-      amount
-    );
-    const parsedDate = parseTransactionDateFromText(prompt, today);
-
-    if (!pickedExpenseAccount || !pickedCashBankAccount) {
-      return NextResponse.json(
-        {
-          success: false,
-          module: assistantModule,
-          draft: null,
-          summary: "Assistant belum bisa menentukan akun.",
-          warnings: ["Silakan pilih akun secara manual."],
-          requires_user_confirmation: true,
-        },
-        { status: 422 }
-      );
-    }
-
-    const warnings: string[] = [];
-
-    if (!amount) {
-      warnings.push("Nominal belum terbaca. Isi nominal secara manual sebelum posting.");
-    }
-
-    if (parsedDate.warning) {
-      warnings.push(parsedDate.warning);
-    }
-
-    if (
-      amount > 0 &&
-      Number(pickedCashBankAccount.current_balance ?? 0) < amount
-    ) {
-      warnings.push(
-        `Saldo ${pickedCashBankAccount.account_name} belum cukup untuk nominal yang dibaca.`
-      );
-    }
-
-    const responsePayload = {
-      success: true,
-      module: assistantModule,
-      draft: {
-        expense_date: parsedDate.expense_date,
-        expense_account_id: pickedExpenseAccount.id,
-        cash_bank_account_id: pickedCashBankAccount.id,
-        total_amount: amount > 0 ? amount : "",
-        description: buildDescription(prompt),
-        operator_reason: parsedDate.operator_reason,
-      },
-      summary: `Assistant backend membaca ini sebagai ${pickedExpenseAccount.kode} - ${pickedExpenseAccount.nama} melalui ${pickedCashBankAccount.account_name}.`,
-      warnings,
-      requires_user_confirmation: true,
-    };
-
-    const { error: assistantAuditError } = await supabase.rpc("log_audit_event", {
-      p_tenant_id: context.tenant_id,
-      p_unit_id: context.unit_id,
-      p_actor_id: context.user_id,
-      p_actor_role: context.role,
-      p_event_type: "assistant_draft_generated",
-      p_entity_type: "operational_expense_assistant",
-      p_entity_id: null,
-      p_source_type: "unit_assistant_endpoint",
-      p_source_id: null,
-      p_description:
-        "Assistant backend read-only menyusun draft form Beban Operasional.",
-      p_metadata: {
-        module: assistantModule,
+    if (assistantModule === "operational_expense") {
+      return handleOperationalExpense({
+        supabase,
+        context,
+        assistantModule,
         prompt,
-        draft: responsePayload.draft,
-        warnings,
-        requires_user_confirmation: true,
-        assistant_mode: "read_only_form_draft",
-        tool_name: "getOperationalExpenseAssistantOptions",
-      },
-    });
-
-    if (assistantAuditError) {
-      responsePayload.warnings.push(
-        "Draft berhasil dibuat, tetapi catatan audit assistant belum berhasil disimpan."
-      );
+        today,
+      });
     }
 
-    return NextResponse.json(responsePayload);
+    return handleRevenueReceipt({
+      supabase,
+      context,
+      assistantModule,
+      prompt,
+      today,
+    });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        module: "operational_expense",
+        module: "unit_assistant",
         draft: null,
         summary: "Assistant gagal menyusun draft form.",
         warnings: [
@@ -453,7 +650,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
-
-
-
