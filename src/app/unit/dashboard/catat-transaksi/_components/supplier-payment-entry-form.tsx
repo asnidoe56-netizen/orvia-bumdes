@@ -39,7 +39,13 @@ function formatRupiah(value: number | string | null | undefined) {
   }).format(Number.isNaN(numberValue) ? 0 : numberValue);
 }
 
-export async function SupplierPaymentEntryForm() {
+type SupplierPaymentEntryFormProps = {
+  errorMessage?: string | null;
+};
+
+export async function SupplierPaymentEntryForm({
+  errorMessage,
+}: SupplierPaymentEntryFormProps) {
   const context = await getLoginContext();
 
   if (!context?.tenant_id || !context.unit_id) {
@@ -134,6 +140,12 @@ export async function SupplierPaymentEntryForm() {
             </p>
           </div>
         </div>
+
+        {errorMessage ? (
+          <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold leading-6 text-rose-700">
+            {errorMessage}
+          </div>
+        ) : null}
 
         {payables.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm leading-6 text-slate-600">
@@ -274,7 +286,8 @@ export async function SupplierPaymentEntryForm() {
             <div className="p-3">Status</div>
           </div>
 
-          {payables.length === 0 ? (
+
+        {payables.length === 0 ? (
             <div className="p-4 text-sm text-slate-600">
               Semua hutang supplier sudah lunas.
             </div>
@@ -305,4 +318,6 @@ export async function SupplierPaymentEntryForm() {
     </div>
   );
 }
+
+
 
