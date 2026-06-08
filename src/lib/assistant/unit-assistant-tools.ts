@@ -168,3 +168,81 @@ export async function getRevenueReceiptAssistantOptions(
     ),
   };
 }
+
+export type AssistantPurchaseSupplierOption = {
+  id: string;
+  supplier_code: string;
+  supplier_name: string;
+};
+
+export type AssistantPurchaseInventoryItemOption = {
+  id: string;
+  item_code: string;
+  item_name: string;
+  unit_of_measure: string;
+};
+
+export type CashPurchaseAssistantOptions = {
+  suppliers: AssistantPurchaseSupplierOption[];
+  items: AssistantPurchaseInventoryItemOption[];
+};
+
+/**
+ * Read-only assistant tool untuk Pembelian Tunai.
+ *
+ * Batas keras:
+ * - hanya membaca supplier aktif unit
+ * - hanya membaca barang persediaan aktif unit
+ * - tidak membaca/memilih kas-bank
+ * - tidak insert
+ * - tidak update
+ * - tidak delete
+ * - tidak posting
+ * - tidak memanggil RPC transaksi
+ */
+export async function getCashPurchaseAssistantOptions(
+  supabase: SupabaseClient,
+  context: LoginContext | null
+): Promise<CashPurchaseAssistantOptions> {
+  const { tenantId, unitId } = assertUnitContext(context);
+
+  const [supplierResult, itemResult] = await Promise.all([
+    supabase
+      .from("suppliers")
+      .select("id, supplier_code, supplier_name")
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .eq("is_active", true)
+      .order("supplier_name", { ascending: true }),
+
+    supabase
+      .from("inventory_items")
+      .select("id, item_code, item_name, unit_of_measure")
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .eq("is_active", true)
+      .order("item_name", { ascending: true }),
+  ]);
+
+  if (supplierResult.error) {
+    throw new Error(supplierResult.error.message);
+  }
+
+  if (itemResult.error) {
+    throw new Error(itemResult.error.message);
+  }
+
+  return {
+    suppliers: (supplierResult.data ?? []).map((supplier) => ({
+      id: supplier.id,
+      supplier_code: supplier.supplier_code ?? "",
+      supplier_name: supplier.supplier_name ?? "",
+    })),
+    items: (itemResult.data ?? []).map((item) => ({
+      id: item.id,
+      item_code: item.item_code ?? "",
+      item_name: item.item_name ?? "",
+      unit_of_measure: item.unit_of_measure ?? "",
+    })),
+  };
+}

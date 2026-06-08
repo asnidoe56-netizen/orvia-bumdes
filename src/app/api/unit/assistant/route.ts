@@ -2,18 +2,26 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import {
+  getCashPurchaseAssistantOptions,
   getOperationalExpenseAssistantOptions,
   getRevenueReceiptAssistantOptions,
   type AssistantCashBankAccountOption,
   type AssistantExpenseAccountOption,
+  type AssistantPurchaseInventoryItemOption,
+  type AssistantPurchaseSupplierOption,
   type AssistantRevenueAccountOption,
 } from "@/lib/assistant/unit-assistant-tools";
 
-type AssistantModule = "operational_expense" | "revenue_receipt";
+type AssistantModule =
+  | "operational_expense"
+  | "revenue_receipt"
+  | "cash_purchase";
 
 type ExpenseAccountOption = AssistantExpenseAccountOption;
 type RevenueAccountOption = AssistantRevenueAccountOption;
 type CashBankAccountOption = AssistantCashBankAccountOption;
+type PurchaseSupplierOption = AssistantPurchaseSupplierOption;
+type PurchaseInventoryItemOption = AssistantPurchaseInventoryItemOption;
 
 function normalizeText(value: string) {
   return value.toLowerCase().trim();
@@ -147,6 +155,88 @@ function buildDescription(text: string) {
   return `${cleaned.charAt(0).toUpperCase()}${cleaned.slice(1)}`;
 }
 
+function parseQuantityFromText(text: string) {
+  const normalized = normalizeText(text);
+
+  const unitMatch = normalized.match(
+    /\b(\d+(?:[.,]\d+)?)\s*(sak|karung|dus|box|pcs|buah|unit|kg|kilo|liter|ltr|botol|ikat|pak|pack)\b/
+  );
+
+  if (unitMatch?.[1]) {
+    return Number(unitMatch[1].replace(",", "."));
+  }
+
+  const beliMatch = normalized.match(
+    /\b(?:beli|membeli|ambil)\s+(\d+(?:[.,]\d+)?)\b/
+  );
+
+  if (beliMatch?.[1]) {
+    return Number(beliMatch[1].replace(",", "."));
+  }
+
+  return 0;
+}
+
+function pickPurchaseSupplier(
+  text: string,
+  suppliers: PurchaseSupplierOption[]
+) {
+  const normalized = normalizeText(text);
+  const afterFromMatch = normalized.match(/\b(?:dari|di|ke)\s+(.+)$/);
+  const afterFrom = afterFromMatch?.[1] ?? "";
+
+  const scoredSuppliers = suppliers
+    .map((supplier) => {
+      const supplierName = normalizeText(supplier.supplier_name);
+      const supplierLabel = normalizeText(
+        `${supplier.supplier_code} ${supplier.supplier_name}`
+      );
+
+      let score = 0;
+
+      if (normalized.includes(supplierLabel)) score += 6;
+      if (normalized.includes(supplierName)) score += 5;
+      if (afterFrom && supplierName.includes(afterFrom)) score += 4;
+      if (afterFrom && afterFrom.includes(supplierName)) score += 4;
+
+      for (const word of supplierName.split(" ")) {
+        if (word.length >= 3 && normalized.includes(word)) {
+          score += 1;
+        }
+      }
+
+      return { supplier, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return scoredSuppliers[0]?.score > 0 ? scoredSuppliers[0].supplier : null;
+}
+
+function pickPurchaseItem(text: string, items: PurchaseInventoryItemOption[]) {
+  const normalized = normalizeText(text);
+
+  const scoredItems = items
+    .map((item) => {
+      const itemName = normalizeText(item.item_name);
+      const itemLabel = normalizeText(`${item.item_code} ${item.item_name}`);
+
+      let score = 0;
+
+      if (normalized.includes(itemLabel)) score += 6;
+      if (normalized.includes(itemName)) score += 5;
+
+      for (const word of itemName.split(" ")) {
+        if (word.length >= 3 && normalized.includes(word)) {
+          score += 1;
+        }
+      }
+
+      return { item, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return scoredItems[0]?.score > 0 ? scoredItems[0].item : null;
+}
 function pickExpenseAccount(
   text: string,
   expenseAccounts: ExpenseAccountOption[]
@@ -553,6 +643,122 @@ async function handleRevenueReceipt({
   return NextResponse.json(responsePayload);
 }
 
+async function handleCashPurchase({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const { suppliers, items } = await getCashPurchaseAssistantOptions(
+    supabase,
+    context
+  );
+
+  if (suppliers.length === 0 || items.length === 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        module: assistantModule,
+        draft: null,
+        summary: "Data referensi belum lengkap.",
+        warnings: ["Periksa supplier dan barang persediaan aktif unit."],
+        requires_user_confirmation: true,
+      },
+      { status: 422 }
+    );
+  }
+
+  const parsedDate = parseTransactionDateFromText(prompt, today);
+  const quantity = parseQuantityFromText(prompt);
+  const unitCost = parseAmountFromText(prompt);
+  const pickedSupplier = pickPurchaseSupplier(prompt, suppliers);
+  const pickedItem = pickPurchaseItem(prompt, items);
+  const warnings: string[] = [];
+
+  if (!pickedSupplier) {
+    warnings.push("Supplier belum terbaca. Pilih supplier secara manual.");
+  }
+
+  if (!pickedItem) {
+    warnings.push("Barang belum terbaca. Pilih barang secara manual.");
+  }
+
+  if (!quantity || !Number.isFinite(quantity) || quantity <= 0) {
+    warnings.push("Jumlah barang belum terbaca. Isi jumlah secara manual.");
+  }
+
+  if (!unitCost || !Number.isFinite(unitCost) || unitCost <= 0) {
+    warnings.push("Harga beli belum terbaca. Isi harga secara manual.");
+  }
+
+  if (parsedDate.warning) {
+    warnings.push(parsedDate.warning);
+  }
+
+  const responsePayload = {
+    success: true,
+    module: assistantModule,
+    draft: {
+      invoice_date: parsedDate.date,
+      supplier_id: pickedSupplier?.id ?? "",
+      item_id: pickedItem?.id ?? "",
+      quantity: quantity > 0 ? quantity : "",
+      unit_cost: unitCost > 0 ? unitCost : "",
+      discount_amount: 0,
+      tax_amount: 0,
+      notes: buildDescription(prompt),
+    },
+    summary: `Assistant backend membaca pembelian tunai sebagai ${
+      pickedItem
+        ? `${pickedItem.item_code} - ${pickedItem.item_name}`
+        : "barang belum dipilih"
+    }, jumlah ${quantity > 0 ? quantity : "belum terbaca"}, harga ${
+      unitCost > 0 ? unitCost : "belum terbaca"
+    }, supplier ${
+      pickedSupplier ? pickedSupplier.supplier_name : "belum dipilih"
+    }.`,
+    warnings,
+    requires_user_confirmation: true,
+  };
+
+  const { error: assistantAuditError } = await supabase.rpc("log_audit_event", {
+    p_tenant_id: context.tenant_id,
+    p_unit_id: context.unit_id,
+    p_actor_id: context.user_id,
+    p_actor_role: context.role,
+    p_event_type: "assistant_draft_generated",
+    p_entity_type: "cash_purchase_assistant",
+    p_entity_id: null,
+    p_source_type: "unit_assistant_endpoint",
+    p_source_id: null,
+    p_description:
+      "Assistant backend read-only menyusun draft form Pembelian Tunai.",
+    p_metadata: {
+      module: assistantModule,
+      prompt,
+      draft: responsePayload.draft,
+      warnings,
+      requires_user_confirmation: true,
+      assistant_mode: "read_only_form_draft",
+      tool_name: "getCashPurchaseAssistantOptions",
+    },
+  });
+
+  if (assistantAuditError) {
+    responsePayload.warnings.push(
+      "Draft berhasil dibuat, tetapi catatan audit assistant belum berhasil disimpan."
+    );
+  }
+
+  return NextResponse.json(responsePayload);
+}
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -563,7 +769,8 @@ export async function POST(request: Request) {
 
     if (
       assistantModule !== "operational_expense" &&
-      assistantModule !== "revenue_receipt"
+      assistantModule !== "revenue_receipt" &&
+      assistantModule !== "cash_purchase"
     ) {
       return NextResponse.json(
         {
@@ -572,7 +779,7 @@ export async function POST(request: Request) {
           draft: null,
           summary: "Modul assistant belum tersedia.",
           warnings: [
-            "Untuk tahap ini, endpoint mendukung Beban Operasional dan Terima Pendapatan.",
+            "Untuk tahap ini, endpoint mendukung Beban Operasional, Terima Pendapatan, dan Pembelian Tunai.",
           ],
           requires_user_confirmation: true,
         },
@@ -625,7 +832,17 @@ export async function POST(request: Request) {
       });
     }
 
-    return handleRevenueReceipt({
+    if (assistantModule === "revenue_receipt") {
+      return handleRevenueReceipt({
+        supabase,
+        context,
+        assistantModule,
+        prompt,
+        today,
+      });
+    }
+
+    return handleCashPurchase({
       supabase,
       context,
       assistantModule,
@@ -650,3 +867,4 @@ export async function POST(request: Request) {
     );
   }
 }
+
