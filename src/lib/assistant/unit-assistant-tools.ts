@@ -336,3 +336,107 @@ export async function getCashSaleAssistantOptions(
     })),
   };
 }
+
+export type AssistantSupplierPayableInvoiceOption = {
+  purchase_invoice_id: string;
+  supplier_name: string | null;
+  invoice_no: string;
+  invoice_date: string;
+  due_date: string | null;
+  outstanding_amount: number;
+  payable_status: string;
+};
+
+export type SupplierDebtPaymentAssistantOptions = {
+  payables: AssistantSupplierPayableInvoiceOption[];
+  cashBankAccounts: AssistantCashBankAccountOption[];
+};
+
+/**
+ * Read-only helper for Supplier Debt Payment assistant.
+ *
+ * Hard boundary:
+ * - no insert
+ * - no update
+ * - no delete
+ * - no transaction RPC
+ * - no journal posting
+ * - no cash-bank mutation
+ * - no payable mutation
+ */
+export async function getSupplierDebtPaymentAssistantOptions(
+  supabase: SupabaseClient,
+  context: LoginContext | null
+): Promise<SupplierDebtPaymentAssistantOptions> {
+  const { tenantId, unitId } = assertUnitContext(context);
+
+  const [payablesResult, cashBankResult, balanceResult] = await Promise.all([
+    supabase
+      .from("v_purchase_invoice_payables")
+      .select(
+        "purchase_invoice_id, supplier_name, invoice_no, invoice_date, due_date, outstanding_amount, payable_status"
+      )
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .gt("outstanding_amount", 0)
+      .order("invoice_date", { ascending: true })
+      .order("invoice_no", { ascending: true }),
+
+    supabase
+      .from("cash_bank_accounts")
+      .select("id, account_code, account_name, account_kind")
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .eq("is_active", true)
+      .order("account_code", { ascending: true }),
+
+    supabase
+      .from("v_cash_bank_balance")
+      .select("cash_bank_account_id, current_balance")
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId),
+  ]);
+
+  if (payablesResult.error) {
+    throw new Error(payablesResult.error.message);
+  }
+
+  if (cashBankResult.error) {
+    throw new Error(cashBankResult.error.message);
+  }
+
+  if (balanceResult.error) {
+    throw new Error(balanceResult.error.message);
+  }
+
+  const balanceByAccount = new Map<string, number>(
+    (balanceResult.data ?? []).map((balance) => [
+      String(balance.cash_bank_account_id),
+      Number(balance.current_balance ?? 0),
+    ])
+  );
+
+  return {
+    payables: (payablesResult.data ?? []).map((invoice) => ({
+      purchase_invoice_id: String(invoice.purchase_invoice_id),
+      supplier_name: invoice.supplier_name
+        ? String(invoice.supplier_name)
+        : null,
+      invoice_no: String(invoice.invoice_no),
+      invoice_date: String(invoice.invoice_date),
+      due_date: invoice.due_date ? String(invoice.due_date) : null,
+      outstanding_amount: Number(invoice.outstanding_amount ?? 0),
+      payable_status: String(invoice.payable_status ?? ""),
+    })),
+
+    cashBankAccounts: (cashBankResult.data ?? []).map((account) => ({
+      id: String(account.id),
+      account_code: String(account.account_code),
+      account_name: String(account.account_name),
+      account_kind: String(account.account_kind),
+      current_balance: balanceByAccount.get(String(account.id)) ?? 0,
+    })),
+  };
+}
+
+

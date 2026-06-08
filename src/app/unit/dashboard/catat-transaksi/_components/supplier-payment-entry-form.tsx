@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
-import { paySupplierPurchaseInvoice } from "../_actions/supplier-payment-actions";
+import { SupplierPaymentFormClient } from "./supplier-payment-form-client";
 
 type PayableInvoice = {
   purchase_invoice_id: string;
@@ -152,123 +152,13 @@ export async function SupplierPaymentEntryForm({
             Tidak ada hutang supplier yang masih terbuka untuk unit ini.
           </div>
         ) : (
-          <form action={paySupplierPurchaseInvoice} className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="space-y-2 md:col-span-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  Invoice Hutang Supplier
-                </span>
-                <select
-                  name="purchase_invoice_id"
-                  required
-                  className="w-full rounded-xl border border-slate-900 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                >
-                  <option value="">Pilih invoice hutang</option>
-                  {payables.map((invoice) => (
-                    <option
-                      key={invoice.purchase_invoice_id}
-                      value={invoice.purchase_invoice_id}
-                    >
-                      {invoice.invoice_no} - {invoice.supplier_name ?? "Supplier"}
-                      {" | Sisa "}
-                      {formatRupiah(invoice.outstanding_amount)}
-                      {" | "}
-                      {invoice.payable_status}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="space-y-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  Tanggal Pembayaran
-                </span>
-                <input
-                  name="payment_date"
-                  type="date"
-                  required
-                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                />
-              </label>
-
-              <label className="space-y-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  Nomor Pembayaran
-                </span>
-                <input
-                  name="payment_no"
-                  type="text"
-                  placeholder="Kosongkan untuk nomor otomatis"
-                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm uppercase outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                />
-              </label>
-
-              <label className="space-y-2 md:col-span-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  Bayar Dari Kas/Bank
-                </span>
-                <select
-                  name="cash_bank_account_id"
-                  required
-                  className="w-full rounded-xl border border-slate-900 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                >
-                  <option value="">Pilih kas/bank unit</option>
-                  {cashBankAccounts.map((account) => {
-                    const balance = balanceByAccount.get(account.id) ?? 0;
-
-                    return (
-                      <option key={account.id} value={account.id}>
-                        {account.account_code} - {account.account_name}
-                        {" | Saldo "}
-                        {formatRupiah(balance)}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
-
-              <label className="space-y-2 md:col-span-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  Nominal Pembayaran
-                </span>
-                <input
-                  name="amount"
-                  type="number"
-                  min="1"
-                  step="1"
-                  required
-                  placeholder="Contoh: 150000"
-                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                />
-              </label>
-
-              <label className="space-y-2 md:col-span-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  Catatan
-                </span>
-                <textarea
-                  name="notes"
-                  rows={3}
-                  placeholder="Catatan pembayaran hutang supplier"
-                  className="w-full rounded-xl border border-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                />
-              </label>
-            </div>
-
-            <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs leading-5 text-slate-500">
-                Engine database akan menolak pembayaran jika nominal melebihi
-                sisa hutang atau saldo kas/bank tidak cukup.
-              </p>
-
-              <button
-                type="submit"
-                className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700"
-              >
-                Simpan & Posting Pembayaran
-              </button>
-            </div>
-          </form>
+          <SupplierPaymentFormClient
+            payables={payables}
+            cashBankAccounts={cashBankAccounts.map((account) => ({
+              ...account,
+              current_balance: balanceByAccount.get(account.id) ?? 0,
+            }))}
+/>
         )}
       </section>
 
@@ -318,6 +208,7 @@ export async function SupplierPaymentEntryForm({
     </div>
   );
 }
+
 
 
 

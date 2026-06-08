@@ -4,6 +4,7 @@ import { getLoginContext } from "@/lib/auth/get-login-context";
 import {
   getCashPurchaseAssistantOptions,
   getCashSaleAssistantOptions,
+  getSupplierDebtPaymentAssistantOptions,
   getOperationalExpenseAssistantOptions,
   getRevenueReceiptAssistantOptions,
   type AssistantCashBankAccountOption,
@@ -13,6 +14,7 @@ import {
   type AssistantRevenueAccountOption,
   type AssistantSaleCustomerOption,
   type AssistantSaleInventoryItemOption,
+  type AssistantSupplierPayableInvoiceOption,
 } from "@/lib/assistant/unit-assistant-tools";
 
 type AssistantModule =
@@ -21,7 +23,8 @@ type AssistantModule =
   | "cash_purchase"
   | "credit_purchase"
   | "cash_sale"
-  | "credit_sale";
+  | "credit_sale"
+  | "supplier_debt_payment";
 
 type ExpenseAccountOption = AssistantExpenseAccountOption;
 type RevenueAccountOption = AssistantRevenueAccountOption;
@@ -30,7 +33,16 @@ type PurchaseSupplierOption = AssistantPurchaseSupplierOption;
 type PurchaseInventoryItemOption = AssistantPurchaseInventoryItemOption;
 type SaleCustomerOption = AssistantSaleCustomerOption;
 type SaleInventoryItemOption = AssistantSaleInventoryItemOption;
+type SupplierPayableInvoiceOption = AssistantSupplierPayableInvoiceOption;
 
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(value) ? value : 0);
+}
 function normalizeText(value: string) {
   return value.toLowerCase().trim();
 }
@@ -739,6 +751,31 @@ function parseCreditDueDateFromText(text: string, today: string) {
 
   return "";
 }
+
+function pickSupplierPayableInvoice(
+  text: string,
+  payables: SupplierPayableInvoiceOption[]
+) {
+  const normalized = normalizeText(text);
+
+  const byInvoiceNo = payables.find((invoice) =>
+    normalized.includes(normalizeText(invoice.invoice_no))
+  );
+
+  if (byInvoiceNo) {
+    return byInvoiceNo;
+  }
+
+  const bySupplier = payables.find((invoice) => {
+    if (!invoice.supplier_name) {
+      return false;
+    }
+
+    return normalized.includes(normalizeText(invoice.supplier_name));
+  });
+
+  return bySupplier ?? null;
+}
 function pickSaleCustomer(text: string, customers: SaleCustomerOption[]) {
   const normalized = normalizeText(text);
 
@@ -1302,6 +1339,131 @@ async function handleCreditSale({
 
   return NextResponse.json(responsePayload);
 }
+
+async function handleSupplierDebtPayment({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const { payables, cashBankAccounts } =
+    await getSupplierDebtPaymentAssistantOptions(supabase, context);
+
+  const parsedDate = parseTransactionDateFromText(prompt, today);
+  const amount = parseAmountFromText(prompt);
+  const pickedInvoice = pickSupplierPayableInvoice(prompt, payables);
+  const pickedCashBank = pickCashBankAccount(prompt, cashBankAccounts, amount);
+
+  const warnings: string[] = [];
+
+  if (!pickedInvoice) {
+    warnings.push(
+      "Invoice hutang supplier belum terbaca. Pilih invoice hutang secara manual."
+    );
+  }
+
+  if (!pickedCashBank) {
+    warnings.push(
+      "Kas/bank belum terbaca. Pilih kas/bank pembayaran secara manual."
+    );
+  }
+
+  if (amount <= 0) {
+    warnings.push(
+      "Nominal pembayaran belum terbaca. Isi nominal pembayaran secara manual."
+    );
+  }
+
+  if (pickedInvoice && amount > pickedInvoice.outstanding_amount) {
+    warnings.push(
+      `Nominal lebih besar dari sisa hutang ${formatCurrency(
+        pickedInvoice.outstanding_amount
+      )}. Database akan menolak jika melebihi sisa hutang.`
+    );
+  }
+
+  if (pickedCashBank && amount > pickedCashBank.current_balance) {
+    warnings.push(
+      `Nominal lebih besar dari saldo ${pickedCashBank.account_name} ${formatCurrency(
+        pickedCashBank.current_balance
+      )}. Database akan menolak jika saldo tidak cukup.`
+    );
+  }
+
+  if (parsedDate.warning) {
+    warnings.push(parsedDate.warning);
+  }
+
+  const responsePayload = {
+    success: true,
+    module: assistantModule,
+    mode: "read_only_form_draft",
+    requires_user_confirmation: true,
+    draft: {
+      payment_date: parsedDate.date,
+      purchase_invoice_id: pickedInvoice?.purchase_invoice_id ?? "",
+      cash_bank_account_id: pickedCashBank?.id ?? "",
+      amount: amount > 0 ? amount : "",
+      notes: prompt,
+    },
+    matched: {
+      invoice: pickedInvoice
+        ? `${pickedInvoice.invoice_no} - ${
+            pickedInvoice.supplier_name ?? "Supplier"
+          }`
+        : null,
+      cash_bank_account: pickedCashBank
+        ? `${pickedCashBank.account_code} - ${pickedCashBank.account_name}`
+        : null,
+    },
+    warnings,
+    summary: `Assistant backend membaca pembayaran hutang supplier sebagai ${
+      amount > 0 ? formatCurrency(amount) : "nominal belum terbaca"
+    }, invoice ${
+      pickedInvoice?.invoice_no ?? "belum terbaca"
+    }, dari ${
+      pickedCashBank?.account_name ?? "kas/bank belum terbaca"
+    }. Pelunasan tetap dilakukan oleh tombol resmi dan engine database.`,
+  };
+
+  const { error: auditError } = await supabase.rpc("log_audit_event", {
+    p_tenant_id: context.tenant_id,
+    p_unit_id: context.unit_id,
+    p_actor_id: context.user_id,
+    p_actor_role: context.role,
+    p_event_type: "assistant_draft_generated",
+    p_entity_type: "supplier_debt_payment_assistant",
+    p_entity_id: null,
+    p_source_type: "unit_assistant_endpoint",
+    p_source_id: null,
+    p_description:
+      "Assistant backend read-only menyusun draft form Bayar Hutang Supplier.",
+    p_metadata: {
+      module: assistantModule,
+      prompt,
+      draft: responsePayload.draft,
+      warnings,
+      requires_user_confirmation: true,
+      assistant_mode: "read_only_form_draft",
+      tool_name: "getSupplierDebtPaymentAssistantOptions",
+    },
+  });
+
+  if (auditError) {
+    responsePayload.warnings.push(
+      "Draft berhasil dibuat, tetapi catatan audit assistant belum berhasil disimpan."
+    );
+  }
+
+  return NextResponse.json(responsePayload);
+}
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -1316,7 +1478,8 @@ export async function POST(request: Request) {
       assistantModule !== "cash_purchase" &&
       assistantModule !== "credit_purchase" &&
       assistantModule !== "cash_sale" &&
-      assistantModule !== "credit_sale"
+      assistantModule !== "credit_sale" &&
+      assistantModule !== "supplier_debt_payment"
     ) {
       return NextResponse.json(
         {
@@ -1388,6 +1551,16 @@ export async function POST(request: Request) {
       });
     }
 
+    if (assistantModule === "supplier_debt_payment") {
+      return handleSupplierDebtPayment({
+        supabase,
+        context,
+        assistantModule,
+        prompt,
+        today,
+      });
+    }
+
     if (assistantModule === "credit_sale") {
       return handleCreditSale({
         supabase,
@@ -1443,6 +1616,11 @@ export async function POST(request: Request) {
     );
   }
 }
+
+
+
+
+
 
 
 
