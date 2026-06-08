@@ -48,16 +48,48 @@ function parseAmountFromText(text: string) {
   const normalized = text
     .toLowerCase()
     .replace(/\brp\.?\s?/g, "")
-    .replace(/\s+/g, " ");
+    .replace(/\s+/g, " ")
+    .trim();
 
-  const jutaMatch = normalized.match(/(\d+(?:[.,]\d+)?)\s*juta/);
-  if (jutaMatch?.[1]) {
-    return Math.round(Number(jutaMatch[1].replace(",", ".")) * 1_000_000);
+  const jutaRibuMatch = normalized.match(
+    /(\d+(?:[.,]\d+)?)\s*juta(?:\s+(\d+(?:[.,]\d+)?)(?:\s*(ribu|rb))?)?/
+  );
+
+  if (jutaRibuMatch?.[1]) {
+    const jutaPart = Number(jutaRibuMatch[1].replace(",", "."));
+    const tailRaw = jutaRibuMatch[2];
+    const tailUnit = jutaRibuMatch[3] ?? "";
+
+    if (!Number.isFinite(jutaPart) || jutaPart <= 0) {
+      return 0;
+    }
+
+    let tailAmount = 0;
+
+    if (tailRaw) {
+      const tailNumber = Number(tailRaw.replace(",", "."));
+
+      if (Number.isFinite(tailNumber) && tailNumber > 0) {
+        tailAmount =
+          tailUnit === "ribu" || tailUnit === "rb" || tailNumber < 1000
+            ? tailNumber * 1_000
+            : tailNumber;
+      }
+    }
+
+    return Math.round(jutaPart * 1_000_000 + tailAmount);
   }
 
   const ribuMatch = normalized.match(/(\d+(?:[.,]\d+)?)\s*(ribu|rb)/);
+
   if (ribuMatch?.[1]) {
-    return Math.round(Number(ribuMatch[1].replace(",", ".")) * 1_000);
+    const ribuPart = Number(ribuMatch[1].replace(",", "."));
+
+    if (!Number.isFinite(ribuPart) || ribuPart <= 0) {
+      return 0;
+    }
+
+    return Math.round(ribuPart * 1_000);
   }
 
   const numberMatch = normalized.match(
@@ -69,10 +101,7 @@ function parseAmountFromText(text: string) {
   }
 
   const amount = Number(
-    numberMatch[0]
-      .replace(/\s/g, "")
-      .replace(/\./g, "")
-      .replace(",", ".")
+    numberMatch[0].replace(/\s/g, "").replace(/\./g, "").replace(",", ".")
   );
 
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -81,7 +110,6 @@ function parseAmountFromText(text: string) {
 
   return Math.round(amount);
 }
-
 function parseTransactionDateFromText(text: string, today: string) {
   const normalized = normalizeText(text);
   const todayDate = parseDateInput(today);
@@ -867,4 +895,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
