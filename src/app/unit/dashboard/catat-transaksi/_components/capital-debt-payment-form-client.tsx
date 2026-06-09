@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useActionState, useState } from "react";
 import {
@@ -28,6 +28,12 @@ export type CashBankBalance = {
 type CapitalDebtPaymentFormClientProps = {
     payables: CapitalPayable[];
     cashBanks: CashBankBalance[];
+};
+
+type AssistantResult = {
+    tone: "success" | "warning" | "error";
+    message: string;
+    warnings?: string[];
 };
 
 const initialState: CapitalDebtPaymentState = {
@@ -94,7 +100,15 @@ function AlertMessage({ state }: { state: CapitalDebtPaymentState }) {
     );
 }
 
-function CashBankSelect({ cashBanks }: { cashBanks: CashBankBalance[] }) {
+function CashBankSelect({
+    cashBanks,
+    value,
+    onChange,
+}: {
+    cashBanks: CashBankBalance[];
+    value: string;
+    onChange: (value: string) => void;
+}) {
     return (
         <div>
             <label className="text-sm font-bold text-slate-700">
@@ -104,6 +118,8 @@ function CashBankSelect({ cashBanks }: { cashBanks: CashBankBalance[] }) {
             <select
                 name="cash_bank_account_id"
                 required
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-slate-900 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
             >
                 <option value="">Pilih kas/bank</option>
@@ -132,7 +148,14 @@ export function CapitalDebtPaymentFormClient({
     );
 
     const [selectedPayableId, setSelectedPayableId] = useState("");
+    const [cashBankAccountId, setCashBankAccountId] = useState("");
+    const [paymentDate, setPaymentDate] = useState(getTodayDate());
+    const [notesValue, setNotesValue] = useState("");
     const [amountValue, setAmountValue] = useState("");
+    const [assistantPrompt, setAssistantPrompt] = useState("");
+    const [assistantResult, setAssistantResult] =
+        useState<AssistantResult | null>(null);
+    const [isAssistantLoading, setIsAssistantLoading] = useState(false);
 
     const selectedPayable = payables.find(
         (item) => item.capital_expenditure_id === selectedPayableId
@@ -153,6 +176,77 @@ export function CapitalDebtPaymentFormClient({
         setAmountValue(normalizeNumericInput(payable.outstanding_amount));
     }
 
+    async function handleAssistantFill() {
+        const prompt = assistantPrompt.trim();
+
+        if (!prompt) {
+            setAssistantResult({
+                tone: "warning",
+                message:
+                    "Tulis dulu kalimat pembayaran. Contoh: hari ini bayar hutang belanja modal Indra 500 ribu dari kas.",
+            });
+            return;
+        }
+
+        setIsAssistantLoading(true);
+        setAssistantResult(null);
+
+        try {
+            const response = await fetch("/api/unit/assistant", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    module: "capital_debt_payment",
+                    prompt,
+                    client_today: getTodayDate(),
+                }),
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok || !payload?.success) {
+                setAssistantResult({
+                    tone: "error",
+                    message:
+                        payload?.message ||
+                        "Assistant belum berhasil membaca pembayaran hutang belanja modal.",
+                });
+                return;
+            }
+
+            const draft = payload.draft ?? {};
+
+            setSelectedPayableId(String(draft.capital_expenditure_id ?? ""));
+            setCashBankAccountId(String(draft.cash_bank_account_id ?? ""));
+            setPaymentDate(String(draft.payment_date ?? getTodayDate()));
+            setAmountValue(String(draft.amount ?? ""));
+            setNotesValue(String(draft.notes ?? prompt));
+
+            setAssistantResult({
+                tone:
+                    Array.isArray(payload.warnings) && payload.warnings.length > 0
+                        ? "warning"
+                        : "success",
+                message:
+                    payload.summary ||
+                    "Assistant berhasil menyusun draft. Periksa kembali sebelum posting.",
+                warnings: payload.warnings ?? [],
+            });
+        } catch (error) {
+            setAssistantResult({
+                tone: "error",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Assistant belum berhasil membaca data pembayaran.",
+            });
+        } finally {
+            setIsAssistantLoading(false);
+        }
+    }
+
     return (
         <section className="rounded-3xl border border-slate-900 bg-white p-6">
             <h2 className="text-lg font-bold text-slate-950">
@@ -164,6 +258,66 @@ export function CapitalDebtPaymentFormClient({
                 otomatis mengikuti sisa hutang di database, tetapi masih bisa diubah oleh
                 user.
             </p>
+
+            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <div className="mb-3">
+                    <p className="text-xs font-bold text-emerald-950">
+                        Asisten Isi Pembayaran Hutang Belanja Modal
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-emerald-800">
+                        Tulis pembayaran dengan bahasa biasa. Asisten hanya membantu isi
+                        form. Posting tetap dilakukan petugas lewat tombol resmi.
+                    </p>
+                </div>
+
+                <textarea
+                    value={assistantPrompt}
+                    onChange={(event) => setAssistantPrompt(event.target.value)}
+                    rows={3}
+                    placeholder="Contoh: hari ini bayar hutang belanja modal Indra 500 ribu dari kas"
+                    className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                />
+
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                        type="button"
+                        onClick={handleAssistantFill}
+                        disabled={isAssistantLoading}
+                        className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {isAssistantLoading
+                            ? "Assistant membaca database..."
+                            : "Gunakan Asisten untuk Isi Form"}
+                    </button>
+
+                    <p className="text-xs leading-5 text-emerald-800">
+                        Assistant membaca hutang belanja modal terbuka dan saldo kas/bank
+                        secara read-only.
+                    </p>
+                </div>
+
+                {assistantResult ? (
+                    <div
+                        className={`mt-3 rounded-xl border px-3 py-2 text-xs leading-5 ${
+                            assistantResult.tone === "error"
+                                ? "border-rose-200 bg-rose-50 text-rose-700"
+                                : assistantResult.tone === "warning"
+                                  ? "border-amber-200 bg-amber-50 text-amber-700"
+                                  : "border-emerald-200 bg-white text-emerald-800"
+                        }`}
+                    >
+                        <p className="font-semibold">{assistantResult.message}</p>
+
+                        {assistantResult.warnings?.length ? (
+                            <ul className="mt-2 list-disc space-y-1 pl-4">
+                                {assistantResult.warnings.map((warning) => (
+                                    <li key={warning}>{warning}</li>
+                                ))}
+                            </ul>
+                        ) : null}
+                    </div>
+                ) : null}
+            </div>
 
             <div className="mt-5">
                 <AlertMessage state={state} />
@@ -204,7 +358,11 @@ export function CapitalDebtPaymentFormClient({
                     )}
                 </div>
 
-                <CashBankSelect cashBanks={cashBanks} />
+                <CashBankSelect
+                    cashBanks={cashBanks}
+                    value={cashBankAccountId}
+                    onChange={setCashBankAccountId}
+                />
 
                 <div>
                     <label className="text-sm font-bold text-slate-700">
@@ -228,7 +386,8 @@ export function CapitalDebtPaymentFormClient({
                         type="date"
                         name="payment_date"
                         required
-                        defaultValue={getTodayDate()}
+                        value={paymentDate}
+                        onChange={(event) => setPaymentDate(event.target.value)}
                         className="mt-2 w-full rounded-2xl border border-slate-900 px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
                     />
                 </div>
@@ -262,6 +421,8 @@ export function CapitalDebtPaymentFormClient({
                     <textarea
                         name="notes"
                         rows={3}
+                        value={notesValue}
+                        onChange={(event) => setNotesValue(event.target.value)}
                         placeholder="Opsional"
                         className="mt-2 w-full rounded-2xl border border-slate-900 px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500"
                     />

@@ -3,11 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import {
   getCashPurchaseAssistantOptions,
+  getCapitalDebtPaymentAssistantOptions,
   getCashSaleAssistantOptions,
   getSupplierDebtPaymentAssistantOptions,
   getOperationalExpenseAssistantOptions,
   getRevenueReceiptAssistantOptions,
   type AssistantCashBankAccountOption,
+  type AssistantCapitalPayableOption,
   type AssistantExpenseAccountOption,
   type AssistantPurchaseInventoryItemOption,
   type AssistantPurchaseSupplierOption,
@@ -24,11 +26,13 @@ type AssistantModule =
   | "credit_purchase"
   | "cash_sale"
   | "credit_sale"
-  | "supplier_debt_payment";
+  | "supplier_debt_payment"
+  | "capital_debt_payment";
 
 type ExpenseAccountOption = AssistantExpenseAccountOption;
 type RevenueAccountOption = AssistantRevenueAccountOption;
 type CashBankAccountOption = AssistantCashBankAccountOption;
+type CapitalPayableOption = AssistantCapitalPayableOption;
 type PurchaseSupplierOption = AssistantPurchaseSupplierOption;
 type PurchaseInventoryItemOption = AssistantPurchaseInventoryItemOption;
 type SaleCustomerOption = AssistantSaleCustomerOption;
@@ -752,6 +756,28 @@ function parseCreditDueDateFromText(text: string, today: string) {
   return "";
 }
 
+
+function pickCapitalPayable(text: string, payables: CapitalPayableOption[]) {
+  const normalized = normalizeText(text);
+
+  const byTransactionNo = payables.find((item) =>
+    normalized.includes(normalizeText(item.transaction_no))
+  );
+
+  if (byTransactionNo) {
+    return byTransactionNo;
+  }
+
+  const bySupplier = payables.find((item) => {
+    if (!item.supplier_name) {
+      return false;
+    }
+
+    return normalized.includes(normalizeText(item.supplier_name));
+  });
+
+  return bySupplier ?? null;
+}
 function pickSupplierPayableInvoice(
   text: string,
   payables: SupplierPayableInvoiceOption[]
@@ -1340,6 +1366,131 @@ async function handleCreditSale({
   return NextResponse.json(responsePayload);
 }
 
+
+async function handleCapitalDebtPayment({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const { payables, cashBanks } =
+    await getCapitalDebtPaymentAssistantOptions(supabase, context);
+
+  const parsedDate = parseTransactionDateFromText(prompt, today);
+  const amount = parseAmountFromText(prompt);
+  const pickedPayable = pickCapitalPayable(prompt, payables);
+  const pickedCashBank = pickCashBankAccount(prompt, cashBanks, amount);
+
+  const warnings: string[] = [];
+
+  if (!pickedPayable) {
+    warnings.push(
+      "Hutang belanja modal belum terbaca. Pilih hutang belanja modal secara manual."
+    );
+  }
+
+  if (!pickedCashBank) {
+    warnings.push(
+      "Kas/bank belum terbaca. Pilih kas/bank pembayaran secara manual."
+    );
+  }
+
+  if (amount <= 0) {
+    warnings.push(
+      "Nominal pembayaran belum terbaca. Isi nominal pembayaran secara manual."
+    );
+  }
+
+  if (pickedPayable && amount > pickedPayable.outstanding_amount) {
+    warnings.push(
+      `Nominal lebih besar dari sisa hutang ${formatCurrency(
+        pickedPayable.outstanding_amount
+      )}. Database akan menolak jika melebihi sisa hutang.`
+    );
+  }
+
+  if (pickedCashBank && amount > pickedCashBank.current_balance) {
+    warnings.push(
+      `Nominal lebih besar dari saldo ${pickedCashBank.account_name} ${formatCurrency(
+        pickedCashBank.current_balance
+      )}. Database akan menolak jika saldo tidak cukup.`
+    );
+  }
+
+  if (parsedDate.warning) {
+    warnings.push(parsedDate.warning);
+  }
+
+  const responsePayload = {
+    success: true,
+    module: assistantModule,
+    mode: "read_only_form_draft",
+    requires_user_confirmation: true,
+    draft: {
+      payment_date: parsedDate.date,
+      capital_expenditure_id: pickedPayable?.capital_expenditure_id ?? "",
+      cash_bank_account_id: pickedCashBank?.id ?? "",
+      amount: amount > 0 ? amount : "",
+      notes: prompt,
+    },
+    matched: {
+      payable: pickedPayable
+        ? `${pickedPayable.transaction_no} - ${
+            pickedPayable.supplier_name ?? "Supplier"
+          }`
+        : null,
+      cash_bank_account: pickedCashBank
+        ? `${pickedCashBank.account_code} - ${pickedCashBank.account_name}`
+        : null,
+    },
+    warnings,
+    summary: `Assistant backend membaca pembayaran hutang belanja modal sebagai ${
+      amount > 0 ? formatCurrency(amount) : "nominal belum terbaca"
+    }, transaksi ${
+      pickedPayable?.transaction_no ?? "belum terbaca"
+    }, dari ${
+      pickedCashBank?.account_name ?? "kas/bank belum terbaca"
+    }. Pelunasan tetap dilakukan oleh tombol resmi dan engine database.`,
+  };
+
+  const { error: assistantAuditError } = await supabase.rpc("log_audit_event", {
+    p_tenant_id: context.tenant_id,
+    p_unit_id: context.unit_id,
+    p_actor_id: context.user_id,
+    p_actor_role: context.role,
+    p_event_type: "assistant_draft_generated",
+    p_entity_type: "capital_debt_payment_assistant",
+    p_entity_id: null,
+    p_source_type: "unit_assistant_endpoint",
+    p_source_id: null,
+    p_description:
+      "Assistant backend read-only menyusun draft form Bayar Hutang Belanja Modal.",
+    p_metadata: {
+      module: assistantModule,
+      prompt,
+      draft: responsePayload.draft,
+      warnings,
+      requires_user_confirmation: true,
+      assistant_mode: "read_only_form_draft",
+      tool_name: "getCapitalDebtPaymentAssistantOptions",
+    },
+  });
+
+  if (assistantAuditError) {
+    responsePayload.warnings.push(
+      "Draft berhasil dibuat, tetapi catatan audit assistant belum berhasil disimpan."
+    );
+  }
+
+  return NextResponse.json(responsePayload);
+}
 async function handleSupplierDebtPayment({
   supabase,
   context,
@@ -1479,7 +1630,8 @@ export async function POST(request: Request) {
       assistantModule !== "credit_purchase" &&
       assistantModule !== "cash_sale" &&
       assistantModule !== "credit_sale" &&
-      assistantModule !== "supplier_debt_payment"
+      assistantModule !== "supplier_debt_payment" &&
+      assistantModule !== "capital_debt_payment"
     ) {
       return NextResponse.json(
         {
@@ -1543,6 +1695,16 @@ export async function POST(request: Request) {
 
     if (assistantModule === "revenue_receipt") {
       return handleRevenueReceipt({
+        supabase,
+        context,
+        assistantModule,
+        prompt,
+        today,
+      });
+    }
+
+    if (assistantModule === "capital_debt_payment") {
+      return handleCapitalDebtPayment({
         supabase,
         context,
         assistantModule,
@@ -1616,6 +1778,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 
 

@@ -439,4 +439,80 @@ export async function getSupplierDebtPaymentAssistantOptions(
   };
 }
 
+export type AssistantCapitalPayableOption = {
+  capital_expenditure_id: string;
+  transaction_no: string;
+  supplier_name: string | null;
+  transaction_date: string;
+  due_date: string | null;
+  outstanding_amount: number;
+  payable_status: string;
+};
+
+export type CapitalDebtPaymentAssistantOptions = {
+  payables: AssistantCapitalPayableOption[];
+  cashBanks: AssistantCashBankAccountOption[];
+};
+
+/**
+ * Read-only helper for Capital Expenditure Debt Payment assistant.
+ *
+ * Hard boundary:
+ * - no insert
+ * - no update
+ * - no delete
+ * - no transaction RPC
+ * - no journal posting
+ * - no cash-bank mutation
+ * - no capital payable mutation
+ */
+export async function getCapitalDebtPaymentAssistantOptions(
+  supabase: SupabaseClient,
+  context: LoginContext | null
+): Promise<CapitalDebtPaymentAssistantOptions> {
+  const { tenantId, unitId } = assertUnitContext(context);
+
+  const [payablesResult, cashBankResult] = await Promise.all([
+    supabase
+      .from("v_capital_expenditure_payables")
+      .select(
+        "capital_expenditure_id, transaction_no, supplier_name, transaction_date, due_date, outstanding_amount, payable_status"
+      )
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .gt("outstanding_amount", 0)
+      .order("transaction_date", { ascending: false })
+      .order("transaction_no", { ascending: true }),
+
+    supabase
+      .from("v_cash_bank_balance")
+      .select("cash_bank_account_id, account_code, account_name, account_kind, current_balance")
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .gt("current_balance", 0)
+      .order("account_code", { ascending: true }),
+  ]);
+
+  if (payablesResult.error) throw new Error(payablesResult.error.message);
+  if (cashBankResult.error) throw new Error(cashBankResult.error.message);
+
+  return {
+    payables: (payablesResult.data ?? []).map((item) => ({
+      capital_expenditure_id: String(item.capital_expenditure_id),
+      transaction_no: String(item.transaction_no),
+      supplier_name: item.supplier_name ? String(item.supplier_name) : null,
+      transaction_date: String(item.transaction_date),
+      due_date: item.due_date ? String(item.due_date) : null,
+      outstanding_amount: Number(item.outstanding_amount ?? 0),
+      payable_status: String(item.payable_status ?? ""),
+    })),
+    cashBanks: (cashBankResult.data ?? []).map((account) => ({
+      id: String(account.cash_bank_account_id),
+      account_code: String(account.account_code),
+      account_name: String(account.account_name),
+      account_kind: String(account.account_kind),
+      current_balance: Number(account.current_balance ?? 0),
+    })),
+  };
+}
 
