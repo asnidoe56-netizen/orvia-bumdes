@@ -4,12 +4,15 @@ import { getLoginContext } from "@/lib/auth/get-login-context";
 import {
   getCashPurchaseAssistantOptions,
   getCapitalDebtPaymentAssistantOptions,
+  getCapitalExpenditureAssistantOptions,
   getCashSaleAssistantOptions,
   getSupplierDebtPaymentAssistantOptions,
   getOperationalExpenseAssistantOptions,
   getRevenueReceiptAssistantOptions,
   type AssistantCashBankAccountOption,
   type AssistantCapitalPayableOption,
+  type AssistantCapitalExpenditureCategoryOption,
+  type AssistantSupplierOption,
   type AssistantExpenseAccountOption,
   type AssistantPurchaseInventoryItemOption,
   type AssistantPurchaseSupplierOption,
@@ -27,12 +30,15 @@ type AssistantModule =
   | "cash_sale"
   | "credit_sale"
   | "supplier_debt_payment"
-  | "capital_debt_payment";
+  | "capital_debt_payment"
+  | "capital_expenditure";
 
 type ExpenseAccountOption = AssistantExpenseAccountOption;
 type RevenueAccountOption = AssistantRevenueAccountOption;
 type CashBankAccountOption = AssistantCashBankAccountOption;
 type CapitalPayableOption = AssistantCapitalPayableOption;
+type CapitalExpenditureCategoryOption = AssistantCapitalExpenditureCategoryOption;
+type SupplierOption = AssistantSupplierOption;
 type PurchaseSupplierOption = AssistantPurchaseSupplierOption;
 type PurchaseInventoryItemOption = AssistantPurchaseInventoryItemOption;
 type SaleCustomerOption = AssistantSaleCustomerOption;
@@ -757,6 +763,205 @@ function parseCreditDueDateFromText(text: string, today: string) {
 }
 
 
+
+function pickCapitalExpenditureCategory(
+  text: string,
+  categories: CapitalExpenditureCategoryOption[]
+) {
+  const normalized = normalizeText(text);
+
+  const byName = categories.find((category) =>
+    normalized.includes(normalizeText(category.category_name))
+  );
+
+  if (byName) {
+    return byName;
+  }
+
+  const fallbackKeywords: Array<{
+    keywords: string[];
+    matcher: (category: CapitalExpenditureCategoryOption) => boolean;
+  }> = [
+    {
+      keywords: ["laptop", "komputer", "printer", "mesin", "peralatan", "alat"],
+      matcher: (category) =>
+        normalizeText(category.category_name).includes("peralatan") ||
+        normalizeText(category.category_name).includes("mesin"),
+    },
+    {
+      keywords: ["motor", "mobil", "kendaraan"],
+      matcher: (category) =>
+        normalizeText(category.category_name).includes("kendaraan"),
+    },
+    {
+      keywords: ["bangunan", "gedung", "kios", "ruko", "renovasi"],
+      matcher: (category) =>
+        normalizeText(category.category_name).includes("bangunan"),
+    },
+    {
+      keywords: ["tanah", "lahan"],
+      matcher: (category) => normalizeText(category.category_name).includes("tanah"),
+    },
+  ];
+
+  for (const fallback of fallbackKeywords) {
+    if (!fallback.keywords.some((keyword) => normalized.includes(keyword))) {
+      continue;
+    }
+
+    const match = categories.find(fallback.matcher);
+
+    if (match) {
+      return match;
+    }
+  }
+
+  return categories[0] ?? null;
+}
+
+function pickSupplier(text: string, suppliers: SupplierOption[]) {
+  const normalized = normalizeText(text);
+
+  return (
+    suppliers.find((supplier) =>
+      normalized.includes(normalizeText(supplier.supplier_name))
+    ) ?? null
+  );
+}
+
+function inferCapitalExpenditurePaymentType(text: string) {
+  const normalized = normalizeText(text);
+
+  if (
+    normalized.includes("kredit") ||
+    normalized.includes("hutang") ||
+    normalized.includes("utang") ||
+    normalized.includes("belum bayar") ||
+    normalized.includes("bayar nanti")
+  ) {
+    return "credit";
+  }
+
+  return "cash";
+}
+
+function toTitleCase(value: string) {
+  return value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function inferCapitalAssetName(text: string) {
+  const normalized = normalizeText(text);
+
+  const explicitAssetNameMatch = normalized.match(
+    /nama\s*aset\s+(.+?)(?:\s+(?:harga|senilai|sebesar|seharga|tunai|kredit|dari|jatuh|tempo|umur)\b|$)/
+  );
+
+  if (explicitAssetNameMatch?.[1]) {
+    return toTitleCase(explicitAssetNameMatch[1]);
+  }
+
+  const boughtAssetMatch = normalized.match(
+    /(?:beli|membeli|belanja|pengadaan)\s+(.+?)(?:\s+(?:harga|senilai|sebesar|seharga|tunai|kredit|dari|jatuh|tempo|umur)\b|$)/
+  );
+
+  if (boughtAssetMatch?.[1]) {
+    const candidate = boughtAssetMatch[1]
+      .replace(/\baset\b/g, "")
+      .replace(/\bbarang\b/g, "")
+      .replace(/\bnama\s*aset\b/g, "")
+      .trim();
+
+    if (candidate) {
+      return toTitleCase(candidate);
+    }
+  }
+
+  const knownAssets = [
+    "laptop",
+    "komputer",
+    "printer",
+    "mesin",
+    "motor",
+    "mobil",
+    "etalase",
+    "kulkas",
+    "freezer",
+    "bangunan",
+    "tanah",
+    "gerobak",
+    "meja",
+    "kursi",
+    "lemari",
+    "rak",
+    "meubelair",
+    "furniture",
+  ];
+
+  const matchedAsset = knownAssets.find((asset) => normalized.includes(asset));
+
+  if (matchedAsset) {
+    return toTitleCase(matchedAsset);
+  }
+
+  return "";
+}
+
+
+function addDaysToDate(dateText: string, days: number) {
+  const date = new Date(`${dateText}T00:00:00.000Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateText;
+  }
+
+  date.setUTCDate(date.getUTCDate() + days);
+
+  return date.toISOString().slice(0, 10);
+}
+function inferDueDateForCapitalExpenditure(text: string, today: string) {
+  const normalized = normalizeText(text);
+
+  if (normalized.includes("besok")) {
+    return addDaysToDate(today, 1);
+  }
+
+  const dayMatch = normalized.match(/(\d+)\s*hari/);
+  if (dayMatch?.[1]) {
+    return addDaysToDate(today, Number(dayMatch[1]));
+  }
+
+  const monthMatch = normalized.match(/(\d+)\s*bulan/);
+  if (monthMatch?.[1]) {
+    return addDaysToDate(today, Number(monthMatch[1]) * 30);
+  }
+
+  return addDaysToDate(today, 30);
+}
+
+function inferUsefulLifeMonths(
+  category: CapitalExpenditureCategoryOption | null,
+  text: string
+) {
+  const normalized = normalizeText(text);
+  const monthMatch = normalized.match(/umur\s*(\d+)\s*bulan/);
+
+  if (monthMatch?.[1]) {
+    return Number(monthMatch[1]);
+  }
+
+  const yearMatch = normalized.match(/umur\s*(\d+)\s*tahun/);
+
+  if (yearMatch?.[1]) {
+    return Number(yearMatch[1]) * 12;
+  }
+
+  return category?.default_useful_life_months ?? "";
+}
 function pickCapitalPayable(text: string, payables: CapitalPayableOption[]) {
   const normalized = normalizeText(text);
 
@@ -1367,6 +1572,149 @@ async function handleCreditSale({
 }
 
 
+
+async function handleCapitalExpenditure({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const { categories, suppliers, cashBanks } =
+    await getCapitalExpenditureAssistantOptions(supabase, context);
+
+  const parsedDate = parseTransactionDateFromText(prompt, today);
+  const amount = parseAmountFromText(prompt);
+  const paymentType = inferCapitalExpenditurePaymentType(prompt);
+  const pickedSupplier = pickSupplier(prompt, suppliers);
+  const pickedCategory = pickCapitalExpenditureCategory(prompt, categories);
+  const pickedCashBank =
+    paymentType === "cash" ? pickCashBankAccount(prompt, cashBanks, amount) : null;
+  const assetName = inferCapitalAssetName(prompt);
+  const dueDate =
+    paymentType === "credit"
+      ? inferDueDateForCapitalExpenditure(prompt, parsedDate.date)
+      : "";
+  const usefulLifeMonths = inferUsefulLifeMonths(pickedCategory, prompt);
+
+  const warnings: string[] = [];
+
+  if (!pickedCategory) {
+    warnings.push("Kategori aset belum terbaca. Pilih kategori aset secara manual.");
+  }
+
+  if (!assetName) {
+    warnings.push("Nama aset belum terbaca. Isi nama aset secara manual.");
+  }
+
+  if (amount <= 0) {
+    warnings.push("Harga aset belum terbaca. Isi harga aset secara manual.");
+  }
+
+  if (paymentType === "cash" && !pickedCashBank) {
+    warnings.push("Kas/bank belum terbaca. Pilih kas/bank secara manual.");
+  }
+
+  if (
+    paymentType === "cash" &&
+    pickedCashBank &&
+    amount > pickedCashBank.current_balance
+  ) {
+    warnings.push(
+      `Nominal lebih besar dari saldo ${pickedCashBank.account_name} ${formatCurrency(
+        pickedCashBank.current_balance
+      )}. Database akan menolak jika saldo tidak cukup.`
+    );
+  }
+
+  if (!pickedSupplier) {
+    warnings.push(
+      "Supplier belum terbaca. Boleh dipilih manual atau dikosongkan jika belum didaftarkan."
+    );
+  }
+
+  if (parsedDate.warning) {
+    warnings.push(parsedDate.warning);
+  }
+
+  const responsePayload = {
+    success: true,
+    module: assistantModule,
+    mode: "read_only_form_draft",
+    requires_user_confirmation: true,
+    draft: {
+      transaction_date: parsedDate.date,
+      payment_type: paymentType,
+      supplier_id: pickedSupplier?.id ?? "",
+      cash_bank_account_id: paymentType === "cash" ? pickedCashBank?.id ?? "" : "",
+      asset_category_id: pickedCategory?.id ?? "",
+      asset_name: assetName,
+      quantity: 1,
+      unit_price: amount > 0 ? amount : "",
+      residual_value: 0,
+      useful_life_months: usefulLifeMonths,
+      due_date: dueDate,
+      description: prompt,
+      notes: prompt,
+    },
+    matched: {
+      category: pickedCategory
+        ? `${pickedCategory.category_code} - ${pickedCategory.category_name}`
+        : null,
+      supplier: pickedSupplier
+        ? `${pickedSupplier.supplier_code} - ${pickedSupplier.supplier_name}`
+        : null,
+      cash_bank_account: pickedCashBank
+        ? `${pickedCashBank.account_code} - ${pickedCashBank.account_name}`
+        : null,
+    },
+    warnings,
+    summary: `Assistant backend membaca belanja modal sebagai ${
+      assetName || "nama aset belum terbaca"
+    } senilai ${
+      amount > 0 ? formatCurrency(amount) : "harga belum terbaca"
+    } dengan cara bayar ${
+      paymentType === "credit" ? "kredit" : "tunai"
+    }. Posting tetap dilakukan oleh tombol resmi dan engine database.`,
+  };
+
+  const { error: assistantAuditError } = await supabase.rpc("log_audit_event", {
+    p_tenant_id: context.tenant_id,
+    p_unit_id: context.unit_id,
+    p_actor_id: context.user_id,
+    p_actor_role: context.role,
+    p_event_type: "assistant_draft_generated",
+    p_entity_type: "capital_expenditure_assistant",
+    p_entity_id: null,
+    p_source_type: "unit_assistant_endpoint",
+    p_source_id: null,
+    p_description:
+      "Assistant backend read-only menyusun draft form Belanja Modal.",
+    p_metadata: {
+      module: assistantModule,
+      prompt,
+      draft: responsePayload.draft,
+      warnings,
+      requires_user_confirmation: true,
+      assistant_mode: "read_only_form_draft",
+      tool_name: "getCapitalExpenditureAssistantOptions",
+    },
+  });
+
+  if (assistantAuditError) {
+    responsePayload.warnings.push(
+      "Draft berhasil dibuat, tetapi catatan audit assistant belum berhasil disimpan."
+    );
+  }
+
+  return NextResponse.json(responsePayload);
+}
 async function handleCapitalDebtPayment({
   supabase,
   context,
@@ -1631,7 +1979,8 @@ export async function POST(request: Request) {
       assistantModule !== "cash_sale" &&
       assistantModule !== "credit_sale" &&
       assistantModule !== "supplier_debt_payment" &&
-      assistantModule !== "capital_debt_payment"
+      assistantModule !== "capital_debt_payment" &&
+      assistantModule !== "capital_expenditure"
     ) {
       return NextResponse.json(
         {
@@ -1695,6 +2044,16 @@ export async function POST(request: Request) {
 
     if (assistantModule === "revenue_receipt") {
       return handleRevenueReceipt({
+        supabase,
+        context,
+        assistantModule,
+        prompt,
+        today,
+      });
+    }
+
+    if (assistantModule === "capital_expenditure") {
+      return handleCapitalExpenditure({
         supabase,
         context,
         assistantModule,
@@ -1778,6 +2137,9 @@ export async function POST(request: Request) {
     );
   }
 }
+
+
+
 
 
 

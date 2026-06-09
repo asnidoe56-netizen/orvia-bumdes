@@ -516,3 +516,97 @@ export async function getCapitalDebtPaymentAssistantOptions(
   };
 }
 
+export type AssistantCapitalExpenditureCategoryOption = {
+  id: string;
+  category_code: string;
+  category_name: string;
+  default_useful_life_months: number;
+  is_depreciable: boolean;
+};
+
+export type AssistantSupplierOption = {
+  id: string;
+  supplier_code: string;
+  supplier_name: string;
+};
+
+export type CapitalExpenditureAssistantOptions = {
+  categories: AssistantCapitalExpenditureCategoryOption[];
+  suppliers: AssistantSupplierOption[];
+  cashBanks: AssistantCashBankAccountOption[];
+};
+
+/**
+ * Read-only helper for Capital Expenditure assistant.
+ *
+ * Hard boundary:
+ * - no insert
+ * - no update
+ * - no delete
+ * - no transaction RPC
+ * - no journal posting
+ * - no cash-bank mutation
+ * - no fixed asset mutation
+ * - no payable mutation
+ */
+export async function getCapitalExpenditureAssistantOptions(
+  supabase: SupabaseClient,
+  context: LoginContext | null
+): Promise<CapitalExpenditureAssistantOptions> {
+  const { tenantId, unitId } = assertUnitContext(context);
+
+  const [categoryResult, supplierResult, cashBankResult] = await Promise.all([
+    supabase
+      .from("capital_expenditure_categories")
+      .select(
+        "id, category_code, category_name, default_useful_life_months, is_depreciable"
+      )
+      .eq("is_active", true)
+      .order("category_name", { ascending: true }),
+
+    supabase
+      .from("suppliers")
+      .select("id, supplier_code, supplier_name")
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .eq("is_active", true)
+      .order("supplier_name", { ascending: true }),
+
+    supabase
+      .from("v_cash_bank_balance")
+      .select("cash_bank_account_id, account_code, account_name, account_kind, current_balance")
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .gt("current_balance", 0)
+      .order("account_code", { ascending: true }),
+  ]);
+
+  if (categoryResult.error) throw new Error(categoryResult.error.message);
+  if (supplierResult.error) throw new Error(supplierResult.error.message);
+  if (cashBankResult.error) throw new Error(cashBankResult.error.message);
+
+  return {
+    categories: (categoryResult.data ?? []).map((category) => ({
+      id: String(category.id),
+      category_code: String(category.category_code ?? ""),
+      category_name: String(category.category_name ?? ""),
+      default_useful_life_months: Number(
+        category.default_useful_life_months ?? 0
+      ),
+      is_depreciable: Boolean(category.is_depreciable),
+    })),
+    suppliers: (supplierResult.data ?? []).map((supplier) => ({
+      id: String(supplier.id),
+      supplier_code: String(supplier.supplier_code ?? ""),
+      supplier_name: String(supplier.supplier_name ?? ""),
+    })),
+    cashBanks: (cashBankResult.data ?? []).map((account) => ({
+      id: String(account.cash_bank_account_id),
+      account_code: String(account.account_code),
+      account_name: String(account.account_name),
+      account_kind: String(account.account_kind),
+      current_balance: Number(account.current_balance ?? 0),
+    })),
+  };
+}
+
