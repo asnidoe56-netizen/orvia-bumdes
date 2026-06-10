@@ -8,6 +8,7 @@ import {
   Landmark,
   LineChart,
   WalletCards,
+  ShieldCheck,
 } from "lucide-react";
 import { PageBackButton } from "@/components/ui/page-back-button";
 
@@ -19,7 +20,16 @@ const reportCards = [
     href: "/unit/dashboard/reports/buku-besar",
     icon: BookOpenText,
     status: "Database",
-  },  {
+  },
+  {
+    title: "Paket Laporan Kepmen 136",
+    description:
+      "Membuka paket laporan Kepmen 136: Neraca, Laba Rugi, Arus Kas, Perubahan Ekuitas, CALK, dan Validasi.",
+    href: "/unit/dashboard/reports/kepmen-136",
+    icon: ShieldCheck,
+    status: "Kepmen 136",
+  },
+  {
     title: "Laba Rugi",
     description:
       "Melihat pendapatan, HPP, beban operasional, dan hasil usaha unit dalam satu periode.",
