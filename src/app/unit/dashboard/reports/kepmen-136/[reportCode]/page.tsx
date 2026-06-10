@@ -61,6 +61,46 @@ type NeracaDetailRow = {
   is_current_profit_loss: boolean | null;
 };
 
+type LabaRugiResultRow = {
+  tenant_id: string;
+  unit_id: string;
+  period_id: string;
+  period_year: number | null;
+  period_month: number | null;
+  period_start: string | null;
+  period_end: string | null;
+  total_pendapatan_usaha: string | number | null;
+  total_hpp: string | number | null;
+  total_beban_usaha: string | number | null;
+  laba_kotor: string | number | null;
+  laba_rugi_bersih: string | number | null;
+};
+
+type LabaRugiDetailRow = {
+  tenant_id: string;
+  unit_id: string;
+  period_id: string;
+  period_year: number | null;
+  period_month: number | null;
+  period_start: string | null;
+  period_end: string | null;
+  account_id: string;
+  orvia_account_code: string | null;
+  orvia_account_name: string | null;
+  orvia_account_type: string | null;
+  normal_balance: string | null;
+  kepmen_account_code: string | null;
+  kepmen_account_name: string | null;
+  kepmen_statement_type: string | null;
+  kepmen_report_section: string | null;
+  kepmen_report_line: string | null;
+  display_order: number | null;
+  laba_rugi_group: string | null;
+  debit_total: string | number | null;
+  credit_total: string | number | null;
+  amount: string | number | null;
+};
+
 function slugToReportCode(slug: string) {
   return slug.toUpperCase().replaceAll("-", "_");
 }
@@ -101,6 +141,21 @@ function sumSection(rows: NeracaSummaryRow[], section: string) {
   return rows
     .filter((row) => row.kepmen_report_section === section)
     .reduce((total, row) => total + toNumber(row.total_amount), 0);
+}
+
+function sumLabaRugiGroup(rows: LabaRugiDetailRow[], group: string) {
+  return rows
+    .filter((row) => row.laba_rugi_group === group)
+    .reduce((total, row) => total + toNumber(row.amount), 0);
+}
+
+function formatPeriodLabel(row: LabaRugiResultRow | LabaRugiDetailRow | null) {
+  if (!row?.period_year || !row.period_month) return "Periode berjalan";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(row.period_year, row.period_month - 1, 1));
 }
 
 function ReportLine({
@@ -407,6 +462,268 @@ function NeracaKepmen136Content({
   );
 }
 
+function LabaRugiAccountRows({
+  rows,
+  emptyText,
+}: {
+  rows: LabaRugiDetailRow[];
+  emptyText: string;
+}) {
+  if (rows.length === 0) {
+    return (
+      <div className="border-b border-slate-100 py-3 pl-6 text-sm text-slate-400">
+        {emptyText}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {rows.map((row) => {
+        const label = [
+          row.kepmen_account_code,
+          row.kepmen_account_name,
+        ]
+          .filter(Boolean)
+          .join(" - ");
+
+        const orviaLabel = [
+          row.orvia_account_code,
+          row.orvia_account_name,
+        ]
+          .filter(Boolean)
+          .join(" - ");
+
+        return (
+          <ReportLine
+            key={`${row.account_id}-${row.display_order}`}
+            label={label || "Akun Kepmen 136"}
+            value={row.amount}
+            indent
+            note={orviaLabel}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+function LabaRugiSection({
+  title,
+  rows,
+  total,
+  emptyText,
+}: {
+  title: string;
+  rows: LabaRugiDetailRow[];
+  total: number;
+  emptyText: string;
+}) {
+  return (
+    <>
+      <ReportLine label={title} bold muted />
+      <LabaRugiAccountRows rows={rows} emptyText={emptyText} />
+      <ReportLine label={`Total ${title}`} value={total} bold />
+    </>
+  );
+}
+
+function LabaRugiKepmen136Content({
+  result,
+  detailRows,
+  resultErrorMessage,
+  detailErrorMessage,
+}: {
+  result: LabaRugiResultRow | null;
+  detailRows: LabaRugiDetailRow[];
+  resultErrorMessage: string;
+  detailErrorMessage: string;
+}) {
+  const pendapatanRows = detailRows.filter(
+    (row) => row.laba_rugi_group === "PENDAPATAN"
+  );
+  const hppRows = detailRows.filter((row) => row.laba_rugi_group === "HPP");
+  const bebanRows = detailRows.filter((row) => row.laba_rugi_group === "BEBAN");
+
+  const totalPendapatan =
+    result?.total_pendapatan_usaha ?? sumLabaRugiGroup(detailRows, "PENDAPATAN");
+  const totalHpp = result?.total_hpp ?? sumLabaRugiGroup(detailRows, "HPP");
+  const labaKotor = result?.laba_kotor ?? toNumber(totalPendapatan) - toNumber(totalHpp);
+  const totalBeban =
+    result?.total_beban_usaha ?? sumLabaRugiGroup(detailRows, "BEBAN");
+  const labaBersih =
+    result?.laba_rugi_bersih ?? toNumber(labaKotor) - toNumber(totalBeban);
+  const isProfit = toNumber(labaBersih) >= 0;
+  const periodLabel = formatPeriodLabel(result ?? detailRows[0] ?? null);
+
+  if (resultErrorMessage || detailErrorMessage) {
+    return (
+      <section className="rounded-3xl border border-rose-100 bg-rose-50 p-5 shadow-sm">
+        <h2 className="font-bold text-rose-950">Laba rugi gagal dimuat</h2>
+        {resultErrorMessage ? (
+          <p className="mt-2 text-sm text-rose-800">
+            Result: {resultErrorMessage}
+          </p>
+        ) : null}
+        {detailErrorMessage ? (
+          <p className="mt-2 text-sm text-rose-800">
+            Detail: {detailErrorMessage}
+          </p>
+        ) : null}
+      </section>
+    );
+  }
+
+  if (!result && detailRows.length === 0) {
+    return (
+      <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+        <h2 className="text-lg font-bold text-slate-950">
+          Belum ada data Laba Rugi Kepmen 136
+        </h2>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          View Laba Rugi Kepmen 136 belum mengembalikan data untuk unit ini.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <>
+      <section className="grid gap-4 md:grid-cols-4">
+        <StatCard
+          title="Pendapatan Usaha"
+          value={formatRupiah(totalPendapatan)}
+          description={`Periode ${periodLabel}.`}
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Harga Pokok"
+          value={formatRupiah(totalHpp)}
+          description="Total HPP berdasarkan mapping Kepmen 136."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Beban Usaha"
+          value={formatRupiah(totalBeban)}
+          description="Total beban usaha dari detail akun."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Laba Bersih"
+          value={formatRupiah(labaBersih)}
+          description={isProfit ? "Unit membukukan laba." : "Unit membukukan rugi."}
+          icon={<ShieldCheck className="h-6 w-6" />}
+        />
+      </section>
+
+      <div className="min-w-0 overflow-hidden rounded-[2rem]">
+        <div className="w-full overflow-x-auto pb-2">
+          <section className="mx-auto min-w-[760px] rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+            <div className="rounded-[2rem] border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-6 md:p-8">
+              <div className="text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-700">
+                  Kepmen 136 Tahun 2022
+                </p>
+
+                <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
+                  Laporan Laba Rugi
+                </h2>
+
+                <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+                  Detail akun dibaca langsung dari view
+                  v_kepmen136_laba_rugi_detail dan diringkas dengan view result
+                  Kepmen 136.
+                </p>
+
+                <div
+                  className={`mx-auto mt-5 inline-flex rounded-full border px-5 py-2 text-sm font-bold ${
+                    isProfit
+                      ? "border-emerald-100 bg-emerald-50 text-emerald-800"
+                      : "border-rose-100 bg-rose-50 text-rose-800"
+                  }`}
+                >
+                  {periodLabel} - {isProfit ? "Laba" : "Rugi"}{" "}
+                  {formatRupiah(labaBersih)}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
+              <div className="border-b border-emerald-100 bg-emerald-50 px-6 py-4 text-emerald-950">
+                <h4 className="text-lg font-bold">
+                  Rincian Laba Rugi Kepmen 136
+                </h4>
+                <p className="mt-1 text-sm text-emerald-700">
+                  Akun ditampilkan berdasarkan mapping akun ORVIA ke struktur
+                  laporan laba rugi Kepmen 136.
+                </p>
+              </div>
+
+              <div className="p-6">
+                <LabaRugiSection
+                  title="PENDAPATAN USAHA"
+                  rows={pendapatanRows}
+                  total={toNumber(totalPendapatan)}
+                  emptyText="Tidak ada akun pendapatan yang memiliki saldo."
+                />
+
+                <div className="h-5" />
+
+                <LabaRugiSection
+                  title="HARGA POKOK PENJUALAN"
+                  rows={hppRows}
+                  total={toNumber(totalHpp)}
+                  emptyText="Tidak ada akun HPP yang memiliki saldo."
+                />
+
+                <ReportLine label="Laba Kotor" value={labaKotor} bold />
+
+                <div className="h-5" />
+
+                <LabaRugiSection
+                  title="BEBAN USAHA"
+                  rows={bebanRows}
+                  total={toNumber(totalBeban)}
+                  emptyText="Tidak ada akun beban yang memiliki saldo."
+                />
+
+                <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(190px,auto)] gap-6">
+                    <div>
+                      <p className="text-sm font-bold uppercase tracking-wide text-slate-500">
+                        Laba/Rugi Bersih
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Pendapatan - HPP - Beban Usaha
+                      </p>
+                    </div>
+
+                    <div
+                      className={`whitespace-nowrap text-right text-2xl font-black tabular-nums ${
+                        isProfit ? "text-emerald-700" : "text-rose-700"
+                      }`}
+                    >
+                      {formatRupiah(labaBersih)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-5 text-center text-xs text-slate-400">
+              Disusun dari view v_kepmen136_laba_rugi_result dan
+              v_kepmen136_laba_rugi_detail.
+            </p>
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
   const resolvedParams = await params;
   const reportCode = slugToReportCode(resolvedParams.reportCode);
@@ -448,6 +765,10 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
   let neracaDetailRows: NeracaDetailRow[] = [];
   let neracaSummaryErrorMessage = "";
   let neracaDetailErrorMessage = "";
+  let labaRugiResult: LabaRugiResultRow | null = null;
+  let labaRugiDetailRows: LabaRugiDetailRow[] = [];
+  let labaRugiResultErrorMessage = "";
+  let labaRugiDetailErrorMessage = "";
 
   if (reportCode === "NERACA") {
     const { data: summaryData, error: summaryError } = await supabase
@@ -474,6 +795,44 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
 
     neracaDetailRows = (detailData ?? []) as NeracaDetailRow[];
     neracaDetailErrorMessage = detailError?.message ?? "";
+  }
+
+  if (reportCode === "LABA_RUGI") {
+    const { data: resultData, error: resultError } = await supabase
+      .from("v_kepmen136_laba_rugi_result")
+      .select(
+        "tenant_id, unit_id, period_id, period_year, period_month, period_start, period_end, total_pendapatan_usaha, total_hpp, total_beban_usaha, laba_kotor, laba_rugi_bersih"
+      )
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .order("period_year", { ascending: false })
+      .order("period_month", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    labaRugiResult = resultData as LabaRugiResultRow | null;
+    labaRugiResultErrorMessage = resultError?.message ?? "";
+
+    let detailQuery = supabase
+      .from("v_kepmen136_laba_rugi_detail")
+      .select(
+        "tenant_id, unit_id, period_id, period_year, period_month, period_start, period_end, account_id, orvia_account_code, orvia_account_name, orvia_account_type, normal_balance, kepmen_account_code, kepmen_account_name, kepmen_statement_type, kepmen_report_section, kepmen_report_line, display_order, laba_rugi_group, debit_total, credit_total, amount"
+      )
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id);
+
+    if (labaRugiResult?.period_year && labaRugiResult.period_month) {
+      detailQuery = detailQuery
+        .eq("period_year", labaRugiResult.period_year)
+        .eq("period_month", labaRugiResult.period_month);
+    }
+
+    const { data: detailData, error: detailError } = await detailQuery
+      .order("display_order", { ascending: true })
+      .order("orvia_account_code", { ascending: true });
+
+    labaRugiDetailRows = (detailData ?? []) as LabaRugiDetailRow[];
+    labaRugiDetailErrorMessage = detailError?.message ?? "";
   }
 
   return (
@@ -578,6 +937,13 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
               detailRows={neracaDetailRows}
               summaryErrorMessage={neracaSummaryErrorMessage}
               detailErrorMessage={neracaDetailErrorMessage}
+            />
+          ) : reportCode === "LABA_RUGI" ? (
+            <LabaRugiKepmen136Content
+              result={labaRugiResult}
+              detailRows={labaRugiDetailRows}
+              resultErrorMessage={labaRugiResultErrorMessage}
+              detailErrorMessage={labaRugiDetailErrorMessage}
             />
           ) : (
             <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
