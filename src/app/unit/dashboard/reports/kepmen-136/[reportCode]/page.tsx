@@ -183,6 +183,66 @@ type CalkIndexRow = {
   source_view: string | null;
   section_note: string | null;
 };
+type CalkPolicyRow = {
+  tenant_id: string;
+  unit_id: string;
+  cakupan_laporan: string | null;
+  policy_section: string | null;
+  display_order: number | null;
+  policy_note: string | null;
+};
+
+type CalkAccountNoteRow = {
+  tenant_id: string;
+  unit_id: string;
+  orvia_account_code: string | null;
+  orvia_account_name: string | null;
+  kepmen_account_code: string | null;
+  kepmen_account_name: string | null;
+  kepmen_report_section: string | null;
+  kepmen_report_line: string | null;
+  saldo: string | number | null;
+  calk_note: string | null;
+};
+
+type CalkLabaRugiRow = CalkAccountNoteRow & {
+  period_id: string | null;
+  period_year: number | null;
+  period_month: number | null;
+  period_start: string | null;
+  period_end: string | null;
+};
+
+type CalkArusKasRow = {
+  tenant_id: string;
+  unit_id: string | null;
+  kode_bumdes: string | null;
+  nama_bumdes: string | null;
+  nama_desa: string | null;
+  nama_kecamatan: string | null;
+  kode_unit: string | null;
+  nama_unit: string | null;
+  report_year: number | null;
+  report_month: number | null;
+  kepmen_cash_flow_code: string | null;
+  kepmen_cash_flow_section: string | null;
+  kepmen_cash_flow_line: string | null;
+  display_order: number | null;
+  is_cash_effective: boolean | null;
+  total_cash_in: string | number | null;
+  total_cash_out: string | number | null;
+  total_cash_effect: string | number | null;
+  calk_note: string | null;
+};
+
+type CalkValidationRow = {
+  tenant_id: string;
+  unit_id: string;
+  cakupan_laporan: string | null;
+  total_calk_sections: string | number | null;
+  calk_validation_status: string | null;
+  validation_note: string | null;
+};
 function slugToReportCode(slug: string) {
   return slug.toUpperCase().replaceAll("-", "_");
 }
@@ -841,7 +901,7 @@ function ArusKasAccountRows({
           row.is_cash_effective === false ? "Non-kas/Internal" : null,
         ]
           .filter(Boolean)
-          .join(" · ");
+          .join(" ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
 
         return (
           <ReportLine
@@ -1140,7 +1200,7 @@ function PerubahanEkuitasAccountRows({
           row.status ? `Status: ${row.status}` : null,
         ]
           .filter(Boolean)
-          .join(" · ");
+          .join(" ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
 
         return (
           <ReportLine
@@ -1425,17 +1485,33 @@ function PerubahanEkuitasKepmen136Content({
 function CalkKepmen136Content({
   summary,
   indexRows,
+  policiesRows,
+  kasRows,
+  asetRows,
+  kewajibanEkuitasRows,
+  labaRugiRows,
+  arusKasRows,
+  validation,
   summaryErrorMessage,
   indexErrorMessage,
+  detailErrorMessage,
 }: {
   summary: CalkSummaryRow | null;
   indexRows: CalkIndexRow[];
+  policiesRows: CalkPolicyRow[];
+  kasRows: CalkAccountNoteRow[];
+  asetRows: CalkAccountNoteRow[];
+  kewajibanEkuitasRows: CalkAccountNoteRow[];
+  labaRugiRows: CalkLabaRugiRow[];
+  arusKasRows: CalkArusKasRow[];
+  validation: CalkValidationRow | null;
   summaryErrorMessage: string;
   indexErrorMessage: string;
+  detailErrorMessage: string;
 }) {
   const isValid = (summary?.validation_status ?? "").toUpperCase() === "VALID";
 
-  if (summaryErrorMessage || indexErrorMessage) {
+  if (summaryErrorMessage || indexErrorMessage || detailErrorMessage) {
     return (
       <section className="rounded-3xl border border-rose-100 bg-rose-50 p-5 shadow-sm">
         <h2 className="font-bold text-rose-950">CALK gagal dimuat</h2>
@@ -1447,6 +1523,11 @@ function CalkKepmen136Content({
         {indexErrorMessage ? (
           <p className="mt-2 text-sm text-rose-800">
             Index: {indexErrorMessage}
+          </p>
+        ) : null}
+        {detailErrorMessage ? (
+          <p className="mt-2 text-sm text-rose-800">
+            Detail: {detailErrorMessage}
           </p>
         ) : null}
       </section>
@@ -1471,8 +1552,8 @@ function CalkKepmen136Content({
       <section className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Status CALK"
-          value={summary?.validation_status ?? "-"}
-          description={summary?.calk_validation_note ?? "Status validasi CALK."}
+          value={validation?.calk_validation_status ?? summary?.validation_status ?? "-"}
+          description={validation?.validation_note ?? summary?.calk_validation_note ?? "Status validasi CALK."}
           icon={<ShieldCheck className="h-6 w-6" />}
         />
 
@@ -1524,7 +1605,7 @@ function CalkKepmen136Content({
                       : "border-amber-100 bg-amber-50 text-amber-800"
                   }`}
                 >
-                  {summary?.validation_status ?? "Belum divalidasi"}
+                  {validation?.calk_validation_status ?? summary?.validation_status ?? "Belum divalidasi"}
                 </div>
               </div>
             </div>
@@ -1572,6 +1653,69 @@ function CalkKepmen136Content({
               </div>
             </div>
 
+            <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white">
+              <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+                <h4 className="text-lg font-bold text-slate-950">
+                  Isi CALK Pendukung
+                </h4>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Ringkasan ini memastikan view pendukung CALK sudah terbaca
+                  sebelum dirender menjadi dokumen catatan lengkap.
+                </p>
+              </div>
+
+              <div className="grid gap-3 p-6 md:grid-cols-2">
+                {[
+                  {
+                    label: "20. Kebijakan Akuntansi",
+                    count: policiesRows.length,
+                    suffix: "catatan",
+                  },
+                  {
+                    label: "30. Kas dan Setara Kas",
+                    count: kasRows.length,
+                    suffix: "akun",
+                  },
+                  {
+                    label: "40. Aset Lainnya",
+                    count: asetRows.length,
+                    suffix: "akun",
+                  },
+                  {
+                    label: "50. Kewajiban dan Ekuitas",
+                    count: kewajibanEkuitasRows.length,
+                    suffix: "akun",
+                  },
+                  {
+                    label: "60. Pendapatan, HPP, dan Beban",
+                    count: labaRugiRows.length,
+                    suffix: "akun",
+                  },
+                  {
+                    label: "70. Arus Kas",
+                    count: arusKasRows.length,
+                    suffix: "pos",
+                  },
+                  {
+                    label: "Total Section CALK",
+                    count: validation?.total_calk_sections ?? indexRows.length,
+                    suffix: "bagian",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white px-4 py-3"
+                  >
+                    <span className="text-sm font-semibold text-slate-700">
+                      {item.label}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700">
+                      {item.count} {item.suffix}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="mt-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-white">
               <div className="border-b border-slate-100 bg-slate-50 px-6 py-5 text-slate-950">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -1713,6 +1857,14 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
   let calkIndexRows: CalkIndexRow[] = [];
   let calkSummaryErrorMessage = "";
   let calkIndexErrorMessage = "";
+  let calkPoliciesRows: CalkPolicyRow[] = [];
+  let calkKasRows: CalkAccountNoteRow[] = [];
+  let calkAsetRows: CalkAccountNoteRow[] = [];
+  let calkKewajibanEkuitasRows: CalkAccountNoteRow[] = [];
+  let calkLabaRugiRows: CalkLabaRugiRow[] = [];
+  let calkArusKasRows: CalkArusKasRow[] = [];
+  let calkValidation: CalkValidationRow | null = null;
+  let calkDetailErrorMessage = "";
 
   if (reportCode === "NERACA") {
     const { data: summaryData, error: summaryError } = await supabase
@@ -1874,6 +2026,84 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
 
     calkIndexRows = (indexData ?? []) as CalkIndexRow[];
     calkIndexErrorMessage = indexError?.message ?? "";
+
+    const [
+      policiesResult,
+      kasResult,
+      asetResult,
+      kewajibanEkuitasResult,
+      labaRugiResult,
+      arusKasResult,
+      validationResult,
+    ] = await Promise.all([
+      supabase
+        .from("v_kepmen136_calk_accounting_policies")
+        .select("tenant_id, unit_id, cakupan_laporan, policy_section, display_order, policy_note")
+        .eq("tenant_id", context.tenant_id)
+        .eq("unit_id", context.unit_id)
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("v_kepmen136_calk_kas_setara_kas")
+        .select("tenant_id, unit_id, orvia_account_code, orvia_account_name, kepmen_account_code, kepmen_account_name, kepmen_report_section, kepmen_report_line, saldo, calk_note")
+        .eq("tenant_id", context.tenant_id)
+        .eq("unit_id", context.unit_id)
+        .order("kepmen_account_code", { ascending: true }),
+      supabase
+        .from("v_kepmen136_calk_aset_lainnya")
+        .select("tenant_id, unit_id, orvia_account_code, orvia_account_name, kepmen_account_code, kepmen_account_name, kepmen_report_section, kepmen_report_line, saldo, calk_note")
+        .eq("tenant_id", context.tenant_id)
+        .eq("unit_id", context.unit_id)
+        .order("kepmen_account_code", { ascending: true }),
+      supabase
+        .from("v_kepmen136_calk_kewajiban_ekuitas")
+        .select("tenant_id, unit_id, orvia_account_code, orvia_account_name, kepmen_account_code, kepmen_account_name, kepmen_report_section, kepmen_report_line, saldo, calk_note")
+        .eq("tenant_id", context.tenant_id)
+        .eq("unit_id", context.unit_id)
+        .order("kepmen_account_code", { ascending: true }),
+      supabase
+        .from("v_kepmen136_calk_laba_rugi")
+        .select("tenant_id, unit_id, period_id, period_year, period_month, period_start, period_end, orvia_account_code, orvia_account_name, kepmen_account_code, kepmen_account_name, kepmen_report_section, kepmen_report_line, saldo, calk_note")
+        .eq("tenant_id", context.tenant_id)
+        .eq("unit_id", context.unit_id)
+        .order("period_year", { ascending: false })
+        .order("period_month", { ascending: false })
+        .order("kepmen_account_code", { ascending: true }),
+      supabase
+        .from("v_kepmen136_calk_arus_kas")
+        .select("tenant_id, kode_bumdes, nama_bumdes, nama_desa, nama_kecamatan, unit_id, kode_unit, nama_unit, report_year, report_month, kepmen_cash_flow_code, kepmen_cash_flow_section, kepmen_cash_flow_line, display_order, is_cash_effective, total_cash_in, total_cash_out, total_cash_effect, calk_note")
+        .eq("tenant_id", context.tenant_id)
+        .eq("unit_id", context.unit_id)
+        .order("report_year", { ascending: false })
+        .order("report_month", { ascending: false })
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("v_kepmen136_calk_validation")
+        .select("tenant_id, unit_id, cakupan_laporan, total_calk_sections, calk_validation_status, validation_note")
+        .eq("tenant_id", context.tenant_id)
+        .eq("unit_id", context.unit_id)
+        .maybeSingle(),
+    ]);
+
+    calkPoliciesRows = (policiesResult.data ?? []) as CalkPolicyRow[];
+    calkKasRows = (kasResult.data ?? []) as CalkAccountNoteRow[];
+    calkAsetRows = (asetResult.data ?? []) as CalkAccountNoteRow[];
+    calkKewajibanEkuitasRows =
+      (kewajibanEkuitasResult.data ?? []) as CalkAccountNoteRow[];
+    calkLabaRugiRows = (labaRugiResult.data ?? []) as CalkLabaRugiRow[];
+    calkArusKasRows = (arusKasResult.data ?? []) as CalkArusKasRow[];
+    calkValidation = validationResult.data as CalkValidationRow | null;
+
+    calkDetailErrorMessage = [
+      policiesResult.error?.message,
+      kasResult.error?.message,
+      asetResult.error?.message,
+      kewajibanEkuitasResult.error?.message,
+      labaRugiResult.error?.message,
+      arusKasResult.error?.message,
+      validationResult.error?.message,
+    ]
+      .filter(Boolean)
+      .join(" | ");
   }
   return (
     <div className="space-y-5">
@@ -2003,8 +2233,16 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
             <CalkKepmen136Content
               summary={calkSummary}
               indexRows={calkIndexRows}
+              policiesRows={calkPoliciesRows}
+              kasRows={calkKasRows}
+              asetRows={calkAsetRows}
+              kewajibanEkuitasRows={calkKewajibanEkuitasRows}
+              labaRugiRows={calkLabaRugiRows}
+              arusKasRows={calkArusKasRows}
+              validation={calkValidation}
               summaryErrorMessage={calkSummaryErrorMessage}
               indexErrorMessage={calkIndexErrorMessage}
+              detailErrorMessage={calkDetailErrorMessage}
             />
           ) : (
             <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
