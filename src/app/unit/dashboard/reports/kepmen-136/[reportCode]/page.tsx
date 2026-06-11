@@ -1,4 +1,4 @@
-﻿export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { ArrowLeft, Database, FileSpreadsheet, ShieldCheck } from "lucide-react";
@@ -126,6 +126,37 @@ type ArusKasSummaryRow = {
   total_cash_in: string | number | null;
   total_cash_out: string | number | null;
   total_cash_effect: string | number | null;
+};
+type PerubahanEkuitasResultRow = {
+  tenant_id: string;
+  unit_id: string;
+  report_year: number | null;
+  total_ekuitas_awal: string | number | null;
+  total_hasil_usaha_tahun_berjalan: string | number | null;
+  total_penambahan_ekuitas: string | number | null;
+  total_pengurangan_ekuitas: string | number | null;
+  total_perubahan_ekuitas: string | number | null;
+};
+
+type PerubahanEkuitasDetailRow = {
+  tenant_id: string;
+  unit_id: string;
+  report_year: number | null;
+  report_date: string | null;
+  orvia_section_name: string | null;
+  orvia_line_code: string | null;
+  orvia_line_name: string | null;
+  orvia_line_category: string | null;
+  kepmen_equity_code: string | null;
+  kepmen_equity_section: string | null;
+  kepmen_equity_line: string | null;
+  display_order: number | null;
+  display_amount: string | number | null;
+  equity_effect_amount: string | number | null;
+  running_equity_amount: string | number | null;
+  source_type: string | null;
+  source_id: string | null;
+  status: string | null;
 };
 function slugToReportCode(slug: string) {
   return slug.toUpperCase().replaceAll("-", "_");
@@ -1046,6 +1077,326 @@ function ArusKasKepmen136Content({
   );
 }
 
+function PerubahanEkuitasAccountRows({
+  rows,
+  emptyText,
+}: {
+  rows: PerubahanEkuitasDetailRow[];
+  emptyText: string;
+}) {
+  if (rows.length === 0) {
+    return (
+      <div className="border-b border-slate-100 py-3 pl-6 text-sm text-slate-400">
+        {emptyText}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {rows.map((row) => {
+        const label = [
+          row.kepmen_equity_code,
+          row.kepmen_equity_line,
+        ]
+          .filter(Boolean)
+          .join(" - ");
+
+        const orviaLabel = [
+          row.orvia_line_code,
+          row.orvia_line_name,
+        ]
+          .filter(Boolean)
+          .join(" - ");
+
+        const note = [
+          orviaLabel || null,
+          row.source_type ? `Sumber: ${row.source_type}` : null,
+          row.status ? `Status: ${row.status}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+        return (
+          <ReportLine
+            key={`${row.kepmen_equity_section}-${row.kepmen_equity_line}-${row.display_order}-${row.source_id ?? "row"}`}
+            label={label || "Pos Perubahan Ekuitas Kepmen 136"}
+            value={row.display_amount}
+            indent
+            note={note}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+function PerubahanEkuitasSection({
+  title,
+  rows,
+  total,
+  emptyText,
+}: {
+  title: string;
+  rows: PerubahanEkuitasDetailRow[];
+  total: number;
+  emptyText: string;
+}) {
+  return (
+    <>
+      <ReportLine label={title} bold muted />
+      <PerubahanEkuitasAccountRows rows={rows} emptyText={emptyText} />
+      <ReportLine label={`Total ${title}`} value={total} bold />
+    </>
+  );
+}
+
+function PerubahanEkuitasKepmen136Content({
+  result,
+  detailRows,
+  resultErrorMessage,
+  detailErrorMessage,
+}: {
+  result: PerubahanEkuitasResultRow | null;
+  detailRows: PerubahanEkuitasDetailRow[];
+  resultErrorMessage: string;
+  detailErrorMessage: string;
+}) {
+  const rowsBySection = (section: string) =>
+    detailRows.filter((row) => row.kepmen_equity_section === section);
+
+  const sumDisplayAmount = (rows: PerubahanEkuitasDetailRow[]) =>
+    rows.reduce((total, row) => total + toNumber(row.display_amount), 0);
+
+  const ekuitasAwalRows = rowsBySection("EKUITAS AWAL");
+  const hasilUsahaRows = rowsBySection("HASIL USAHA TAHUN BERJALAN");
+  const penambahanRows = rowsBySection("PENAMBAHAN EKUITAS");
+  const penguranganRows = rowsBySection("PENGURANGAN EKUITAS");
+
+  const knownSections = new Set([
+    "EKUITAS AWAL",
+    "HASIL USAHA TAHUN BERJALAN",
+    "PENAMBAHAN EKUITAS",
+    "PENGURANGAN EKUITAS",
+  ]);
+
+  const otherRows = detailRows.filter(
+    (row) => !knownSections.has(row.kepmen_equity_section ?? "")
+  );
+
+  const ekuitasAwalTotal =
+    result?.total_ekuitas_awal === undefined ||
+    result?.total_ekuitas_awal === null
+      ? sumDisplayAmount(ekuitasAwalRows)
+      : toNumber(result.total_ekuitas_awal);
+
+  const hasilUsahaTotal =
+    result?.total_hasil_usaha_tahun_berjalan === undefined ||
+    result?.total_hasil_usaha_tahun_berjalan === null
+      ? sumDisplayAmount(hasilUsahaRows)
+      : toNumber(result.total_hasil_usaha_tahun_berjalan);
+
+  const penambahanTotal =
+    result?.total_penambahan_ekuitas === undefined ||
+    result?.total_penambahan_ekuitas === null
+      ? sumDisplayAmount(penambahanRows)
+      : toNumber(result.total_penambahan_ekuitas);
+
+  const penguranganTotal =
+    result?.total_pengurangan_ekuitas === undefined ||
+    result?.total_pengurangan_ekuitas === null
+      ? sumDisplayAmount(penguranganRows)
+      : toNumber(result.total_pengurangan_ekuitas);
+
+  const perubahanTotal =
+    result?.total_perubahan_ekuitas === undefined ||
+    result?.total_perubahan_ekuitas === null
+      ? hasilUsahaTotal + penambahanTotal + penguranganTotal
+      : toNumber(result.total_perubahan_ekuitas);
+
+  const ekuitasAkhir = ekuitasAwalTotal + perubahanTotal;
+
+  const reportYear =
+    result?.report_year ?? detailRows.find((row) => row.report_year)?.report_year ?? "-";
+
+  if (resultErrorMessage || detailErrorMessage) {
+    return (
+      <section className="rounded-3xl border border-rose-100 bg-rose-50 p-5 shadow-sm">
+        <h2 className="font-bold text-rose-950">
+          Perubahan Ekuitas gagal dimuat
+        </h2>
+        {resultErrorMessage ? (
+          <p className="mt-2 text-sm text-rose-800">
+            Result: {resultErrorMessage}
+          </p>
+        ) : null}
+        {detailErrorMessage ? (
+          <p className="mt-2 text-sm text-rose-800">
+            Detail: {detailErrorMessage}
+          </p>
+        ) : null}
+      </section>
+    );
+  }
+
+  if (!result && detailRows.length === 0) {
+    return (
+      <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+        <h2 className="text-lg font-bold text-slate-950">
+          Belum ada data Perubahan Ekuitas Kepmen 136
+        </h2>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          View Perubahan Ekuitas Kepmen 136 belum mengembalikan data untuk unit ini.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <>
+      <section className="grid gap-4 md:grid-cols-4">
+        <StatCard
+          title="Tahun Laporan"
+          value={String(reportYear)}
+          description="Tahun laporan Perubahan Ekuitas."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Ekuitas Awal"
+          value={formatRupiah(ekuitasAwalTotal)}
+          description="Saldo awal ekuitas berdasarkan view Kepmen 136."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Perubahan Bersih"
+          value={formatRupiah(perubahanTotal)}
+          description="Perubahan ekuitas periode berjalan."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Ekuitas Akhir"
+          value={formatRupiah(ekuitasAkhir)}
+          description="Ekuitas awal ditambah perubahan bersih."
+          icon={<ShieldCheck className="h-6 w-6" />}
+        />
+      </section>
+
+      <div className="min-w-0 overflow-hidden rounded-[2rem]">
+        <div className="w-full overflow-x-auto pb-2">
+          <section className="mx-auto min-w-[760px] rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+            <div className="rounded-[2rem] border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-6 md:p-8">
+              <div className="text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-700">
+                  Kepmen 136 Tahun 2022
+                </p>
+
+                <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
+                  Laporan Perubahan Ekuitas
+                </h2>
+
+                <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+                  Pos perubahan ekuitas ditampilkan memakai COA Kepmen dari
+                  kolom kepmen_equity_code, sedangkan kode internal mapping
+                  tetap disimpan di database.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
+              <div className="border-b border-emerald-100 bg-emerald-50 px-6 py-4 text-emerald-950">
+                <h4 className="text-lg font-bold">
+                  Rincian Perubahan Ekuitas Kepmen 136
+                </h4>
+                <p className="mt-1 text-sm text-emerald-700">
+                  Kode yang tampil adalah nomor COA Kepmen, bukan kode internal
+                  K136-EQ.
+                </p>
+              </div>
+
+              <div className="p-6">
+                <PerubahanEkuitasSection
+                  title="EKUITAS AWAL"
+                  rows={ekuitasAwalRows}
+                  total={ekuitasAwalTotal}
+                  emptyText="Tidak ada saldo awal ekuitas pada tahun ini."
+                />
+
+                <div className="h-5" />
+
+                <PerubahanEkuitasSection
+                  title="HASIL USAHA TAHUN BERJALAN"
+                  rows={hasilUsahaRows}
+                  total={hasilUsahaTotal}
+                  emptyText="Tidak ada hasil usaha tahun berjalan pada tahun ini."
+                />
+
+                <div className="h-5" />
+
+                <PerubahanEkuitasSection
+                  title="PENAMBAHAN EKUITAS"
+                  rows={penambahanRows}
+                  total={penambahanTotal}
+                  emptyText="Tidak ada penambahan ekuitas pada tahun ini."
+                />
+
+                <div className="h-5" />
+
+                <PerubahanEkuitasSection
+                  title="PENGURANGAN EKUITAS"
+                  rows={penguranganRows}
+                  total={penguranganTotal}
+                  emptyText="Tidak ada pengurangan ekuitas pada tahun ini."
+                />
+
+                {otherRows.length > 0 ? (
+                  <>
+                    <div className="h-5" />
+                    <PerubahanEkuitasSection
+                      title="POS LAINNYA"
+                      rows={otherRows}
+                      total={sumDisplayAmount(otherRows)}
+                      emptyText="Tidak ada pos lainnya."
+                    />
+                  </>
+                ) : null}
+
+                <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(190px,auto)] gap-6">
+                    <div>
+                      <p className="text-sm font-bold uppercase tracking-wide text-slate-500">
+                        Ekuitas Akhir
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Perubahan bersih: {formatRupiah(perubahanTotal)}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`whitespace-nowrap text-right text-2xl font-black tabular-nums ${amountClass(
+                        ekuitasAkhir
+                      )}`}
+                    >
+                      {formatRupiah(ekuitasAkhir)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-5 text-center text-xs text-slate-400">
+              Disusun dari view v_kepmen136_perubahan_ekuitas_result dan
+              v_kepmen136_perubahan_ekuitas_detail.
+            </p>
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
   const resolvedParams = await params;
   const reportCode = slugToReportCode(resolvedParams.reportCode);
@@ -1095,6 +1446,10 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
   let arusKasSummaryRows: ArusKasSummaryRow[] = [];
   const arusKasResultErrorMessage = "";
   let arusKasSummaryErrorMessage = "";
+  let perubahanEkuitasResult: PerubahanEkuitasResultRow | null = null;
+  let perubahanEkuitasDetailRows: PerubahanEkuitasDetailRow[] = [];
+  let perubahanEkuitasResultErrorMessage = "";
+  let perubahanEkuitasDetailErrorMessage = "";
 
   if (reportCode === "NERACA") {
     const { data: summaryData, error: summaryError } = await supabase
@@ -1193,6 +1548,44 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
       : null;
   }
 
+  if (reportCode === "PERUBAHAN_EKUITAS") {
+    const { data: resultData, error: resultError } = await supabase
+      .from("v_kepmen136_perubahan_ekuitas_result")
+      .select(
+        "tenant_id, unit_id, report_year, total_ekuitas_awal, total_hasil_usaha_tahun_berjalan, total_penambahan_ekuitas, total_pengurangan_ekuitas, total_perubahan_ekuitas"
+      )
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .order("report_year", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    perubahanEkuitasResult = resultData as PerubahanEkuitasResultRow | null;
+    perubahanEkuitasResultErrorMessage = resultError?.message ?? "";
+
+    let detailQuery = supabase
+      .from("v_kepmen136_perubahan_ekuitas_detail")
+      .select(
+        "tenant_id, unit_id, report_year, report_date, orvia_section_name, orvia_line_code, orvia_line_name, orvia_line_category, kepmen_equity_code, kepmen_equity_section, kepmen_equity_line, display_order, display_amount, equity_effect_amount, running_equity_amount, source_type, source_id, status"
+      )
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id);
+
+    if (perubahanEkuitasResult?.report_year) {
+      detailQuery = detailQuery.eq(
+        "report_year",
+        perubahanEkuitasResult.report_year
+      );
+    }
+
+    const { data: detailData, error: detailError } = await detailQuery
+      .order("report_year", { ascending: false })
+      .order("display_order", { ascending: true });
+
+    perubahanEkuitasDetailRows =
+      (detailData ?? []) as PerubahanEkuitasDetailRow[];
+    perubahanEkuitasDetailErrorMessage = detailError?.message ?? "";
+  }
   return (
     <div className="space-y-5">
       <PageBackButton fallbackHref="/unit/dashboard/reports/kepmen-136" />
@@ -1309,6 +1702,13 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
               summaryRows={arusKasSummaryRows}
               resultErrorMessage={arusKasResultErrorMessage}
               summaryErrorMessage={arusKasSummaryErrorMessage}
+            />
+          ) : reportCode === "PERUBAHAN_EKUITAS" ? (
+            <PerubahanEkuitasKepmen136Content
+              result={perubahanEkuitasResult}
+              detailRows={perubahanEkuitasDetailRows}
+              resultErrorMessage={perubahanEkuitasResultErrorMessage}
+              detailErrorMessage={perubahanEkuitasDetailErrorMessage}
             />
           ) : (
             <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
