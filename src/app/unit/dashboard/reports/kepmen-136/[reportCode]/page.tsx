@@ -901,7 +901,7 @@ function ArusKasAccountRows({
           row.is_cash_effective === false ? "Non-kas/Internal" : null,
         ]
           .filter(Boolean)
-          .join(" ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
+          .join(" ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
 
         return (
           <ReportLine
@@ -1200,7 +1200,7 @@ function PerubahanEkuitasAccountRows({
           row.status ? `Status: ${row.status}` : null,
         ]
           .filter(Boolean)
-          .join(" ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
+          .join(" ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
 
         return (
           <ReportLine
@@ -1716,6 +1716,49 @@ function CalkKepmen136Content({
                 ))}
               </div>
             </div>
+            <section className="mt-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 bg-slate-50 px-6 py-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-sm font-black text-emerald-700">
+                    20
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-700">
+                      Catatan CALK
+                    </p>
+                    <h4 className="mt-2 text-xl font-black text-slate-950">
+                      Kebijakan Akuntansi dan Basis Penyajian
+                    </h4>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Disusun dari view v_kepmen136_calk_accounting_policies.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 p-6">
+                {policiesRows.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
+                    Belum ada kebijakan akuntansi yang tersedia untuk unit ini.
+                  </div>
+                ) : (
+                  policiesRows.map((row) => (
+                    <div
+                      key={`${row.display_order}-${row.policy_section}`}
+                      className="rounded-2xl border border-slate-100 bg-slate-50 p-5"
+                    >
+                      <p className="font-black text-slate-950">
+                        {row.policy_section ?? "Kebijakan Akuntansi"}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-700">
+                        {row.policy_note ?? "Tidak ada catatan kebijakan."}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
             <div className="mt-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-white">
               <div className="border-b border-slate-100 bg-slate-50 px-6 py-5 text-slate-950">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
