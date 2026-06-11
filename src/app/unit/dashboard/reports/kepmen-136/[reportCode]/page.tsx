@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { ArrowLeft, Database, FileSpreadsheet, ShieldCheck } from "lucide-react";
@@ -101,6 +101,32 @@ type LabaRugiDetailRow = {
   amount: string | number | null;
 };
 
+type ArusKasResultRow = {
+  tenant_id: string;
+  unit_id: string;
+  report_year: number | null;
+  report_month: number | null;
+  net_cash_operating: string | number | null;
+  net_cash_investing: string | number | null;
+  net_cash_financing: string | number | null;
+  net_increase_decrease_cash: string | number | null;
+  non_cash_internal_effect: string | number | null;
+};
+
+type ArusKasSummaryRow = {
+  tenant_id: string;
+  unit_id: string;
+  report_year: number | null;
+  report_month: number | null;
+  kepmen_cash_flow_code: string | null;
+  kepmen_cash_flow_section: string | null;
+  kepmen_cash_flow_line: string | null;
+  display_order: number | null;
+  is_cash_effective: boolean | null;
+  total_cash_in: string | number | null;
+  total_cash_out: string | number | null;
+  total_cash_effect: string | number | null;
+};
 function slugToReportCode(slug: string) {
   return slug.toUpperCase().replaceAll("-", "_");
 }
@@ -724,6 +750,302 @@ function LabaRugiKepmen136Content({
   );
 }
 
+function ArusKasAccountRows({
+  rows,
+  emptyText,
+}: {
+  rows: ArusKasSummaryRow[];
+  emptyText: string;
+}) {
+  if (rows.length === 0) {
+    return (
+      <div className="border-b border-slate-100 py-3 pl-6 text-sm text-slate-400">
+        {emptyText}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {rows.map((row) => {
+        const label = [
+          row.kepmen_cash_flow_code,
+          row.kepmen_cash_flow_line,
+        ]
+          .filter(Boolean)
+          .join(" - ");
+
+        const note = [
+          toNumber(row.total_cash_in) > 0
+            ? `Masuk ${formatRupiah(row.total_cash_in)}`
+            : null,
+          toNumber(row.total_cash_out) > 0
+            ? `Keluar ${formatRupiah(row.total_cash_out)}`
+            : null,
+          row.is_cash_effective === false ? "Non-kas/Internal" : null,
+        ]
+          .filter(Boolean)
+          .join(" Ãƒâ€šÃ‚Â· ");
+
+        return (
+          <ReportLine
+            key={`${row.kepmen_cash_flow_section}-${row.kepmen_cash_flow_code}-${row.display_order}`}
+            label={label || "Pos Arus Kas Kepmen 136"}
+            value={row.total_cash_effect}
+            indent
+            note={note}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+function ArusKasSection({
+  title,
+  rows,
+  total,
+  emptyText,
+}: {
+  title: string;
+  rows: ArusKasSummaryRow[];
+  total: number;
+  emptyText: string;
+}) {
+  return (
+    <>
+      <ReportLine label={title} bold muted />
+      <ArusKasAccountRows rows={rows} emptyText={emptyText} />
+      <ReportLine label={`Arus Kas Bersih ${title}`} value={total} bold />
+    </>
+  );
+}
+
+function ArusKasKepmen136Content({
+  result,
+  summaryRows,
+  resultErrorMessage,
+  summaryErrorMessage,
+}: {
+  result: ArusKasResultRow | null;
+  summaryRows: ArusKasSummaryRow[];
+  resultErrorMessage: string;
+  summaryErrorMessage: string;
+}) {
+  const hasSection = (row: ArusKasSummaryRow, keyword: string) =>
+    (row.kepmen_cash_flow_section ?? "").toUpperCase().includes(keyword);
+
+  const sumRows = (rows: ArusKasSummaryRow[]) =>
+    rows.reduce((total, row) => total + toNumber(row.total_cash_effect), 0);
+
+  const operasiRows = summaryRows.filter((row) => hasSection(row, "OPERASI"));
+  const investasiRows = summaryRows.filter((row) =>
+    hasSection(row, "INVESTASI")
+  );
+  const pendanaanRows = summaryRows.filter((row) =>
+    hasSection(row, "PENDANAAN")
+  );
+  const internalRows = summaryRows.filter(
+    (row) =>
+      !hasSection(row, "OPERASI") &&
+      !hasSection(row, "INVESTASI") &&
+      !hasSection(row, "PENDANAAN")
+  );
+
+  const operatingTotal =
+    result?.net_cash_operating === undefined ||
+    result?.net_cash_operating === null
+      ? sumRows(operasiRows)
+      : toNumber(result.net_cash_operating);
+  const investingTotal =
+    result?.net_cash_investing === undefined ||
+    result?.net_cash_investing === null
+      ? sumRows(investasiRows)
+      : toNumber(result.net_cash_investing);
+  const financingTotal =
+    result?.net_cash_financing === undefined ||
+    result?.net_cash_financing === null
+      ? sumRows(pendanaanRows)
+      : toNumber(result.net_cash_financing);
+  const netCashChange =
+    result?.net_increase_decrease_cash === undefined ||
+    result?.net_increase_decrease_cash === null
+      ? operatingTotal + investingTotal + financingTotal
+      : toNumber(result.net_increase_decrease_cash);
+  const internalEffect = toNumber(result?.non_cash_internal_effect);
+
+  const periodLabel =
+    result?.report_year && result?.report_month
+      ? `${String(result.report_month).padStart(2, "0")}/${result.report_year}`
+      : "-";
+
+  if (resultErrorMessage || summaryErrorMessage) {
+    return (
+      <section className="rounded-3xl border border-rose-100 bg-rose-50 p-5 shadow-sm">
+        <h2 className="font-bold text-rose-950">Arus Kas gagal dimuat</h2>
+        {resultErrorMessage ? (
+          <p className="mt-2 text-sm text-rose-800">
+            Result: {resultErrorMessage}
+          </p>
+        ) : null}
+        {summaryErrorMessage ? (
+          <p className="mt-2 text-sm text-rose-800">
+            Summary: {summaryErrorMessage}
+          </p>
+        ) : null}
+      </section>
+    );
+  }
+
+  if (!result && summaryRows.length === 0) {
+    return (
+      <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+        <h2 className="text-lg font-bold text-slate-950">
+          Belum ada data Arus Kas Kepmen 136
+        </h2>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          View Arus Kas Kepmen 136 belum mengembalikan data untuk unit ini.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <>
+      <section className="grid gap-4 md:grid-cols-4">
+        <StatCard
+          title="Periode"
+          value={periodLabel}
+          description="Periode laporan Arus Kas terbaru."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Arus Kas Operasi"
+          value={formatRupiah(operatingTotal)}
+          description="Kas bersih dari aktivitas operasi."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Arus Kas Investasi"
+          value={formatRupiah(investingTotal)}
+          description="Kas bersih dari aktivitas investasi."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Kenaikan/Penurunan Kas"
+          value={formatRupiah(netCashChange)}
+          description="Perubahan kas bersih periode berjalan."
+          icon={<ShieldCheck className="h-6 w-6" />}
+        />
+      </section>
+
+      <div className="min-w-0 overflow-hidden rounded-[2rem]">
+        <div className="w-full overflow-x-auto pb-2">
+          <section className="mx-auto min-w-[760px] rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+            <div className="rounded-[2rem] border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-6 md:p-8">
+              <div className="text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-700">
+                  Kepmen 136 Tahun 2022
+                </p>
+
+                <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
+                  Laporan Arus Kas
+                </h2>
+
+                <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+                  Pos arus kas ditampilkan memakai COA Kepmen dari kolom
+                  kepmen_cash_flow_code, sedangkan kode internal mapping tetap
+                  disimpan di database.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
+              <div className="border-b border-emerald-100 bg-emerald-50 px-6 py-4 text-emerald-950">
+                <h4 className="text-lg font-bold">
+                  Rincian Arus Kas Kepmen 136
+                </h4>
+                <p className="mt-1 text-sm text-emerald-700">
+                  Kode yang tampil adalah nomor COA Kepmen, bukan kode internal
+                  K136-AK.
+                </p>
+              </div>
+
+              <div className="p-6">
+                <ArusKasSection
+                  title="AKTIVITAS OPERASI"
+                  rows={operasiRows}
+                  total={operatingTotal}
+                  emptyText="Tidak ada arus kas operasi pada periode ini."
+                />
+
+                <div className="h-5" />
+
+                <ArusKasSection
+                  title="AKTIVITAS INVESTASI"
+                  rows={investasiRows}
+                  total={investingTotal}
+                  emptyText="Tidak ada arus kas investasi pada periode ini."
+                />
+
+                <div className="h-5" />
+
+                <ArusKasSection
+                  title="AKTIVITAS PENDANAAN"
+                  rows={pendanaanRows}
+                  total={financingTotal}
+                  emptyText="Tidak ada arus kas pendanaan pada periode ini."
+                />
+
+                {internalRows.length > 0 ? (
+                  <>
+                    <div className="h-5" />
+                    <ArusKasSection
+                      title="NON-KAS / INTERNAL"
+                      rows={internalRows}
+                      total={sumRows(internalRows)}
+                      emptyText="Tidak ada pos non-kas/internal."
+                    />
+                  </>
+                ) : null}
+
+                <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(190px,auto)] gap-6">
+                    <div>
+                      <p className="text-sm font-bold uppercase tracking-wide text-slate-500">
+                        Kenaikan / Penurunan Bersih Kas
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Dampak non-kas/internal: {formatRupiah(internalEffect)}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`whitespace-nowrap text-right text-2xl font-black tabular-nums ${amountClass(
+                        netCashChange
+                      )}`}
+                    >
+                      {formatRupiah(netCashChange)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-5 text-center text-xs text-slate-400">
+              Disusun dari view v_kepmen136_cash_flow_result dan
+              v_kepmen136_cash_flow_summary.
+            </p>
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
   const resolvedParams = await params;
   const reportCode = slugToReportCode(resolvedParams.reportCode);
@@ -769,6 +1091,10 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
   let labaRugiDetailRows: LabaRugiDetailRow[] = [];
   let labaRugiResultErrorMessage = "";
   let labaRugiDetailErrorMessage = "";
+  let arusKasResult: ArusKasResultRow | null = null;
+  let arusKasSummaryRows: ArusKasSummaryRow[] = [];
+  const arusKasResultErrorMessage = "";
+  let arusKasSummaryErrorMessage = "";
 
   if (reportCode === "NERACA") {
     const { data: summaryData, error: summaryError } = await supabase
@@ -833,6 +1159,38 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
 
     labaRugiDetailRows = (detailData ?? []) as LabaRugiDetailRow[];
     labaRugiDetailErrorMessage = detailError?.message ?? "";
+  }
+
+  if (reportCode === "ARUS_KAS") {
+    const { data: summaryData, error: summaryError } = await supabase
+      .from("v_kepmen136_cash_flow_summary")
+      .select(
+        "tenant_id, unit_id, report_year, report_month, kepmen_cash_flow_code, kepmen_cash_flow_section, kepmen_cash_flow_line, display_order, is_cash_effective, total_cash_in, total_cash_out, total_cash_effect"
+      )
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .order("report_year", { ascending: false })
+      .order("report_month", { ascending: false })
+      .order("display_order", { ascending: true });
+
+    arusKasSummaryRows = (summaryData ?? []) as ArusKasSummaryRow[];
+    arusKasSummaryErrorMessage = summaryError?.message ?? "";
+
+    const latestRow = arusKasSummaryRows[0];
+
+    arusKasResult = latestRow
+      ? {
+          tenant_id: latestRow.tenant_id,
+          unit_id: latestRow.unit_id,
+          report_year: latestRow.report_year,
+          report_month: latestRow.report_month,
+          net_cash_operating: null,
+          net_cash_investing: null,
+          net_cash_financing: null,
+          net_increase_decrease_cash: null,
+          non_cash_internal_effect: null,
+        }
+      : null;
   }
 
   return (
@@ -945,6 +1303,13 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
               resultErrorMessage={labaRugiResultErrorMessage}
               detailErrorMessage={labaRugiDetailErrorMessage}
             />
+          ) : reportCode === "ARUS_KAS" ? (
+            <ArusKasKepmen136Content
+              result={arusKasResult}
+              summaryRows={arusKasSummaryRows}
+              resultErrorMessage={arusKasResultErrorMessage}
+              summaryErrorMessage={arusKasSummaryErrorMessage}
+            />
           ) : (
             <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
               <h2 className="text-lg font-bold text-emerald-950">
@@ -961,3 +1326,4 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
     </div>
   );
 }
+
