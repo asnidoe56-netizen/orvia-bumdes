@@ -158,6 +158,31 @@ type PerubahanEkuitasDetailRow = {
   source_id: string | null;
   status: string | null;
 };
+type CalkSummaryRow = {
+  tenant_id: string;
+  unit_id: string;
+  cakupan_laporan: string | null;
+  total_aset: string | number | null;
+  total_kewajiban: string | number | null;
+  total_ekuitas: string | number | null;
+  selisih_neraca: string | number | null;
+  selisih_laba_rugi_neraca: string | number | null;
+  selisih_arus_kas_neraca: string | number | null;
+  selisih_perubahan_ekuitas_neraca: string | number | null;
+  validation_status: string | null;
+  calk_validation_note: string | null;
+  generated_at: string | null;
+};
+
+type CalkIndexRow = {
+  tenant_id: string;
+  unit_id: string;
+  cakupan_laporan: string | null;
+  section_order: number | null;
+  calk_section: string | null;
+  source_view: string | null;
+  section_note: string | null;
+};
 function slugToReportCode(slug: string) {
   return slug.toUpperCase().replaceAll("-", "_");
 }
@@ -816,7 +841,7 @@ function ArusKasAccountRows({
           row.is_cash_effective === false ? "Non-kas/Internal" : null,
         ]
           .filter(Boolean)
-          .join(" Ãƒâ€šÃ‚Â· ");
+          .join(" · ");
 
         return (
           <ReportLine
@@ -1397,6 +1422,240 @@ function PerubahanEkuitasKepmen136Content({
   );
 }
 
+function CalkKepmen136Content({
+  summary,
+  indexRows,
+  summaryErrorMessage,
+  indexErrorMessage,
+}: {
+  summary: CalkSummaryRow | null;
+  indexRows: CalkIndexRow[];
+  summaryErrorMessage: string;
+  indexErrorMessage: string;
+}) {
+  const isValid = (summary?.validation_status ?? "").toUpperCase() === "VALID";
+
+  if (summaryErrorMessage || indexErrorMessage) {
+    return (
+      <section className="rounded-3xl border border-rose-100 bg-rose-50 p-5 shadow-sm">
+        <h2 className="font-bold text-rose-950">CALK gagal dimuat</h2>
+        {summaryErrorMessage ? (
+          <p className="mt-2 text-sm text-rose-800">
+            Summary: {summaryErrorMessage}
+          </p>
+        ) : null}
+        {indexErrorMessage ? (
+          <p className="mt-2 text-sm text-rose-800">
+            Index: {indexErrorMessage}
+          </p>
+        ) : null}
+      </section>
+    );
+  }
+
+  if (!summary && indexRows.length === 0) {
+    return (
+      <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+        <h2 className="text-lg font-bold text-slate-950">
+          Belum ada data CALK Kepmen 136
+        </h2>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          View CALK Kepmen 136 belum mengembalikan data untuk unit ini.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <>
+      <section className="grid gap-4 md:grid-cols-4">
+        <StatCard
+          title="Status CALK"
+          value={summary?.validation_status ?? "-"}
+          description={summary?.calk_validation_note ?? "Status validasi CALK."}
+          icon={<ShieldCheck className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Total Aset"
+          value={formatRupiah(summary?.total_aset)}
+          description="Total aset dari ringkasan CALK."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Total Kewajiban"
+          value={formatRupiah(summary?.total_kewajiban)}
+          description="Total kewajiban dari ringkasan CALK."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+
+        <StatCard
+          title="Total Ekuitas"
+          value={formatRupiah(summary?.total_ekuitas)}
+          description="Total ekuitas dari ringkasan CALK."
+          icon={<FileSpreadsheet className="h-6 w-6" />}
+        />
+      </section>
+
+      <div className="min-w-0 overflow-hidden rounded-[2rem]">
+        <div className="w-full overflow-x-auto pb-2">
+          <section className="mx-auto min-w-[760px] rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+            <div className="rounded-[2rem] border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-6 md:p-8">
+              <div className="text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-700">
+                  Kepmen 136 Tahun 2022
+                </p>
+
+                <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
+                  Catatan atas Laporan Keuangan
+                </h2>
+
+                <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+                  CALK menyajikan ringkasan validasi, keterkaitan antar laporan,
+                  dan daftar bagian catatan pendukung yang bersumber dari view
+                  Kepmen 136.
+                </p>
+
+                <div
+                  className={`mx-auto mt-5 inline-flex rounded-full border px-5 py-2 text-sm font-bold ${
+                    isValid
+                      ? "border-emerald-100 bg-emerald-50 text-emerald-800"
+                      : "border-amber-100 bg-amber-50 text-amber-800"
+                  }`}
+                >
+                  {summary?.validation_status ?? "Belum divalidasi"}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
+              <div className="border-b border-emerald-100 bg-emerald-50 px-6 py-4 text-emerald-950">
+                <h4 className="text-lg font-bold">Ringkasan Validasi CALK</h4>
+                <p className="mt-1 text-sm text-emerald-700">
+                  Selisih ditampilkan untuk membantu membaca konsistensi antara
+                  Neraca, Laba Rugi, Arus Kas, dan Perubahan Ekuitas.
+                </p>
+              </div>
+
+              <div className="p-6">
+                <ReportLine
+                  label="Selisih Neraca"
+                  value={summary?.selisih_neraca}
+                  bold
+                />
+                <ReportLine
+                  label="Selisih Laba Rugi terhadap Neraca"
+                  value={summary?.selisih_laba_rugi_neraca}
+                  indent
+                />
+                <ReportLine
+                  label="Selisih Arus Kas terhadap Neraca"
+                  value={summary?.selisih_arus_kas_neraca}
+                  indent
+                />
+                <ReportLine
+                  label="Selisih Perubahan Ekuitas terhadap Neraca"
+                  value={summary?.selisih_perubahan_ekuitas_neraca}
+                  indent
+                />
+
+                <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-bold uppercase tracking-wide text-slate-500">
+                    Catatan Validasi
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-700">
+                    {summary?.calk_validation_note ??
+                      "Belum ada catatan validasi CALK."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-white">
+              <div className="border-b border-slate-100 bg-slate-50 px-6 py-5 text-slate-950">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-700">
+                      Indeks CALK dari Database
+                    </p>
+                    <h4 className="mt-2 text-xl font-black">
+                      Daftar Bagian Catatan atas Laporan Keuangan
+                    </h4>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                      Bagian ini merepresentasikan isi view
+                      v_kepmen136_calk_index: nomor bagian, judul catatan,
+                      ringkasan naratif, cakupan laporan, dan sumber view
+                      pendukung.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
+                    {indexRows[0]?.cakupan_laporan ?? "CALK"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-b from-white to-slate-50 p-5 md:p-6">
+                {indexRows.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-400">
+                    Belum ada bagian CALK yang tersedia.
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="absolute bottom-6 left-[35px] top-6 hidden w-px bg-emerald-100 md:block" />
+
+                    <div className="space-y-4">
+                      {indexRows.map((row) => (
+                        <div
+                          key={`${row.section_order}-${row.calk_section}-${row.source_view}`}
+                          className="relative grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md md:grid-cols-[72px_minmax(0,1fr)] md:gap-x-5"
+                        >
+                          <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-sm font-black text-emerald-700">
+                            {row.section_order ?? "-"}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="text-base font-black uppercase tracking-tight text-slate-950">
+                              {row.calk_section ?? "Bagian CALK"}
+                            </p>
+
+                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                              {row.section_note ?? "Tidak ada catatan."}
+                            </p>
+
+                            <div className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
+                              {row.cakupan_laporan ?? "Cakupan tidak tersedia"}
+                            </div>
+                          </div>
+
+                          <div className="min-w-0 self-start rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500 md:col-start-2 md:max-w-xl">
+                            <span className="block font-bold uppercase tracking-wide text-slate-400">
+                              Source View
+                            </span>
+                            <span className="mt-1 block break-words font-black text-slate-700">
+                              {row.source_view ?? "-"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <p className="mt-5 text-center text-xs text-slate-400">
+              Disusun dari view v_kepmen136_calk_index dan
+              v_kepmen136_calk_summary.
+            </p>
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
   const resolvedParams = await params;
   const reportCode = slugToReportCode(resolvedParams.reportCode);
@@ -1450,6 +1709,10 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
   let perubahanEkuitasDetailRows: PerubahanEkuitasDetailRow[] = [];
   let perubahanEkuitasResultErrorMessage = "";
   let perubahanEkuitasDetailErrorMessage = "";
+  let calkSummary: CalkSummaryRow | null = null;
+  let calkIndexRows: CalkIndexRow[] = [];
+  let calkSummaryErrorMessage = "";
+  let calkIndexErrorMessage = "";
 
   if (reportCode === "NERACA") {
     const { data: summaryData, error: summaryError } = await supabase
@@ -1586,6 +1849,32 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
       (detailData ?? []) as PerubahanEkuitasDetailRow[];
     perubahanEkuitasDetailErrorMessage = detailError?.message ?? "";
   }
+  if (reportCode === "CALK") {
+    const { data: summaryData, error: summaryError } = await supabase
+      .from("v_kepmen136_calk_summary")
+      .select(
+        "tenant_id, unit_id, cakupan_laporan, total_aset, total_kewajiban, total_ekuitas, selisih_neraca, selisih_laba_rugi_neraca, selisih_arus_kas_neraca, selisih_perubahan_ekuitas_neraca, validation_status, calk_validation_note, generated_at"
+      )
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .limit(1)
+      .maybeSingle();
+
+    calkSummary = summaryData as CalkSummaryRow | null;
+    calkSummaryErrorMessage = summaryError?.message ?? "";
+
+    const { data: indexData, error: indexError } = await supabase
+      .from("v_kepmen136_calk_index")
+      .select(
+        "tenant_id, unit_id, cakupan_laporan, section_order, calk_section, source_view, section_note"
+      )
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .order("section_order", { ascending: true });
+
+    calkIndexRows = (indexData ?? []) as CalkIndexRow[];
+    calkIndexErrorMessage = indexError?.message ?? "";
+  }
   return (
     <div className="space-y-5">
       <PageBackButton fallbackHref="/unit/dashboard/reports/kepmen-136" />
@@ -1709,6 +1998,13 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
               detailRows={perubahanEkuitasDetailRows}
               resultErrorMessage={perubahanEkuitasResultErrorMessage}
               detailErrorMessage={perubahanEkuitasDetailErrorMessage}
+            />
+          ) : reportCode === "CALK" ? (
+            <CalkKepmen136Content
+              summary={calkSummary}
+              indexRows={calkIndexRows}
+              summaryErrorMessage={calkSummaryErrorMessage}
+              indexErrorMessage={calkIndexErrorMessage}
             />
           ) : (
             <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
