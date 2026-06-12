@@ -1,4 +1,4 @@
-﻿import {
+import {
   Building2,
   CheckCircle2,
   LayoutDashboard,
@@ -10,7 +10,7 @@ export const publicNavItems = [
   { label: "Beranda", href: "/" },
   { label: "Aplikasi", href: "/aplikasi" },
   { label: "Manajemen", href: "/manajemen" },
-  { label: "Berita", href: "#berita" },
+  { label: "Berita", href: "/#berita" },
   { label: "Tentang", href: "/tentang" },
 ];
 
