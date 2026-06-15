@@ -8,6 +8,7 @@ import { getLoginContext } from "@/lib/auth/get-login-context";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { PageHeader } from "@/components/ui/page-header";
+import { ExportPdfButton } from "./_components/export-pdf-button";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -115,6 +116,23 @@ const externalDistribution = rows
 
   const identity = rows[0];
 
+  const reportData = {
+    tenant: {
+      nama_bumdes: identity?.nama_bumdes ?? null,
+      nama_desa: identity?.nama_desa ?? null,
+      nama_kecamatan: identity?.nama_kecamatan ?? null,
+      nama_unit: identity?.nama_unit ?? null,
+      kode_unit: identity?.kode_unit ?? null,
+    },
+    year: selectedYear,
+    rows,
+    totals: {
+      latestRunningEquity,
+      externalDistribution,
+      internalReserve,
+    },
+  };
+
   return (
     <div className="space-y-5">
       <PageBackButton fallbackHref="/unit/dashboard/reports" />
@@ -124,13 +142,19 @@ const externalDistribution = rows
         title="Laporan Perubahan Ekuitas"
         description="Menampilkan perubahan modal, surplus tahun berjalan, distribusi bagi hasil, dan cadangan modal berdasarkan reporting view database."
         action={
-          <Link
-            href="/unit/dashboard/reports/arus-kas"
-            className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100"
-          >
-            Lihat Arus Kas
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <ExportPdfButton
+              fileName={`perubahan-ekuitas-${selectedYear}.pdf`}
+              reportData={reportData}
+            />
+            <Link
+              href="/unit/dashboard/reports/arus-kas"
+              className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100"
+            >
+              Lihat Arus Kas
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         }
       />
 
