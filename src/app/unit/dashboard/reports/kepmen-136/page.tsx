@@ -1,4 +1,4 @@
-﻿export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import {
@@ -30,19 +30,12 @@ type DashboardSummary = {
 };
 
 type ReportMenuItem = {
-  tenant_id: string;
-  unit_id: string | null;
-  cakupan_laporan: string | null;
   report_order: number;
   report_code: string;
   report_name: string;
   summary_view: string | null;
   detail_view: string | null;
   report_note: string | null;
-  reporting_package_status: string | null;
-  is_ready_for_export: boolean | null;
-  is_enabled: boolean | null;
-  menu_note: string | null;
 };
 
 function toNumber(value: string | number | null | undefined) {
@@ -102,12 +95,10 @@ export default async function Kepmen136ReportDashboardPage() {
   const summary = summaryData as DashboardSummary | null;
 
   const { data: menuData, error: menuError } = await supabase
-    .from("v_kepmen136_report_menu")
+    .from("v_kepmen136_report_catalog")
     .select(
-      "tenant_id, unit_id, cakupan_laporan, report_order, report_code, report_name, summary_view, detail_view, report_note, reporting_package_status, is_ready_for_export, is_enabled, menu_note"
+      "report_order, report_code, report_name, summary_view, detail_view, report_note"
     )
-    .eq("tenant_id", context.tenant_id)
-    .eq("unit_id", context.unit_id)
     .order("report_order", { ascending: true });
 
   const reportMenu = (menuData ?? []) as ReportMenuItem[];
@@ -248,7 +239,7 @@ export default async function Kepmen136ReportDashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {reportMenu.map((report) => {
                 const Icon = getReportIcon(report.report_code);
-                const isEnabled = report.is_enabled === true;
+                const isEnabled = isValid;
 
                 return (
                   <Link
@@ -266,7 +257,7 @@ export default async function Kepmen136ReportDashboardPage() {
                       </div>
 
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                        {report.reporting_package_status ?? "-"}
+                        {statusLabel}
                       </span>
                     </div>
 
@@ -275,7 +266,7 @@ export default async function Kepmen136ReportDashboardPage() {
                     </h3>
 
                     <p className="mt-2 min-h-[72px] text-sm leading-6 text-slate-600">
-                      {report.report_note ?? report.menu_note ?? "-"}
+                      {report.report_note ?? "-"}
                     </p>
 
                     <div className="mt-5 flex items-center gap-2 text-sm font-bold text-emerald-700">

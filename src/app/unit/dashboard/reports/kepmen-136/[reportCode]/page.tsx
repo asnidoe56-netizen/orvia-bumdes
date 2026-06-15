@@ -25,10 +25,6 @@ type ReportMenuItem = {
   summary_view: string | null;
   detail_view: string | null;
   report_note: string | null;
-  reporting_package_status: string | null;
-  is_ready_for_export: boolean | null;
-  is_enabled: boolean | null;
-  menu_note: string | null;
 };
 
 type NeracaSummaryRow = {
@@ -1869,12 +1865,10 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("v_kepmen136_report_menu")
+    .from("v_kepmen136_report_catalog")
     .select(
-      "report_order, report_code, report_name, summary_view, detail_view, report_note, reporting_package_status, is_ready_for_export, is_enabled, menu_note"
+      "report_order, report_code, report_name, summary_view, detail_view, report_note"
     )
-    .eq("tenant_id", context.tenant_id)
-    .eq("unit_id", context.unit_id)
     .eq("report_code", reportCode)
     .maybeSingle();
 
@@ -2198,16 +2192,16 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
             />
 
             <StatCard
-              title="Status Paket"
-              value={report.reporting_package_status ?? "-"}
-              description="Status validasi paket laporan Kepmen 136."
+              title="Urutan Laporan"
+              value={String(report.report_order)}
+              description="Urutan tampilan laporan dalam katalog Kepmen 136."
               icon={<ShieldCheck className="h-6 w-6" />}
             />
 
             <StatCard
-              title="Kesiapan Export"
-              value={report.is_ready_for_export ? "Siap" : "Belum Siap"}
-              description={report.menu_note ?? "Status kesiapan tampilan/export."}
+              title="Metadata Ringan"
+              value="Katalog"
+              description="Metadata laporan dibaca dari katalog ringan tanpa menghitung ulang status paket."
               icon={<Database className="h-6 w-6" />}
             />
           </section>
