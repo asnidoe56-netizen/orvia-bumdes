@@ -6,6 +6,7 @@ import { getLoginContext } from "@/lib/auth/get-login-context";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { PageHeader } from "@/components/ui/page-header";
+import { ExportPdfButton } from "./_components/export-pdf-button";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -115,6 +116,16 @@ export default async function BukuJurnalPage({
   const totalCredit = rows.reduce((sum, row) => sum + toNumber(row.credit), 0);
   const journalCount = new Set(rows.map((row) => row.journal_entry_id)).size;
 
+  const reportData = {
+    year: selectedYear,
+    rows,
+    totals: {
+      journalCount,
+      totalDebit,
+      totalCredit,
+    },
+  };
+
   return (
     <div className="space-y-5">
       <PageBackButton fallbackHref="/unit/dashboard/reports" />
@@ -124,8 +135,14 @@ export default async function BukuJurnalPage({
         title="Buku Jurnal"
         description="Menampilkan catatan transaksi berdasarkan urutan kejadian jurnal. Nomor urut, tanggal, debit, dan kredit dibaca dari view database v_journal_book."
         action={
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-            <BookOpenText className="h-6 w-6" />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <ExportPdfButton
+              fileName={`buku-jurnal-${selectedYear}.pdf`}
+              reportData={reportData}
+            />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+              <BookOpenText className="h-6 w-6" />
+            </div>
           </div>
         }
       />
