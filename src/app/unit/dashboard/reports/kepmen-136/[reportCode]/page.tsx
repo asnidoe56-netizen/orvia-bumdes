@@ -298,6 +298,7 @@ function formatPeriodLabel(row: LabaRugiResultRow | LabaRugiDetailRow | null) {
 
 function ReportLine({
   label,
+  lineNumber,
   value,
   bold = false,
   muted = false,
@@ -305,6 +306,7 @@ function ReportLine({
   note,
 }: {
   label: string;
+  lineNumber?: number;
   value?: string | number | null;
   bold?: boolean;
   muted?: boolean;
@@ -313,11 +315,22 @@ function ReportLine({
 }) {
   return (
     <div
-      className={`grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(170px,auto)] gap-6 border-b border-slate-100 py-3 ${
+      className={`grid min-w-0 grid-cols-[40px_minmax(0,1fr)_minmax(120px,auto)] gap-4 border-b border-slate-100 py-3 md:grid-cols-[52px_minmax(0,1fr)_minmax(170px,auto)] ${
         bold ? "font-bold" : ""
       } ${muted ? "text-slate-500" : "text-slate-800"}`}
     >
-      <div className={["min-w-0 break-words", indent ? "pl-6" : ""].join(" ")}>
+      <div className="pt-0.5 text-right text-sm font-semibold tabular-nums text-slate-500">
+        {lineNumber ?? ""}
+      </div>
+
+      <div
+        className={[
+          "min-w-0 break-words",
+          indent && lineNumber === undefined ? "pl-6" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {label}
         {note ? (
           <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
@@ -333,6 +346,16 @@ function ReportLine({
       >
         {value === undefined ? "" : formatRupiah(value)}
       </div>
+    </div>
+  );
+}
+
+function ReportLineHeader() {
+  return (
+    <div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)_minmax(120px,auto)] gap-4 border-b border-slate-100 pb-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-400 md:grid-cols-[52px_minmax(0,1fr)_minmax(170px,auto)]">
+      <div className="text-right">No</div>
+      <div>Kode / Uraian</div>
+      <div className="text-right">Nilai</div>
     </div>
   );
 }
@@ -354,7 +377,8 @@ function NeracaAccountRows({
 
   return (
     <>
-      {rows.map((row) => {
+      <ReportLineHeader />
+      {rows.map((row, index) => {
         const label = [
           row.kepmen_account_code,
           row.kepmen_account_name ?? row.presentation_label,
@@ -372,6 +396,7 @@ function NeracaAccountRows({
         return (
           <ReportLine
             key={`${row.account_id}-${row.display_order}`}
+            lineNumber={index + 1}
             label={label || "Akun Kepmen 136"}
             value={row.presentation_display_amount}
             indent
@@ -617,7 +642,8 @@ function LabaRugiAccountRows({
 
   return (
     <>
-      {rows.map((row) => {
+      <ReportLineHeader />
+      {rows.map((row, index) => {
         const label = [
           row.kepmen_account_code,
           row.kepmen_account_name,
@@ -635,7 +661,8 @@ function LabaRugiAccountRows({
         return (
           <ReportLine
             key={`${row.account_id}-${row.display_order}`}
-            label={label || "Akun Kepmen 136"}
+            lineNumber={index + 1}
+            label={label || "Akun Laba Rugi Kepmen 136"}
             value={row.amount}
             indent
             note={orviaLabel}
@@ -879,7 +906,8 @@ function ArusKasAccountRows({
 
   return (
     <>
-      {rows.map((row) => {
+      <ReportLineHeader />
+      {rows.map((row, index) => {
         const label = [
           row.kepmen_cash_flow_code,
           row.kepmen_cash_flow_line,
@@ -902,6 +930,7 @@ function ArusKasAccountRows({
         return (
           <ReportLine
             key={`${row.kepmen_cash_flow_section}-${row.kepmen_cash_flow_code}-${row.display_order}`}
+            lineNumber={index + 1}
             label={label || "Pos Arus Kas Kepmen 136"}
             value={row.total_cash_effect}
             indent
@@ -1175,7 +1204,8 @@ function PerubahanEkuitasAccountRows({
 
   return (
     <>
-      {rows.map((row) => {
+      <ReportLineHeader />
+      {rows.map((row, index) => {
         const label = [
           row.kepmen_equity_code,
           row.kepmen_equity_line,
@@ -1201,6 +1231,7 @@ function PerubahanEkuitasAccountRows({
         return (
           <ReportLine
             key={`${row.kepmen_equity_section}-${row.kepmen_equity_line}-${row.display_order}-${row.source_id ?? "row"}`}
+            lineNumber={index + 1}
             label={label || "Pos Perubahan Ekuitas Kepmen 136"}
             value={row.display_amount}
             indent
