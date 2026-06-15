@@ -6,6 +6,7 @@ import { getLoginContext } from "@/lib/auth/get-login-context";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { PageHeader } from "@/components/ui/page-header";
+import { ExportPdfButton } from "./_components/export-pdf-button";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -166,6 +167,25 @@ export default async function BukuBesarPage({
   const totalDebit = rows.reduce((sum, row) => sum + toNumber(row.debit), 0);
   const totalCredit = rows.reduce((sum, row) => sum + toNumber(row.credit), 0);
   const latestBalance = getLatestBalance(rows);
+  const selectedAccountLabel = selectedAccountId
+    ? accountOptions.find((account) => account.id === selectedAccountId)?.label ??
+      "Akun terpilih"
+    : "Semua akun";
+
+  const reportData = {
+    year: selectedYear,
+    period: {
+      startDate,
+      endDate,
+    },
+    accountLabel: selectedAccountLabel,
+    rows,
+    totals: {
+      totalDebit,
+      totalCredit,
+      latestBalance,
+    },
+  };
 
   return (
     <div className="space-y-5">
@@ -176,8 +196,14 @@ export default async function BukuBesarPage({
         title="Buku Besar"
         description="Menampilkan mutasi debit, kredit, sumber jurnal, dan saldo berjalan per akun berdasarkan view database v_general_ledger."
         action={
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-            <BookOpenText className="h-6 w-6" />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <ExportPdfButton
+              fileName={`buku-besar-${selectedYear}.pdf`}
+              reportData={reportData}
+            />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+              <BookOpenText className="h-6 w-6" />
+            </div>
           </div>
         }
       />
