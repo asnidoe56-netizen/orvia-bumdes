@@ -2146,23 +2146,6 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
     <div className="space-y-5">
       <PageBackButton fallbackHref="/unit/dashboard/reports/kepmen-136" />
 
-      <PageHeader
-        breadcrumb="Admin Unit / Laporan / Kepmen 136"
-        title={report?.report_name ?? getReadableScope(reportCode)}
-        description={
-          report?.report_note ??
-          "Halaman detail laporan Kepmen 136. Tahap ini memastikan route detail tersedia sebelum tabel laporan lengkap ditampilkan."
-        }
-        action={
-          <Link
-            href="/unit/dashboard/reports/kepmen-136"
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-emerald-200 hover:text-emerald-700"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Kembali ke paket
-          </Link>
-        }
-      />
 
       {error ? (
         <section className="rounded-3xl border border-rose-100 bg-rose-50 p-5 shadow-sm">
@@ -2183,60 +2166,7 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
         </section>
       ) : (
         <>
-          <section className="grid gap-4 md:grid-cols-3">
-            <StatCard
-              title="Kode Laporan"
-              value={report.report_code}
-              description="Kode metadata laporan dari database Kepmen 136."
-              icon={<FileSpreadsheet className="h-6 w-6" />}
-            />
 
-            <StatCard
-              title="Urutan Laporan"
-              value={String(report.report_order)}
-              description="Urutan tampilan laporan dalam katalog Kepmen 136."
-              icon={<ShieldCheck className="h-6 w-6" />}
-            />
-
-            <StatCard
-              title="Metadata Ringan"
-              value="Katalog"
-              description="Metadata laporan dibaca dari katalog ringan tanpa menghitung ulang status paket."
-              icon={<Database className="h-6 w-6" />}
-            />
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-950">
-              Sumber View Database
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Halaman detail ini sudah terhubung ke metadata Kepmen 136. Tabel
-              laporan lengkap akan kita buka satu per satu dari view summary dan
-              detail berikut.
-            </p>
-
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-bold text-slate-500">
-                  Summary View
-                </p>
-                <p className="mt-2 break-words text-sm font-semibold text-slate-950">
-                  {report.summary_view ?? "-"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-bold text-slate-500">
-                  Detail View
-                </p>
-                <p className="mt-2 break-words text-sm font-semibold text-slate-950">
-                  {report.detail_view ?? "-"}
-                </p>
-              </div>
-            </div>
-          </section>
 
           {reportCode === "NERACA" ? (
             <NeracaKepmen136Content
