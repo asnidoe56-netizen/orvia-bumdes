@@ -901,7 +901,7 @@ function ArusKasAccountRows({
           row.is_cash_effective === false ? "Non-kas/Internal" : null,
         ]
           .filter(Boolean)
-          .join(" ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
+          .join(" - ");
 
         return (
           <ReportLine
@@ -1200,7 +1200,7 @@ function PerubahanEkuitasAccountRows({
           row.status ? `Status: ${row.status}` : null,
         ]
           .filter(Boolean)
-          .join(" ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ");
+          .join(" - ");
 
         return (
           <ReportLine
