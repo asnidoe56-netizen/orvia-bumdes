@@ -162,6 +162,9 @@ export async function POST(request: Request, context: RouteContext) {
   revalidatePath("/platform/dashboard/public-content");
   revalidatePath(`/platform/dashboard/public-content/sections/${id}/edit`);
 
-  const redirectUrl = new URL("/platform/dashboard/public-content", request.url);
-  return NextResponse.redirect(redirectUrl, 303);
+  return new NextResponse(null, {
+    status: 303,
+    headers: { Location: "/platform/dashboard/public-content" },
+  });
 }
+
