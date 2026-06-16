@@ -253,3 +253,129 @@ export async function getAiCustomerReceivables(prompt?: string | null) {
     rows,
   };
 }
+
+export type AiSupplierPayableRow = {
+  purchase_invoice_id: string;
+  unit_id: string | null;
+  supplier_name: string | null;
+  invoice_no: string;
+  invoice_date: string;
+  due_date: string | null;
+  total_amount: number;
+  payment_amount: number;
+  outstanding_amount: number;
+  payable_status: string;
+};
+
+type SupplierPayableDbRow = {
+  purchase_invoice_id: string | null;
+  unit_id: string | null;
+  supplier_name: string | null;
+  invoice_no: string | null;
+  invoice_date: string | null;
+  due_date: string | null;
+  total_amount: number | string | null;
+  payment_amount: number | string | null;
+  outstanding_amount: number | string | null;
+  payable_status: string | null;
+};
+
+/**
+ * Read-only ORVIA AI tool.
+ *
+ * Purpose:
+ * - Read tenant-bound supplier payables for AI answers and future MCP tools.
+ *
+ * Hard boundaries:
+ * - no insert
+ * - no update
+ * - no delete
+ * - no posting
+ * - no journal mutation
+ * - no payable mutation
+ * - no cash/bank mutation
+ * - tenant_id and unit_id are derived from authenticated login context only
+ */
+export async function getAiSupplierPayables(prompt?: string | null) {
+  const supabase = await createClient();
+  const context = await getOrviaAiContext();
+
+  assertAiRoleAllowed(context, "read.payables");
+  assertAiTenantScope(context);
+  assertAiUnitScope(context);
+
+  const scopeFilter = getAiReadableScopeFilter(context);
+
+  let query = supabase
+    .from("v_purchase_invoice_payables")
+    .select(
+      "purchase_invoice_id, unit_id, supplier_name, invoice_no, invoice_date, due_date, total_amount, payment_amount, outstanding_amount, payable_status"
+    )
+    .eq("tenant_id", scopeFilter.tenantId)
+    .gt("outstanding_amount", 0)
+    .order("invoice_date", { ascending: true })
+    .order("invoice_no", { ascending: true });
+
+  if (scopeFilter.scope === "unit") {
+    query = query.eq("unit_id", scopeFilter.unitId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Gagal membaca hutang supplier: ${error.message}`);
+  }
+
+  const rows: AiSupplierPayableRow[] = (
+    (data ?? []) as SupplierPayableDbRow[]
+  )
+    .filter((row) => Boolean(row.purchase_invoice_id))
+    .map((row) => ({
+      purchase_invoice_id: row.purchase_invoice_id as string,
+      unit_id: row.unit_id ?? null,
+      supplier_name: row.supplier_name ?? null,
+      invoice_no: row.invoice_no ?? "-",
+      invoice_date: row.invoice_date ?? "-",
+      due_date: row.due_date ?? null,
+      total_amount: toNumber(row.total_amount),
+      payment_amount: toNumber(row.payment_amount),
+      outstanding_amount: toNumber(row.outstanding_amount),
+      payable_status: row.payable_status ?? "-",
+    }));
+
+  const totalOutstanding = rows.reduce(
+    (sum, row) => sum + row.outstanding_amount,
+    0
+  );
+
+  const largestPayables = [...rows]
+    .sort((a, b) => b.outstanding_amount - a.outstanding_amount)
+    .slice(0, 5);
+
+  await logOrviaAiToolUsage(supabase, context, {
+    toolName: "orvia.read.supplier_payables",
+    permission: "read.payables",
+    prompt: prompt ?? null,
+    summary: "ORVIA AI membaca daftar hutang supplier.",
+    metadata: {
+      row_count: rows.length,
+      total_outstanding: totalOutstanding,
+      largest_payable_count: largestPayables.length,
+    },
+  });
+
+  return {
+    mode: "read_only",
+    tool: "orvia.read.supplier_payables",
+    requires_user_confirmation: false,
+    scope: scopeFilter.scope,
+    tenant_id: context.tenantId,
+    unit_id: scopeFilter.unitId,
+    totals: {
+      outstanding: totalOutstanding,
+      invoice_count: rows.length,
+    },
+    largest_payables: largestPayables,
+    rows,
+  };
+}
