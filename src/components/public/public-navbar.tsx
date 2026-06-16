@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -25,10 +25,10 @@ export function PublicNavbar({ siteSettings }: PublicNavbarProps) {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-slate-200/70 bg-white/95 shadow-sm backdrop-blur-xl">
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-cyan-100/70 bg-white/[0.90] shadow-[0_14px_35px_rgba(15,23,42,0.05)] backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex min-w-0 items-center gap-3">
-            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-emerald-700 text-white shadow-lg shadow-emerald-200">
+            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-cyan-700 text-white shadow-lg shadow-cyan-200">
               {logoUrl ? (
                 <Image
                   src={logoUrl}
@@ -44,7 +44,7 @@ export function PublicNavbar({ siteSettings }: PublicNavbarProps) {
             </div>
 
             <div className="min-w-0">
-              <p className="truncate text-sm font-black uppercase tracking-[0.28em] text-emerald-700">
+              <p className="truncate text-sm font-black uppercase tracking-[0.22em] text-emerald-700">
                 {brandName}
               </p>
               <p className="truncate text-sm font-bold text-slate-900">
@@ -58,7 +58,7 @@ export function PublicNavbar({ siteSettings }: PublicNavbarProps) {
               <Link
                 key={item.label}
                 href={item.href}
-                className="rounded-full px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700"
+                className="rounded-full px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-cyan-50/80 hover:text-emerald-700"
               >
                 {item.label}
               </Link>
@@ -68,13 +68,13 @@ export function PublicNavbar({ siteSettings }: PublicNavbarProps) {
           <div className="hidden items-center gap-3 sm:flex">
             <Link
               href={secondaryCtaHref}
-              className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-black text-slate-800 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+              className="rounded-2xl border border-white/70 bg-white/[0.82] px-5 py-2.5 text-sm font-black text-slate-800 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl transition hover:border-cyan-200 hover:bg-cyan-50/80 hover:text-emerald-700"
             >
               {secondaryCtaLabel}
             </Link>
             <Link
               href={primaryCtaHref}
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-800"
+              className="inline-flex items-center gap-2 rounded-2xl bg-[#b6f4fc] px-5 py-2.5 text-sm font-black text-slate-950 shadow-lg shadow-cyan-100 transition hover:-translate-y-0.5 hover:bg-[#8ee8f5]"
             >
               {primaryCtaLabel}
               <ArrowRight className="h-4 w-4" />
@@ -84,7 +84,7 @@ export function PublicNavbar({ siteSettings }: PublicNavbarProps) {
           <button
             type="button"
             aria-label="Buka menu"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:bg-slate-50 lg:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/70 bg-white/[0.82] text-slate-800 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl transition hover:bg-cyan-50/80 lg:hidden"
             onClick={() => setIsMenuOpen(true)}
           >
             <Menu className="h-5 w-5" />
@@ -104,7 +104,7 @@ export function PublicNavbar({ siteSettings }: PublicNavbarProps) {
           <aside className="absolute right-4 top-4 flex h-fit max-h-[calc(100vh-2rem)] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-y-auto rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-emerald-700 text-white">
+                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-cyan-700 text-white">
                   {logoUrl ? (
                     <Image
                       src={logoUrl}
@@ -162,7 +162,7 @@ export function PublicNavbar({ siteSettings }: PublicNavbarProps) {
               </Link>
               <Link
                 href={primaryCtaHref}
-                className="rounded-2xl bg-emerald-700 px-5 py-3 text-center text-sm font-black text-white shadow-lg shadow-emerald-200"
+                className="rounded-2xl bg-[#b6f4fc] px-5 py-3 text-center text-sm font-black text-slate-950 shadow-lg shadow-cyan-100"
                 onClick={() => setIsMenuOpen(false)}
               >
                 {primaryCtaLabel}

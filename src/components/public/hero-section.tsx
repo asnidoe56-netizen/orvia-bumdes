@@ -1,4 +1,4 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Building2 } from "lucide-react";
 import { trustItems } from "@/components/public/landing-data";
@@ -29,10 +29,14 @@ export function HeroSection({ section, featureItems }: HeroSectionProps) {
   const primaryCtaHref = section?.cta_href || "/login";
 
   return (
-    <section id="beranda" className="relative overflow-hidden pt-20">
-      <div className="absolute right-0 top-20 h-72 w-72 rounded-full bg-emerald-100/70 blur-3xl" />
-      <div className="absolute bottom-0 left-1/2 h-80 w-80 rounded-full bg-orange-100/70 blur-3xl" />
-      <div className="absolute right-16 top-48 hidden h-44 w-44 rounded-full border border-emerald-100 2xl:block" />
+    <section
+      id="beranda"
+      className="relative overflow-hidden bg-[radial-gradient(circle_at_86%_12%,rgba(103,232,249,0.34),transparent_34%),radial-gradient(circle_at_12%_84%,rgba(255,237,213,0.46),transparent_31%),linear-gradient(135deg,#ffffff_0%,#f8fdff_42%,#e0f7ff_100%)] pt-20"
+    >
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_0_43%,rgba(125,211,252,0.16)_43%_55%,transparent_55%),linear-gradient(45deg,transparent_0_58%,rgba(186,230,253,0.24)_58%_68%,transparent_68%)]" />
+      <div className="absolute -right-20 top-16 h-96 w-96 rounded-full bg-cyan-200/35 blur-3xl" />
+      <div className="absolute bottom-0 left-1/2 h-80 w-80 rounded-full bg-orange-100/65 blur-3xl" />
+      <div className="absolute right-16 top-48 hidden h-44 w-44 rounded-full border border-cyan-200/70 bg-white/20 backdrop-blur-sm 2xl:block" />
 
       <div className="relative mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 2xl:grid-cols-[0.86fr_1.14fr] lg:px-8 lg:py-20">
         <section className="relative z-10">
@@ -58,7 +62,7 @@ export function HeroSection({ section, featureItems }: HeroSectionProps) {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href={primaryCtaHref}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-4 text-sm font-black text-white shadow-xl shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-800"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#b6f4fc] px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-100 transition hover:-translate-y-0.5 hover:bg-[#8ee8f5]"
             >
               {primaryCtaLabel}
               <ArrowRight className="h-4 w-4" />
