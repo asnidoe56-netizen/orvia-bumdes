@@ -1,163 +1,146 @@
-﻿import Link from "next/link"
-import { redirect } from "next/navigation"
-import { ArrowLeft, CalendarClock, CheckCircle2, Clock, LockKeyhole, RotateCcw, ShieldCheck } from "lucide-react"
+﻿import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ArrowLeft, CalendarClock, Clock, LockKeyhole, RotateCcw } from "lucide-react";
 
-import { requireRole } from "@/lib/auth/require-role"
-import { createClient } from "@/lib/supabase/server"
-
-type AccountingPeriodRecord = {
-  id: string
-  unit_id: string | null
-  period_year: number | null
-  period_month: number | null
-  period_start: string | null
-  period_end: string | null
-  status: string | null
-  notes: string | null
-}
+import { requireRole } from "@/lib/auth/require-role";
+import { createClient } from "@/lib/supabase/server";
 
 type BusinessUnitRecord = {
-  id: string
-  nama_unit: string | null
+  id: string;
+  kode_unit: string | null;
+  nama_unit: string | null;
+  jenis_unit: string | null;
+  status: string | null;
+};
+
+type AccountingPeriodRecord = {
+  id: string;
+  unit_id: string | null;
+  status: string | null;
+};
+
+type ReopenRequestRecord = {
+  id: string;
+  period_id: string | null;
+  unit_id: string | null;
+  status: string | null;
+};
+
+type UnitSummary = {
+  unit: BusinessUnitRecord;
+  open: number;
+  closed: number;
+  reopened: number;
+  locked: number;
+  pending: number;
+};
+
+type PageProps = {
+  searchParams?: Promise<{
+    error?: string;
+  }>;
+};
+
+function normalize(value: string | null) {
+  return (value || "").trim().toLowerCase();
 }
 
-type PeriodRow = {
-  id: string
-  unit: string
-  period: string
-  status: string
-  description: string
-  sortUnit: string
-  sortYear: number
-  sortMonth: number
+function isActiveUnit(unit: BusinessUnitRecord) {
+  const status = normalize(unit.status);
+
+  return status === "aktif" || status === "active";
 }
 
-const monthNames = [
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
-]
-
-const statusStyles: Record<string, string> = {
-  open: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  closed: "border-amber-200 bg-amber-50 text-amber-700",
-  reopened: "border-sky-200 bg-sky-50 text-sky-700",
-  locked: "border-slate-300 bg-slate-100 text-slate-700",
+function createSummary(unit: BusinessUnitRecord): UnitSummary {
+  return {
+    unit,
+    open: 0,
+    closed: 0,
+    reopened: 0,
+    locked: 0,
+    pending: 0,
+  };
 }
 
-function normalizeStatus(status: string | null) {
-  return (status || "open").toLowerCase()
-}
-
-function formatPeriod(year: number | null, month: number | null, periodStart: string | null, periodEnd: string | null) {
-  if (year && month && month >= 1 && month <= 12) {
-    return `${monthNames[month - 1]} ${year}`
-  }
-
-  const fallbackDate = periodStart || periodEnd
-
-  if (fallbackDate) {
-    const date = new Date(`${fallbackDate}T00:00:00`)
-
-    if (!Number.isNaN(date.getTime())) {
-      return date.toLocaleDateString("id-ID", {
-        month: "long",
-        year: "numeric",
-      })
-    }
-  }
-
-  return "Periode tidak diketahui"
-}
-
-function getStatusDescription(status: string, notes: string | null) {
-  if (notes) return notes
-
-  switch (status) {
-    case "open":
-      return "Periode berjalan dan masih dapat menerima transaksi."
-    case "closed":
-      return "Periode sudah ditutup dan perlu pengajuan buka ulang untuk transaksi tambahan."
-    case "reopened":
-      return "Periode sedang dibuka ulang berdasarkan persetujuan."
-    case "locked":
-      return "Laporan sudah final dan tidak dapat dibuka lewat alur normal."
-    default:
-      return "Status periode belum dikenali oleh tampilan."
-  }
-}
-
-function buildPeriodRows(periods: AccountingPeriodRecord[], units: BusinessUnitRecord[]) {
-  const unitsById = new Map(units.map((unit) => [unit.id, unit.nama_unit || "Unit tanpa nama"]))
-
-  return periods
-    .map((period): PeriodRow => {
-      const status = normalizeStatus(period.status)
-      const unitName = period.unit_id ? unitsById.get(period.unit_id) || "Unit tidak ditemukan" : "Tanpa unit"
-
-      return {
-        id: period.id,
-        unit: unitName,
-        period: formatPeriod(period.period_year, period.period_month, period.period_start, period.period_end),
-        status,
-        description: getStatusDescription(status, period.notes),
-        sortUnit: unitName,
-        sortYear: period.period_year || 0,
-        sortMonth: period.period_month || 0,
-      }
-    })
-    .sort((a, b) => {
-      const unitCompare = a.sortUnit.localeCompare(b.sortUnit, "id-ID")
-
-      if (unitCompare !== 0) return unitCompare
-      if (a.sortYear !== b.sortYear) return b.sortYear - a.sortYear
-
-      return b.sortMonth - a.sortMonth
-    })
-}
-
-export default async function PeriodeAkuntansiPage() {
-  const context = await requireRole(["direktur_bumdes", "admin_bumdes"])
+export default async function PeriodeAkuntansiPage({ searchParams }: PageProps) {
+  const context = await requireRole(["direktur_bumdes", "admin_bumdes"]);
 
   if (!context.tenant_id) {
-    redirect("/login")
+    redirect("/login");
   }
 
-  const supabase = await createClient()
+  const search = searchParams ? await searchParams : {};
+  const supabase = await createClient();
 
-  const [periodsResult, unitsResult] = await Promise.all([
-    supabase
-      .from("accounting_periods")
-      .select("id, unit_id, period_year, period_month, period_start, period_end, status, notes")
-      .eq("tenant_id", context.tenant_id)
-      .order("period_year", { ascending: false })
-      .order("period_month", { ascending: false })
-      .limit(300),
+  const [unitsResult, periodsResult, requestsResult] = await Promise.all([
     supabase
       .from("business_units")
-      .select("id, nama_unit")
+      .select("id, kode_unit, nama_unit, jenis_unit, status")
       .eq("tenant_id", context.tenant_id)
       .order("nama_unit", { ascending: true }),
-  ])
+    supabase
+      .from("accounting_periods")
+      .select("id, unit_id, status")
+      .eq("tenant_id", context.tenant_id)
+      .limit(1200),
+    supabase
+      .from("accounting_period_reopen_requests")
+      .select("id, period_id, unit_id, status")
+      .eq("tenant_id", context.tenant_id)
+      .in("status", ["pending", "approved"])
+      .limit(1200),
+  ]);
 
-  const periods = (periodsResult.data || []) as AccountingPeriodRecord[]
-  const units = (unitsResult.data || []) as BusinessUnitRecord[]
-  const periodRows = buildPeriodRows(periods, units)
+  const loadError = unitsResult.error || periodsResult.error || requestsResult.error;
 
-  const openCount = periodRows.filter((row) => row.status === "open").length
-  const closedCount = periodRows.filter((row) => row.status === "closed").length
-  const reopenedCount = periodRows.filter((row) => row.status === "reopened").length
-  const lockedCount = periodRows.filter((row) => row.status === "locked").length
-  const loadError = periodsResult.error || unitsResult.error
+  const activeUnits = ((unitsResult.data || []) as BusinessUnitRecord[]).filter(isActiveUnit);
+  const periods = (periodsResult.data || []) as AccountingPeriodRecord[];
+  const requests = (requestsResult.data || []) as ReopenRequestRecord[];
+
+  const summaries = new Map<string, UnitSummary>();
+  const approvedRequestPeriodIds = new Set(
+    requests
+      .filter((request) => normalize(request.status) === "approved" && request.period_id)
+      .map((request) => request.period_id as string)
+  );
+
+  activeUnits.forEach((unit) => {
+    summaries.set(unit.id, createSummary(unit));
+  });
+
+  periods.forEach((period) => {
+    if (!period.unit_id) return;
+
+    const summary = summaries.get(period.unit_id);
+    if (!summary) return;
+
+    const status = normalize(period.status) || "open";
+
+    if (status === "closed") summary.closed += 1;
+    else if (status === "locked") summary.locked += 1;
+    else if (status === "reopened") summary.reopened += 1;
+    else if (approvedRequestPeriodIds.has(period.id)) summary.reopened += 1;
+    else summary.open += 1;
+  });
+
+  requests.forEach((request) => {
+    if (!request.unit_id) return;
+
+    const summary = summaries.get(request.unit_id);
+    if (!summary) return;
+
+    if (normalize(request.status) === "pending") {
+      summary.pending += 1;
+    }
+  });
+
+  const rows = Array.from(summaries.values());
+
+  const totalOpen = rows.reduce((total, row) => total + row.open, 0);
+  const totalClosed = rows.reduce((total, row) => total + row.closed, 0);
+  const totalReopened = rows.reduce((total, row) => total + row.reopened, 0);
+  const totalLocked = rows.reduce((total, row) => total + row.locked, 0);
+  const totalPending = rows.reduce((total, row) => total + row.pending, 0);
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
@@ -180,41 +163,46 @@ export default async function PeriodeAkuntansiPage() {
                 Manajemen Periode Akuntansi
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-                Kelola status periode bulanan, penutupan otomatis, pembukaan ulang periode tertutup,
-                dan penguncian periode final. Data ditarik langsung dari database sesuai tenant BUMDes
-                yang sedang login.
+                Pantau periode akuntansi per unit. Halaman awal hanya menampilkan unit aktif dan
+                ringkasan status agar ringan. Detail Januari sampai Desember dibuka dari tombol Detail.
               </p>
             </div>
 
             <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              Grace period awal: <span className="font-bold">5 hari</span>
+              Pending approval: <span className="font-bold">{totalPending}</span>
             </div>
           </div>
         </div>
+
+        {search.error ? (
+          <section className="rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 shadow-sm sm:p-6">
+            {search.error}
+          </section>
+        ) : null}
 
         <section className="grid gap-4 md:grid-cols-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <CalendarClock className="h-6 w-6 text-emerald-600" />
             <p className="mt-3 text-sm text-slate-500">Periode berjalan</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{openCount} Open</p>
+            <p className="mt-1 text-2xl font-bold text-slate-900">{totalOpen} Open</p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <Clock className="h-6 w-6 text-amber-600" />
             <p className="mt-3 text-sm text-slate-500">Closed</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{closedCount}</p>
+            <p className="mt-1 text-2xl font-bold text-slate-900">{totalClosed}</p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <RotateCcw className="h-6 w-6 text-sky-600" />
             <p className="mt-3 text-sm text-slate-500">Reopened</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{reopenedCount}</p>
+            <p className="mt-1 text-2xl font-bold text-slate-900">{totalReopened}</p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <LockKeyhole className="h-6 w-6 text-slate-700" />
             <p className="mt-3 text-sm text-slate-500">Final</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{lockedCount} Locked</p>
+            <p className="mt-1 text-2xl font-bold text-slate-900">{totalLocked} Locked</p>
           </div>
         </section>
 
@@ -226,80 +214,62 @@ export default async function PeriodeAkuntansiPage() {
 
         <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-5 sm:p-6">
-            <h2 className="text-lg font-bold text-slate-900">Daftar Periode per Unit</h2>
+            <h2 className="text-lg font-bold text-slate-900">Unit Aktif</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Data di bawah mengikuti tenant BUMDes yang sedang login dan unit usaha dalam scope tenant tersebut.
+              Klik Detail untuk melihat Januari sampai Desember dan menyetujui permintaan buka periode.
             </p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-sm">
-              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-5 py-3">Unit</th>
-                  <th className="px-5 py-3">Periode</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Keterangan</th>
-                  <th className="px-5 py-3 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {periodRows.length > 0 ? (
-                  periodRows.map((row) => (
-                    <tr key={row.id} className="bg-white">
-                      <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-900">{row.unit}</td>
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-700">{row.period}</td>
+          {rows.length === 0 ? (
+            <div className="p-5 text-sm text-slate-600">Belum ada unit aktif pada tenant BUMDes ini.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-100 text-sm">
+                <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-5 py-3">Unit</th>
+                    <th className="px-5 py-3">Jenis</th>
+                    <th className="px-5 py-3 text-center">Open</th>
+                    <th className="px-5 py-3 text-center">Closed</th>
+                    <th className="px-5 py-3 text-center">Reopened</th>
+                    <th className="px-5 py-3 text-center">Locked</th>
+                    <th className="px-5 py-3 text-center">Pending</th>
+                    <th className="px-5 py-3 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {rows.map((row) => (
+                    <tr key={row.unit.id} className="hover:bg-slate-50">
                       <td className="whitespace-nowrap px-5 py-4">
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusStyles[row.status] || "border-slate-200 bg-slate-50 text-slate-600"}`}>
-                          {row.status}
+                        <div className="font-semibold text-slate-900">{row.unit.nama_unit || "Unit tanpa nama"}</div>
+                        <div className="text-xs text-slate-500">{row.unit.kode_unit || "-"}</div>
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-slate-700">{row.unit.jenis_unit || "-"}</td>
+                      <td className="px-5 py-4 text-center font-semibold text-emerald-700">{row.open}</td>
+                      <td className="px-5 py-4 text-center font-semibold text-amber-700">{row.closed}</td>
+                      <td className="px-5 py-4 text-center font-semibold text-sky-700">{row.reopened}</td>
+                      <td className="px-5 py-4 text-center font-semibold text-slate-700">{row.locked}</td>
+                      <td className="px-5 py-4 text-center">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${row.pending > 0 ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-500"}`}>
+                          {row.pending}
                         </span>
                       </td>
-                      <td className="min-w-[260px] px-5 py-4 text-slate-600">{row.description}</td>
                       <td className="whitespace-nowrap px-5 py-4 text-right">
-                        <button className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                        <Link
+                          href={`/bumdes/dashboard/periode-akuntansi/${row.unit.id}`}
+                          className="inline-flex rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                        >
                           Detail
-                        </button>
+                        </Link>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr className="bg-white">
-                    <td colSpan={5} className="px-5 py-8 text-center text-sm text-slate-500">
-                      Belum ada periode akuntansi untuk tenant BUMDes ini.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-            <h3 className="mt-3 font-bold text-slate-900">Open</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Transaksi normal boleh masuk selama periode masih terbuka.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <RotateCcw className="h-6 w-6 text-sky-600" />
-            <h3 className="mt-3 font-bold text-slate-900">Closed / Reopen</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Periode tertutup tidak bisa diinput langsung dan perlu pengajuan buka ulang.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <ShieldCheck className="h-6 w-6 text-slate-700" />
-            <h3 className="mt-3 font-bold text-slate-900">Locked</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Periode final tidak boleh dibuka lewat workflow normal.
-            </p>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
     </main>
-  )
+  );
 }
