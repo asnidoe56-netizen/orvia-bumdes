@@ -364,6 +364,102 @@ export type SupplierDebtPaymentAssistantOptions = {
  * - no cash-bank mutation
  * - no payable mutation
  */
+export type AssistantCustomerReceivableInvoiceOption = {
+  sales_invoice_id: string;
+  customer_name: string | null;
+  invoice_no: string;
+  invoice_date: string;
+  due_date: string | null;
+  total_amount: number | string;
+  paid_amount: number | string;
+  outstanding_amount: number | string;
+  receivable_status: string;
+};
+
+export type CustomerPaymentAssistantOptions = {
+  receivables: AssistantCustomerReceivableInvoiceOption[];
+  cashBankAccounts: AssistantCashBankAccountOption[];
+};
+
+/**
+ * Read-only helper for Customer Receivable Payment assistant.
+ *
+ * Hard boundary:
+ * - no insert
+ * - no update
+ * - no delete
+ * - no posting
+ * - no transaction RPC
+ * - no journal mutation
+ * - no cash-bank mutation
+ * - no receivable mutation
+ */
+export async function getCustomerPaymentAssistantOptions(
+  supabase: SupabaseClient,
+  context: LoginContext | null
+): Promise<CustomerPaymentAssistantOptions> {
+  const { tenantId, unitId } = assertUnitContext(context);
+
+  const [receivablesResult, cashBankResult, balanceResult] = await Promise.all([
+    supabase
+      .from("v_sales_invoice_receivables")
+      .select(
+        "sales_invoice_id, customer_name, invoice_no, invoice_date, due_date, total_amount, paid_amount, outstanding_amount, receivable_status"
+      )
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .gt("outstanding_amount", 0)
+      .order("invoice_date", { ascending: true })
+      .order("invoice_no", { ascending: true }),
+
+    supabase
+      .from("cash_bank_accounts")
+      .select("id, account_code, account_name, account_kind")
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId)
+      .eq("is_active", true)
+      .order("account_code", { ascending: true }),
+
+    supabase
+      .from("v_cash_bank_balance")
+      .select("cash_bank_account_id, current_balance")
+      .eq("tenant_id", tenantId)
+      .eq("unit_id", unitId),
+  ]);
+
+  if (receivablesResult.error) {
+    throw new Error(receivablesResult.error.message);
+  }
+
+  if (cashBankResult.error) {
+    throw new Error(cashBankResult.error.message);
+  }
+
+  if (balanceResult.error) {
+    throw new Error(balanceResult.error.message);
+  }
+
+  const balanceByAccount = new Map(
+    (balanceResult.data ?? []).map((balance) => [
+      balance.cash_bank_account_id,
+      Number(balance.current_balance ?? 0),
+    ])
+  );
+
+  const cashBankAccounts = (cashBankResult.data ?? []).map((account) => ({
+    id: account.id,
+    account_code: account.account_code,
+    account_name: account.account_name,
+    account_kind: account.account_kind,
+    current_balance: balanceByAccount.get(account.id) ?? 0,
+  }));
+
+  return {
+    receivables: (receivablesResult.data ??
+      []) as AssistantCustomerReceivableInvoiceOption[],
+    cashBankAccounts,
+  };
+}
 export async function getSupplierDebtPaymentAssistantOptions(
   supabase: SupabaseClient,
   context: LoginContext | null

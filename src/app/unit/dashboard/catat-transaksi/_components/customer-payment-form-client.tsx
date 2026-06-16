@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 
@@ -28,6 +28,23 @@ type CustomerPaymentFormClientProps = {
   receivables: ReceivableInvoice[];
   cashBankAccounts: CashBankAccountWithBalance[];
 };
+type CustomerPaymentAssistantDraft = {
+  payment_date?: string;
+  sales_invoice_id?: string;
+  cash_bank_account_id?: string;
+  amount?: number | string;
+  notes?: string;
+};
+
+type CustomerPaymentAssistantResponse = {
+  success: boolean;
+  module: "customer_payment";
+  draft: CustomerPaymentAssistantDraft | null;
+  summary?: string;
+  warnings?: string[];
+  requires_user_confirmation?: boolean;
+};
+
 
 function formatRupiah(value: number | string | null | undefined) {
   const numberValue = Number(value ?? 0);
@@ -58,6 +75,11 @@ export function CustomerPaymentFormClient({
   const [cashBankAccountId, setCashBankAccountId] = useState("");
   const [amountInput, setAmountInput] = useState("");
   const [notesInput, setNotesInput] = useState("");
+  const [assistantPrompt, setAssistantPrompt] = useState("");
+  const [assistantSummary, setAssistantSummary] = useState("");
+  const [assistantWarnings, setAssistantWarnings] = useState<string[]>([]);
+  const [assistantError, setAssistantError] = useState("");
+  const [isAssistantLoading, setIsAssistantLoading] = useState(false);
 
   const selectedInvoice = useMemo(
     () =>
@@ -86,8 +108,136 @@ export function CustomerPaymentFormClient({
     }
   }
 
+  async function handleAssistantDraft() {
+    const prompt = assistantPrompt.trim();
+
+    if (!prompt) {
+      setAssistantError("Tulis dulu perintah singkat untuk assistant.");
+      return;
+    }
+
+    setIsAssistantLoading(true);
+    setAssistantError("");
+    setAssistantSummary("");
+    setAssistantWarnings([]);
+
+    try {
+      const response = await fetch("/api/unit/assistant", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          module: "customer_payment",
+          prompt,
+        }),
+      });
+
+      const payload = (await response.json()) as CustomerPaymentAssistantResponse;
+
+      if (!response.ok || !payload.success || !payload.draft) {
+        setAssistantError(
+          payload.summary ?? "Assistant belum bisa menyusun draft pembayaran pelanggan."
+        );
+        setAssistantWarnings(payload.warnings ?? []);
+        return;
+      }
+
+      const draft = payload.draft;
+
+      if (draft.payment_date) {
+        setPaymentDate(String(draft.payment_date));
+      }
+
+      if (draft.sales_invoice_id) {
+        handleInvoiceChange(String(draft.sales_invoice_id));
+      }
+
+      if (draft.cash_bank_account_id) {
+        setCashBankAccountId(String(draft.cash_bank_account_id));
+      }
+
+      if (draft.amount !== undefined && draft.amount !== null && draft.amount !== "") {
+        setAmountInput(String(draft.amount));
+      }
+
+      if (draft.notes) {
+        setNotesInput(String(draft.notes));
+      }
+
+      setAssistantSummary(
+        payload.summary ??
+          "Assistant sudah mengisi draft. Periksa ulang sebelum posting."
+      );
+      setAssistantWarnings(payload.warnings ?? []);
+    } catch (error) {
+      setAssistantError(
+        error instanceof Error
+          ? error.message
+          : "Assistant gagal membaca perintah."
+      );
+    } finally {
+      setIsAssistantLoading(false);
+    }
+  }
   return (
     <form action={payCustomerSalesInvoice} className="space-y-5">
+      <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-sm font-bold text-sky-900">
+              Asisten Isi Terima Bayar Pelanggan
+            </p>
+            <p className="mt-1 text-xs leading-5 text-sky-800">
+              Tulis contoh: “hari ini pelanggan Indra bayar piutang 500 ribu ke kas”.
+              Assistant hanya mengisi form. Posting tetap lewat tombol resmi.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
+          <textarea
+            value={assistantPrompt}
+            onChange={(event) => setAssistantPrompt(event.target.value)}
+            rows={3}
+            placeholder="Contoh: hari ini pelanggan Indra bayar piutang 500 ribu ke kas"
+            className="w-full rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+          />
+
+          <button
+            type="button"
+            onClick={handleAssistantDraft}
+            disabled={isAssistantLoading}
+            className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-bold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60 md:self-start"
+          >
+            {isAssistantLoading ? "Membaca..." : "Isi Otomatis"}
+          </button>
+        </div>
+
+        {assistantSummary ? (
+          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold leading-5 text-emerald-800">
+            {assistantSummary}
+          </div>
+        ) : null}
+
+        {assistantError ? (
+          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold leading-5 text-rose-700">
+            {assistantError}
+          </div>
+        ) : null}
+
+        {assistantWarnings.length > 0 ? (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+            <p className="font-bold">Perlu dicek:</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              {assistantWarnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2 md:col-span-2">
           <span className="text-sm font-semibold text-slate-700">

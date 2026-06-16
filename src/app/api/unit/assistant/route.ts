@@ -4,6 +4,7 @@ import { getLoginContext } from "@/lib/auth/get-login-context";
 import {
   getCashPurchaseAssistantOptions,
   getCapitalDebtPaymentAssistantOptions,
+  getCustomerPaymentAssistantOptions,
   getCapitalExpenditureAssistantOptions,
   getCashSaleAssistantOptions,
   getSupplierDebtPaymentAssistantOptions,
@@ -20,6 +21,7 @@ import {
   type AssistantSaleCustomerOption,
   type AssistantSaleInventoryItemOption,
   type AssistantSupplierPayableInvoiceOption,
+  type AssistantCustomerReceivableInvoiceOption,
 } from "@/lib/assistant/unit-assistant-tools";
 
 type AssistantModule =
@@ -31,7 +33,8 @@ type AssistantModule =
   | "credit_sale"
   | "supplier_debt_payment"
   | "capital_debt_payment"
-  | "capital_expenditure";
+  | "capital_expenditure"
+  | "customer_payment";
 
 type ExpenseAccountOption = AssistantExpenseAccountOption;
 type RevenueAccountOption = AssistantRevenueAccountOption;
@@ -44,6 +47,7 @@ type PurchaseInventoryItemOption = AssistantPurchaseInventoryItemOption;
 type SaleCustomerOption = AssistantSaleCustomerOption;
 type SaleInventoryItemOption = AssistantSaleInventoryItemOption;
 type SupplierPayableInvoiceOption = AssistantSupplierPayableInvoiceOption;
+type CustomerReceivableInvoiceOption = AssistantCustomerReceivableInvoiceOption;
 
 
 function formatCurrency(value: number) {
@@ -983,6 +987,53 @@ function pickCapitalPayable(text: string, payables: CapitalPayableOption[]) {
 
   return bySupplier ?? null;
 }
+function pickCustomerReceivableInvoice(
+  text: string,
+  receivables: CustomerReceivableInvoiceOption[]
+) {
+  const normalized = normalizeText(text);
+
+  const byInvoiceNo = receivables.find((invoice) =>
+    normalized.includes(normalizeText(invoice.invoice_no))
+  );
+
+  if (byInvoiceNo) {
+    return byInvoiceNo;
+  }
+
+  const scoredReceivables = receivables
+    .map((invoice) => {
+      const customerName = normalizeText(invoice.customer_name ?? "");
+      const invoiceLabel = normalizeText(
+        `${invoice.invoice_no} ${invoice.customer_name ?? ""}`
+      );
+
+      let score = 0;
+
+      if (invoiceLabel && normalized.includes(invoiceLabel)) score += 8;
+      if (customerName && normalized.includes(customerName)) score += 6;
+
+      for (const word of customerName.split(" ")) {
+        if (word.length >= 3 && normalized.includes(word)) {
+          score += 1;
+        }
+      }
+
+      return { invoice, score };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+
+      return (
+        Number(b.invoice.outstanding_amount ?? 0) -
+        Number(a.invoice.outstanding_amount ?? 0)
+      );
+    });
+
+  return scoredReceivables[0]?.score > 0
+    ? scoredReceivables[0].invoice
+    : null;
+}
 function pickSupplierPayableInvoice(
   text: string,
   payables: SupplierPayableInvoiceOption[]
@@ -1715,6 +1766,121 @@ async function handleCapitalExpenditure({
 
   return NextResponse.json(responsePayload);
 }
+async function handleCustomerPayment({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const { receivables, cashBankAccounts } =
+    await getCustomerPaymentAssistantOptions(supabase, context);
+
+  const parsedDate = parseTransactionDateFromText(prompt, today);
+  const amount = parseAmountFromText(prompt);
+  const pickedInvoice = pickCustomerReceivableInvoice(prompt, receivables);
+  const pickedCashBankAccount = pickCashBankAccount(
+    prompt,
+    cashBankAccounts,
+    amount
+  );
+
+  const outstandingAmount = Number(pickedInvoice?.outstanding_amount ?? 0);
+
+  const warnings: string[] = [];
+
+  if (!pickedInvoice) {
+    warnings.push(
+      "Invoice piutang pelanggan belum terbaca. Pilih invoice secara manual."
+    );
+  }
+
+  if (!pickedCashBankAccount) {
+    warnings.push("Kas/bank tujuan belum terbaca. Pilih kas/bank secara manual.");
+  }
+
+  if (!amount || amount <= 0) {
+    warnings.push("Nominal penerimaan belum terbaca. Isi nominal secara manual.");
+  }
+
+  if (amount > 0 && outstandingAmount > 0 && amount > outstandingAmount) {
+    warnings.push(
+      "Nominal lebih besar dari sisa piutang. Kurangi nominal sebelum posting."
+    );
+  }
+
+  if (parsedDate.warning) {
+    warnings.push(parsedDate.warning);
+  }
+
+  const draft = {
+    payment_date: parsedDate.date,
+    sales_invoice_id: pickedInvoice?.sales_invoice_id ?? "",
+    cash_bank_account_id: pickedCashBankAccount?.id ?? "",
+    amount: amount > 0 ? amount : "",
+    notes: buildDescription(prompt),
+  };
+
+  const responsePayload = {
+    success: true,
+    module: assistantModule,
+    mode: "read_only_form_draft",
+    requires_user_confirmation: true,
+    draft,
+    matched: {
+      invoice_no: pickedInvoice?.invoice_no ?? null,
+      customer_name: pickedInvoice?.customer_name ?? null,
+      cash_bank_account_name: pickedCashBankAccount?.account_name ?? null,
+      outstanding_amount: pickedInvoice?.outstanding_amount ?? null,
+    },
+    warnings,
+    summary: `Assistant backend membaca ini sebagai penerimaan bayar pelanggan ${
+      pickedInvoice
+        ? `${pickedInvoice.invoice_no} - ${pickedInvoice.customer_name ?? "Pelanggan"}`
+        : "invoice belum terbaca"
+    } sebesar ${amount > 0 ? amount : "nominal belum terbaca"} ke ${
+      pickedCashBankAccount
+        ? pickedCashBankAccount.account_name
+        : "kas/bank belum dipilih"
+    }. Posting tetap dilakukan oleh tombol resmi dan engine database.`,
+  };
+
+  const { error: assistantAuditError } = await supabase.rpc("log_audit_event", {
+    p_tenant_id: context.tenant_id,
+    p_unit_id: context.unit_id,
+    p_actor_id: context.user_id,
+    p_actor_role: context.role,
+    p_event_type: "assistant_draft_generated",
+    p_entity_type: "customer_payment_assistant",
+    p_entity_id: null,
+    p_source_type: "unit_assistant_endpoint",
+    p_source_id: null,
+    p_description:
+      "Assistant backend read-only menyusun draft form Terima Bayar Pelanggan.",
+    p_metadata: {
+      module: assistantModule,
+      prompt,
+      draft: responsePayload.draft,
+      matched: responsePayload.matched,
+      warnings,
+      requires_user_confirmation: true,
+      assistant_mode: "read_only_form_draft",
+      tool_name: "getCustomerPaymentAssistantOptions",
+    },
+  });
+
+  if (assistantAuditError) {
+    console.error("customer payment assistant audit error", assistantAuditError);
+  }
+
+  return NextResponse.json(responsePayload);
+}
 async function handleCapitalDebtPayment({
   supabase,
   context,
@@ -1980,7 +2146,8 @@ export async function POST(request: Request) {
       assistantModule !== "credit_sale" &&
       assistantModule !== "supplier_debt_payment" &&
       assistantModule !== "capital_debt_payment" &&
-      assistantModule !== "capital_expenditure"
+      assistantModule !== "capital_expenditure" &&
+      assistantModule !== "customer_payment"
     ) {
       return NextResponse.json(
         {
@@ -2054,6 +2221,16 @@ export async function POST(request: Request) {
 
     if (assistantModule === "capital_expenditure") {
       return handleCapitalExpenditure({
+        supabase,
+        context,
+        assistantModule,
+        prompt,
+        today,
+      });
+    }
+
+    if (assistantModule === "customer_payment") {
+      return handleCustomerPayment({
         supabase,
         context,
         assistantModule,
@@ -2137,21 +2314,4 @@ export async function POST(request: Request) {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
