@@ -15,6 +15,7 @@ export const savingsLoanUnitNav: NavItem[] = [
   // Fitur global unit
   { label: "Master Data", href: "/unit/dashboard/master-data" },
   { label: "Cut-off Migrasi", href: "/unit/dashboard/cutoff-migrasi" },
+  { label: "Permintaan Buka Periode", href: "/unit/dashboard/buka-periode" },
   { label: "Catat Transaksi", href: "/unit/dashboard/catat-transaksi" },
   { label: "Kas & Bank", href: "/unit/dashboard/cash-bank" },
   { label: "Aset Tetap", href: "/unit/dashboard/aset-tetap" },
@@ -43,3 +44,4 @@ export function isSavingsLoanUnit(context: UnitMenuContext) {
 export function getUnitDashboardNav(context: UnitMenuContext): NavItem[] {
   return isSavingsLoanUnit(context) ? savingsLoanUnitNav : unitNav;
 }
+

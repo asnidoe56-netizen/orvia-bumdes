@@ -35,6 +35,7 @@ export const unitNav: NavItem[] = [
   { label: "Ringkasan Unit", href: "/unit/dashboard" },
   { label: "Master Data", href: "/unit/dashboard/master-data" },
   { label: "Cut-off Migrasi", href: "/unit/dashboard/cutoff-migrasi" },
+  { label: "Permintaan Buka Periode", href: "/unit/dashboard/buka-periode" },
   { label: "Daftar Stok Tersedia", href: "/unit/dashboard/daftar-stok" },
   { label: "Catat Transaksi", href: "/unit/dashboard/catat-transaksi" },
   { label: "Cek Alur Transaksi", href: "/unit/dashboard/cek-alur-transaksi" },
@@ -75,6 +76,7 @@ export const bupatiNav: NavItem[] = [
   { label: "Executive Summary", href: "/bupati/dashboard" },
   { label: "Kinerja Daerah", href: "/bupati/dashboard/regional-performance" },
 ];
+
 
 
 
