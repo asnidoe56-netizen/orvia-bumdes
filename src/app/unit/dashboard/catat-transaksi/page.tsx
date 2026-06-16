@@ -54,6 +54,14 @@ const transactionCards: TransactionCardItem[] = [
     tone: "from-violet-50 to-purple-50 text-violet-700 ring-violet-100",
   },
   {
+    title: "Terima Bayar Pelanggan",
+    description: "Penerimaan pembayaran piutang dari penjualan kredit.",
+    href: "/unit/dashboard/catat-transaksi/terima-bayar-pelanggan",
+    icon: HandCoins,
+    disabled: false,
+    tone: "from-sky-50 to-blue-50 text-sky-700 ring-sky-100",
+  },
+  {
     title: "Bayar Hutang Supplier",
     description: "Pelunasan utang pembelian kredit ke supplier.",
     href: "/unit/dashboard/catat-transaksi/bayar-hutang-supplier",
@@ -233,6 +241,7 @@ export default async function CatatTransaksiPage({
     </div>
   );
 }
+
 
 
 
