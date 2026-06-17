@@ -527,3 +527,100 @@ export async function getAiInventoryPosition(prompt?: string | null) {
     rows,
   };
 }
+
+/**
+ * Read-only ORVIA AI summary tool.
+ *
+ * Purpose:
+ * - Combine existing read-only tools into one unit health summary.
+ *
+ * Hard boundaries:
+ * - no insert
+ * - no update
+ * - no delete
+ * - no posting
+ * - no journal mutation
+ * - no cash/bank mutation
+ * - no receivable mutation
+ * - no payable mutation
+ * - no inventory mutation
+ * - no stock mutation
+ * - tenant_id and unit_id are derived from authenticated login context only
+ */
+export async function getAiUnitHealthSummary(prompt?: string | null) {
+  const [
+    cashBank,
+    customerReceivables,
+    supplierPayables,
+    inventoryPosition,
+  ] = await Promise.all([
+    getAiCashBankPosition(prompt ?? "Ringkasan kesehatan unit: posisi kas/bank."),
+    getAiCustomerReceivables(prompt ?? "Ringkasan kesehatan unit: piutang pelanggan."),
+    getAiSupplierPayables(prompt ?? "Ringkasan kesehatan unit: hutang supplier."),
+    getAiInventoryPosition(prompt ?? "Ringkasan kesehatan unit: posisi stok."),
+  ]);
+
+  const cashBankBalance = cashBank.totals.balance;
+  const receivableOutstanding = customerReceivables.totals.outstanding;
+  const supplierPayableOutstanding = supplierPayables.totals.outstanding;
+  const inventoryValue = inventoryPosition.totals.inventory_value;
+
+  const netLiquidPosition =
+    cashBankBalance + receivableOutstanding - supplierPayableOutstanding;
+
+  const attentionNotes: string[] = [];
+
+  if (supplierPayableOutstanding > cashBankBalance) {
+    attentionNotes.push(
+      "Hutang supplier lebih besar dari saldo kas/bank. Perlu perhatian sebelum melakukan pembayaran baru."
+    );
+  }
+
+  if (customerReceivables.totals.invoice_count > 0) {
+    attentionNotes.push(
+      "Masih ada piutang pelanggan terbuka. Perlu pemantauan penagihan."
+    );
+  }
+
+  if (inventoryPosition.totals.low_or_empty_count > 0) {
+    attentionNotes.push(
+      "Ada barang dengan stok rendah atau kosong. Perlu pemeriksaan persediaan."
+    );
+  }
+
+  if (attentionNotes.length === 0) {
+    attentionNotes.push(
+      "Tidak ada catatan perhatian utama dari kas/bank, piutang, hutang supplier, dan stok."
+    );
+  }
+
+  return {
+    mode: "read_only",
+    tool: "orvia.read.unit_health_summary",
+    requires_user_confirmation: false,
+    scope: cashBank.scope,
+    tenant_id: cashBank.tenant_id,
+    unit_id: cashBank.unit_id,
+    summary: {
+      cash_bank_balance: cashBankBalance,
+      customer_receivable_outstanding: receivableOutstanding,
+      supplier_payable_outstanding: supplierPayableOutstanding,
+      inventory_value: inventoryValue,
+      net_liquid_position: netLiquidPosition,
+      customer_receivable_invoice_count:
+        customerReceivables.totals.invoice_count,
+      supplier_payable_invoice_count: supplierPayables.totals.invoice_count,
+      inventory_item_count: inventoryPosition.totals.item_count,
+      low_or_empty_inventory_count: inventoryPosition.totals.low_or_empty_count,
+    },
+    attention_notes: attentionNotes,
+    highlights: {
+      cash_bank_rows: cashBank.rows,
+      largest_receivables: customerReceivables.largest_receivables,
+      largest_payables: supplierPayables.largest_payables,
+      low_or_empty_items: inventoryPosition.low_or_empty_items,
+      largest_inventory_value_items:
+        inventoryPosition.largest_inventory_value_items,
+    },
+  };
+}
