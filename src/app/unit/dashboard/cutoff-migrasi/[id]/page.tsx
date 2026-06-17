@@ -290,7 +290,7 @@ const [
   const isDraft = status === "draft";
   const isValidated = status === "validated";
   const canValidate = status === "draft" || status === "rejected";
-  const canSubmit = status === "validated";
+  const canSubmit = ["direktur_bumdes", "manager_unit"].includes(String(context.role ?? "")) && status === "validated";
 
   return (
     <div className="space-y-6">
