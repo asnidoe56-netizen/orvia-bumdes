@@ -226,21 +226,53 @@ export async function createUnitCutoffCashBankLineAction(formData: FormData) {
     throw new Error("Baris kas-bank hanya dapat ditambahkan saat status draft atau rejected.");
   }
 
-  const { data: cashBankAccount, error: cashBankAccountError } = await supabase
+  const targetCashBankCode =
+    cashBankKind === "bank" ? "BANK-UTAMA" : "KAS-UTAMA";
+
+  const { data: cashBankAccounts, error: cashBankAccountError } = await supabase
     .from("cash_bank_accounts")
     .select("id, account_id, account_kind, account_code, account_name")
     .eq("tenant_id", context.tenant_id)
     .eq("unit_id", context.unit_id)
     .eq("account_kind", cashBankKind)
     .eq("is_active", true)
-    .order("account_code", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("account_code", { ascending: true });
+
+  const normalizeCashBankText = (value: string | null | undefined) =>
+    String(value ?? "").toLowerCase();
+
+  const eligibleCashBankAccounts = cashBankAccounts ?? [];
+
+  const cashBankAccount =
+    eligibleCashBankAccounts.find(
+      (account) =>
+        account.account_code === targetCashBankCode &&
+        Boolean(account.account_id)
+    ) ??
+    eligibleCashBankAccounts.find((account) => {
+      const accountName = normalizeCashBankText(account.account_name);
+      const accountCode = normalizeCashBankText(account.account_code);
+      const isAllocationAccount =
+        accountName.includes("alokasi") ||
+        accountName.includes("bagi hasil") ||
+        accountCode.includes("alokasi") ||
+        accountCode.includes("bh");
+
+      if (isAllocationAccount || !account.account_id) {
+        return false;
+      }
+
+      if (cashBankKind === "cash") {
+        return accountName.includes("kas tunai");
+      }
+
+      return accountName.includes("bank");
+    });
 
   if (cashBankAccountError || !cashBankAccount?.account_id) {
     throw new Error(
       cashBankAccountError?.message ||
-        "Master Kas & Bank untuk jenis ini belum tersedia atau belum terhubung ke COA."
+        `Master ${targetCashBankCode} untuk jenis ini belum tersedia atau belum terhubung ke COA.`
     );
   }
 
