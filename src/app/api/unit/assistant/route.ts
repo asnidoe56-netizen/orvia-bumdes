@@ -2392,6 +2392,54 @@ function extractJsonObjectFromAiText(text: string) {
   };
 }
 
+async function isOrviaAiEnabledForUnitAssistant({
+  supabase,
+  tenantId,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  tenantId: string;
+}) {
+  const { data, error } = await supabase.rpc("is_orvia_ai_enabled_for_tenant", {
+    p_tenant_id: tenantId,
+  });
+
+  if (error) {
+    console.error("orvia ai tenant access check failed", error);
+    return false;
+  }
+
+  return data === true;
+}
+
+async function withAiNormalizerSkippedMetadata({
+  response,
+  reason,
+}: {
+  response: Response;
+  reason: string;
+}) {
+  const payload = await readUnitAssistantPayload(response);
+
+  if (!payload) {
+    return response;
+  }
+
+  const warnings = getWarningsFromPayload(payload);
+
+  return NextResponse.json(
+    {
+      ...payload,
+      warnings: [...warnings, reason],
+      assistant_engine: "local_parser",
+      ai_attempted: false,
+      ai_used: false,
+      ai_status: "disabled_by_platform",
+      ai_error: null,
+      requires_user_confirmation: true,
+    },
+    { status: response.status }
+  );
+}
 async function normalizePromptWithOrviaAi({
   assistantModule,
   prompt,
@@ -2649,6 +2697,19 @@ export async function POST(request: Request) {
 
     if (!shouldUseAiPromptNormalizer({ payload: localPayload, prompt })) {
       return localResponse;
+    }
+
+    const canUseOrviaAi = await isOrviaAiEnabledForUnitAssistant({
+      supabase,
+      tenantId: context.tenant_id,
+    });
+
+    if (!canUseOrviaAi) {
+      return withAiNormalizerSkippedMetadata({
+        response: localResponse,
+        reason:
+          "ORVIA AI belum diaktifkan untuk BUMDes ini oleh Super Admin Platform. Form tetap diisi oleh pembaca lokal.",
+      });
     }
 
     try {
