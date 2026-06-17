@@ -1,6 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getLoginContext } from "@/lib/auth/get-login-context";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,21 @@ type SettingsBody = {
 const ENV_PATH = path.join(process.cwd(), ".env.local");
 const BACKUP_DIR = path.join(process.cwd(), "backups");
 
+async function requirePlatformAiSettingsAccess() {
+  const context = await getLoginContext();
+
+  if (context?.role !== "super_admin_platform") {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Hanya Super Admin Platform yang boleh mengatur ORVIA AI.",
+      },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}
 function normalizeProvider(value: unknown): AiProvider {
   return value === "openai" ? "openai" : "gemini";
 }
@@ -99,6 +115,12 @@ function buildPublicSettings(values: Record<string, string>) {
 }
 
 export async function GET() {
+  const denied = await requirePlatformAiSettingsAccess();
+
+  if (denied) {
+    return denied;
+  }
+
   const content = await readEnvContent();
   const fileValues = parseEnv(content);
 
@@ -120,6 +142,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const denied = await requirePlatformAiSettingsAccess();
+
+  if (denied) {
+    return denied;
+  }
+
   if (
     process.env.NODE_ENV === "production" &&
     process.env.ORVIA_AI_SETTINGS_WRITE !== "true"

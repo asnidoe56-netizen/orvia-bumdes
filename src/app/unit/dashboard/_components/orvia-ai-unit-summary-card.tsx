@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
@@ -431,13 +430,6 @@ export function OrviaAiUnitSummaryCard() {
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               Muat ulang ringkasan
             </button>
-
-            <Link
-              href="/unit/dashboard/orvia-ai-settings"
-              className="inline-flex w-fit items-center justify-center rounded-2xl border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-50"
-            >
-              Atur Asisten AI
-            </Link>
           </div>
         </div>
 

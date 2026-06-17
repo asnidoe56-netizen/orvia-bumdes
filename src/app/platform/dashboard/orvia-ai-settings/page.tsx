@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -74,7 +74,7 @@ export default function OrviaAiSettingsPage() {
       const payload = (await response.json()) as SettingsPayload;
 
       if (!response.ok || !payload.success || !payload.settings) {
-        throw new Error(payload.error ?? "Pengaturan Asisten AI belum dapat dibaca.");
+        throw new Error(payload.error ?? "Pengaturan ORVIA AI Platform belum dapat dibaca.");
       }
 
       setSettings(payload.settings);
@@ -85,7 +85,7 @@ export default function OrviaAiSettingsPage() {
       const loadMessage =
         loadError instanceof Error
           ? loadError.message
-          : "Pengaturan Asisten AI belum dapat dibaca.";
+          : "Pengaturan ORVIA AI Platform belum dapat dibaca.";
 
       setError(loadMessage);
     } finally {
@@ -123,7 +123,7 @@ export default function OrviaAiSettingsPage() {
       const payload = (await response.json()) as SettingsPayload;
 
       if (!response.ok || !payload.success || !payload.settings) {
-        throw new Error(payload.error ?? "Pengaturan Asisten AI belum berhasil disimpan.");
+        throw new Error(payload.error ?? "Pengaturan ORVIA AI Platform belum berhasil disimpan.");
       }
 
       setSettings(payload.settings);
@@ -132,12 +132,12 @@ export default function OrviaAiSettingsPage() {
       setOpenaiModel(payload.settings.openai.model);
       setGeminiApiKey("");
       setOpenaiApiKey("");
-      setMessage(payload.message ?? "Pengaturan Asisten AI berhasil disimpan.");
+      setMessage(payload.message ?? "Pengaturan ORVIA AI Platform berhasil disimpan.");
     } catch (saveError) {
       const saveMessage =
         saveError instanceof Error
           ? saveError.message
-          : "Pengaturan Asisten AI belum berhasil disimpan.";
+          : "Pengaturan ORVIA AI Platform belum berhasil disimpan.";
 
       setError(saveMessage);
     } finally {
@@ -170,7 +170,7 @@ export default function OrviaAiSettingsPage() {
                 ORVIA AI
               </p>
               <h1 className="text-2xl font-black text-slate-950">
-                Pengaturan Asisten AI
+                Pengaturan ORVIA AI Platform
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                 Pilih layanan AI, atur model, dan simpan API key dari halaman ini.
@@ -211,7 +211,7 @@ export default function OrviaAiSettingsPage() {
             </select>
 
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              Provider ini dipakai oleh tombol Tanya ORVIA AI di dashboard unit.
+              Pengaturan ini hanya untuk Super Admin Platform. Provider dipakai oleh fitur ORVIA AI yang diizinkan pada tenant/BUMDes.
             </p>
           </div>
 

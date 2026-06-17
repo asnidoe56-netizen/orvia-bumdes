@@ -1,4 +1,4 @@
-﻿export type NavItem = {
+export type NavItem = {
   label: string;
   href?: string;
   children?: NavItem[];
@@ -13,6 +13,7 @@ export const platformNav: NavItem[] = [
   { label: "Data BUMDes", href: "/platform/dashboard/bumdes" },
   { label: "Users & Role", href: "/platform/dashboard/users" },
   { label: "Governance", href: "/platform/dashboard/governance" },
+  { label: "ORVIA AI", href: "/platform/dashboard/orvia-ai-settings" },
   { label: "Konten Publik", href: "/platform/dashboard/public-content" },
 ];
 
