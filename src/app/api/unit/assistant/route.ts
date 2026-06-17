@@ -2411,6 +2411,27 @@ async function isOrviaAiEnabledForUnitAssistant({
   return data === true;
 }
 
+async function isTransactionAssistantEnabledForUnitAssistant({
+  supabase,
+  tenantId,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  tenantId: string;
+}) {
+  const { data, error } = await supabase.rpc(
+    "is_transaction_assistant_enabled_for_tenant",
+    {
+      p_tenant_id: tenantId,
+    }
+  );
+
+  if (error) {
+    console.error("transaction assistant tenant access check failed", error);
+    return false;
+  }
+
+  return data === true;
+}
 async function withAiNormalizerSkippedMetadata({
   response,
   reason,
@@ -2684,6 +2705,33 @@ export async function POST(request: Request) {
     const today = isValidDateInput(clientToday)
       ? clientToday
       : formatDateInput(new Date());
+
+    const canUseTransactionAssistant =
+      await isTransactionAssistantEnabledForUnitAssistant({
+        supabase,
+        tenantId: context.tenant_id,
+      });
+
+    if (!canUseTransactionAssistant) {
+      return NextResponse.json(
+        {
+          success: false,
+          module: assistantModule,
+          draft: null,
+          summary:
+            "Asisten Catat Transaksi belum diaktifkan untuk BUMDes ini oleh Super Admin Platform.",
+          warnings: [
+            "Silakan isi form secara manual atau minta Super Admin Platform mengaktifkan Asisten Catat Transaksi.",
+          ],
+          assistant_engine: "disabled_by_platform",
+          transaction_assistant_status: "disabled_by_platform",
+          ai_attempted: false,
+          ai_used: false,
+          requires_user_confirmation: true,
+        },
+        { status: 403 }
+      );
+    }
 
     const localResponse = await dispatchUnitAssistantModule({
       supabase,

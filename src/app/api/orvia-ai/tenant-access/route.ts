@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
 
+type TenantAccessFeature = "orvia_ai" | "transaction_assistant";
+
 type TenantAccessBody = {
   tenantId?: string;
+  feature?: TenantAccessFeature;
   isEnabled?: boolean;
   notes?: string | null;
 };
@@ -20,9 +23,13 @@ type TenantRow = {
 type TenantAccessRow = {
   tenant_id: string;
   is_enabled: boolean;
+  transaction_assistant_enabled: boolean | null;
   notes: string | null;
+  transaction_assistant_notes: string | null;
   enabled_at: string | null;
   disabled_at: string | null;
+  transaction_assistant_enabled_at: string | null;
+  transaction_assistant_disabled_at: string | null;
   updated_at: string | null;
 };
 
@@ -61,7 +68,9 @@ export async function GET() {
         .returns<TenantRow[]>(),
       supabase
         .from("orvia_ai_tenant_access")
-        .select("tenant_id,is_enabled,notes,enabled_at,disabled_at,updated_at")
+        .select(
+          "tenant_id,is_enabled,transaction_assistant_enabled,notes,transaction_assistant_notes,enabled_at,disabled_at,transaction_assistant_enabled_at,transaction_assistant_disabled_at,updated_at"
+        )
         .returns<TenantAccessRow[]>(),
     ]);
 
@@ -104,9 +113,17 @@ export async function GET() {
         nama_kecamatan: tenant.nama_kecamatan,
         status: tenant.status,
         is_enabled: access?.is_enabled ?? false,
+        transaction_assistant_enabled:
+          access?.transaction_assistant_enabled ?? true,
         notes: access?.notes ?? null,
+        transaction_assistant_notes:
+          access?.transaction_assistant_notes ?? null,
         enabled_at: access?.enabled_at ?? null,
         disabled_at: access?.disabled_at ?? null,
+        transaction_assistant_enabled_at:
+          access?.transaction_assistant_enabled_at ?? null,
+        transaction_assistant_disabled_at:
+          access?.transaction_assistant_disabled_at ?? null,
         updated_at: access?.updated_at ?? null,
       };
     }),
@@ -122,6 +139,10 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as TenantAccessBody | null;
   const tenantId = String(body?.tenantId ?? "").trim();
+  const feature: TenantAccessFeature =
+    body?.feature === "transaction_assistant"
+      ? "transaction_assistant"
+      : "orvia_ai";
   const isEnabled = body?.isEnabled === true;
   const notes =
     typeof body?.notes === "string" && body.notes.trim().length > 0
@@ -140,7 +161,12 @@ export async function POST(request: Request) {
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("set_orvia_ai_tenant_access", {
+  const rpcName =
+    feature === "transaction_assistant"
+      ? "set_transaction_assistant_tenant_access"
+      : "set_orvia_ai_tenant_access";
+
+  const { data, error } = await supabase.rpc(rpcName, {
     p_tenant_id: tenantId,
     p_is_enabled: isEnabled,
     p_notes: notes,
@@ -158,9 +184,15 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     success: true,
-    message: isEnabled
-      ? "ORVIA AI diaktifkan untuk BUMDes terpilih."
-      : "ORVIA AI dinonaktifkan untuk BUMDes terpilih.",
+    feature,
+    message:
+      feature === "transaction_assistant"
+        ? isEnabled
+          ? "Asisten Catat Transaksi diaktifkan untuk BUMDes terpilih."
+          : "Asisten Catat Transaksi dinonaktifkan untuk BUMDes terpilih."
+        : isEnabled
+          ? "ORVIA AI diaktifkan untuk BUMDes terpilih."
+          : "ORVIA AI dinonaktifkan untuk BUMDes terpilih.",
     access: data,
   });
 }

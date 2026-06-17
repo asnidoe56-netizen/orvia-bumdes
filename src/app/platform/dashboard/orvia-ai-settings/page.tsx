@@ -48,9 +48,13 @@ type TenantAccessRow = {
   nama_kecamatan: string | null;
   status: string | null;
   is_enabled: boolean;
+  transaction_assistant_enabled: boolean;
   notes: string | null;
+  transaction_assistant_notes: string | null;
   enabled_at: string | null;
   disabled_at: string | null;
+  transaction_assistant_enabled_at: string | null;
+  transaction_assistant_disabled_at: string | null;
   updated_at: string | null;
 };
 
@@ -235,8 +239,14 @@ export default function OrviaAiSettingsPage() {
     }
   }
 
-  async function toggleTenantAccess(tenant: TenantAccessRow) {
-    const nextEnabled = !tenant.is_enabled;
+  async function toggleTenantAccess(
+    tenant: TenantAccessRow,
+    feature: "orvia_ai" | "transaction_assistant"
+  ) {
+    const isTransactionAssistant = feature === "transaction_assistant";
+    const nextEnabled = isTransactionAssistant
+      ? !tenant.transaction_assistant_enabled
+      : !tenant.is_enabled;
 
     setSavingTenantId(tenant.tenant_id);
     setMessage(null);
@@ -251,10 +261,15 @@ export default function OrviaAiSettingsPage() {
         },
         body: JSON.stringify({
           tenantId: tenant.tenant_id,
+          feature,
           isEnabled: nextEnabled,
-          notes: nextEnabled
-            ? "Diaktifkan dari Dashboard Platform ORVIA AI."
-            : "Dinonaktifkan dari Dashboard Platform ORVIA AI.",
+          notes: isTransactionAssistant
+            ? nextEnabled
+              ? "Asisten Catat Transaksi diaktifkan dari Dashboard Platform."
+              : "Asisten Catat Transaksi dinonaktifkan dari Dashboard Platform."
+            : nextEnabled
+              ? "ORVIA AI diaktifkan dari Dashboard Platform."
+              : "ORVIA AI dinonaktifkan dari Dashboard Platform.",
         }),
       });
 
@@ -262,23 +277,18 @@ export default function OrviaAiSettingsPage() {
 
       if (!response.ok || !payload.success) {
         throw new Error(
-          payload.error ?? "Izin ORVIA AI BUMDes belum berhasil disimpan."
+          payload.error ?? "Izin fitur BUMDes belum berhasil disimpan."
         );
       }
 
-      setMessage(
-        payload.message ??
-          (nextEnabled
-            ? "ORVIA AI diaktifkan untuk BUMDes terpilih."
-            : "ORVIA AI dinonaktifkan untuk BUMDes terpilih.")
-      );
+      setMessage(payload.message ?? "Izin fitur BUMDes berhasil disimpan.");
 
       await loadTenantAccess();
     } catch (saveError) {
       const saveMessage =
         saveError instanceof Error
           ? saveError.message
-          : "Izin ORVIA AI BUMDes belum berhasil disimpan.";
+          : "Izin fitur BUMDes belum berhasil disimpan.";
 
       setAccessError(saveMessage);
     } finally {
@@ -587,7 +597,7 @@ export default function OrviaAiSettingsPage() {
                           {tenant.nama_bumdes ?? "-"}
                         </p>
                         <p className="mt-1 text-xs font-bold text-slate-500">
-                          {tenant.kode_bumdes ?? "Tanpa kode"} · ID{" "}
+                          {tenant.kode_bumdes ?? "Tanpa kode"} Ã‚Â· ID{" "}
                           {tenant.tenant_id.slice(0, 8)}...
                         </p>
                       </td>
@@ -625,7 +635,7 @@ export default function OrviaAiSettingsPage() {
                       <td className="border-b border-slate-100 px-4 py-4">
                         <button
                           type="button"
-                          onClick={() => void toggleTenantAccess(tenant)}
+                          onClick={() => void toggleTenantAccess(tenant, "orvia_ai")}
                           disabled={isSavingThisTenant}
                           className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
                             tenant.is_enabled
