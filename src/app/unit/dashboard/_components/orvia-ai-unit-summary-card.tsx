@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
@@ -43,6 +44,30 @@ function formatRupiah(value: number) {
   }).format(value);
 }
 
+function buildLocalGreetingAnswer(question: string) {
+  const normalizedQuestion = question.toLowerCase().trim();
+
+  const greetingWords = [
+    "halo",
+    "halow",
+    "hallo",
+    "hai",
+    "hi",
+    "hello",
+    "tes",
+    "test",
+    "pagi",
+    "siang",
+    "sore",
+    "malam",
+  ];
+
+  if (greetingWords.includes(normalizedQuestion)) {
+    return "Halo, saya ORVIA AI. Saya bisa membantu membaca kondisi kas/bank, piutang pelanggan, hutang supplier, stok, dan catatan perhatian unit. Silakan tanya, misalnya: Berapa kas saya hari ini?";
+  }
+
+  return null;
+}
 function buildLocalAnswer(question: string, data: UnitHealthSummary | null) {
   if (!data) {
     return "Ringkasan unit belum selesai dibaca. Klik Muat ulang ringkasan, lalu coba bertanya lagi.";
@@ -139,6 +164,7 @@ export function OrviaAiUnitSummaryCard() {
   const [answer, setAnswer] = useState(
     "Silakan tanya kondisi unit. Contoh: Berapa kas saya hari ini?"
   );
+  const [isAsking, setIsAsking] = useState(false);
 
   async function loadSummary() {
     setIsLoading(true);
@@ -239,11 +265,59 @@ export function OrviaAiUnitSummaryCard() {
     return "Kondisi awal unit terlihat stabil dari kas/bank, piutang, hutang supplier, dan stok.";
   }, [data]);
 
-  function handleAsk(event: React.FormEvent<HTMLFormElement>) {
+  async function handleAsk(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const localAnswer = buildLocalAnswer(question, data);
-    setAnswer(localAnswer);
+    const trimmedQuestion = question.trim();
+
+    if (!trimmedQuestion) {
+      setAnswer("Tulis pertanyaan dulu. Contoh: Berapa kas saya hari ini?");
+      return;
+    }
+
+    const localGreetingAnswer = buildLocalGreetingAnswer(trimmedQuestion);
+
+    if (localGreetingAnswer) {
+      setAnswer(localGreetingAnswer);
+      return;
+    }
+
+    setIsAsking(true);
+    setAnswer("ORVIA AI sedang membaca ringkasan unit dan menyusun jawaban...");
+
+    try {
+      const response = await fetch("/api/orvia-ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ question: trimmedQuestion }),
+        cache: "no-store",
+      });
+
+      const payload = (await response.json()) as {
+        success?: boolean;
+        answer?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error ?? "ORVIA AI belum berhasil menjawab.");
+      }
+
+      setAnswer(payload.answer ?? "ORVIA AI belum dapat menyusun jawaban.");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "ORVIA AI belum berhasil menjawab.";
+      const localAnswer = buildLocalAnswer(trimmedQuestion, data);
+
+      setAnswer(`${message}\n\nJawaban sementara dari pembaca lokal: ${localAnswer}`);
+    } finally {
+      setIsAsking(false);
+    }
   }
 
   const suggestedQuestions = [
@@ -318,10 +392,11 @@ export function OrviaAiUnitSummaryCard() {
 
               <button
                 type="submit"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"
+                disabled={isLoading || isAsking}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Send className="h-4 w-4" />
-                Tanya
+                {isAsking ? "Menjawab..." : "Tanya"}
               </button>
             </div>
 
@@ -341,20 +416,29 @@ export function OrviaAiUnitSummaryCard() {
               ))}
             </div>
 
-            <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm leading-6 text-slate-700">
+            <div className="mt-4 whitespace-pre-line rounded-2xl bg-slate-50 p-3 text-sm leading-6 text-slate-700">
               {answer}
             </div>
           </form>
 
-          <button
-            type="button"
-            onClick={() => void loadSummary()}
-            className="inline-flex w-fit items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-            Muat ulang ringkasan
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => void loadSummary()}
+              className="inline-flex w-fit items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isLoading || isAsking}
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              Muat ulang ringkasan
+            </button>
+
+            <Link
+              href="/unit/dashboard/orvia-ai-settings"
+              className="inline-flex w-fit items-center justify-center rounded-2xl border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+            >
+              Atur Asisten AI
+            </Link>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -458,3 +542,4 @@ export function OrviaAiUnitSummaryCard() {
     </section>
   );
 }
+

@@ -42,3 +42,10 @@ next-env.d.ts
 
 # Local database dump
 postgres.sql
+
+# Local development backups
+backups/
+
+# Local environment secrets
+.env*.local
+
