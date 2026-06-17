@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { PlusCircle } from "lucide-react";
@@ -53,6 +53,21 @@ export function PurchaseEntryClientForm({
   const [unitCost, setUnitCost] = useState("");
   const [discountAmount, setDiscountAmount] = useState("0");
   const [taxAmount, setTaxAmount] = useState("0");
+
+  const quantityNumber = Number(String(quantity || "0").replace(",", "."));
+  const unitCostNumber = Number(String(unitCost || "0").replace(",", "."));
+  const discountAmountNumber = Number(String(discountAmount || "0").replace(",", "."));
+  const taxAmountNumber = Number(String(taxAmount || "0").replace(",", "."));
+
+  const purchaseSubtotal =
+    Number.isFinite(quantityNumber) && Number.isFinite(unitCostNumber)
+      ? quantityNumber * unitCostNumber
+      : 0;
+
+  const purchaseTotal =
+    purchaseSubtotal -
+    (Number.isFinite(discountAmountNumber) ? discountAmountNumber : 0) +
+    (Number.isFinite(taxAmountNumber) ? taxAmountNumber : 0);
   const [notes, setNotes] = useState("");
   const [assistantPrompt, setAssistantPrompt] = useState("");
   const [assistantResult, setAssistantResult] =
@@ -450,9 +465,18 @@ export function PurchaseEntryClientForm({
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-slate-500">Harga Beli</span>
+              <span className="text-slate-500">Harga Satuan</span>
               <span className="font-bold text-slate-950">
                 {unitCost || "Dari input"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-slate-500">Total Bayar</span>
+              <span className="font-bold text-emerald-700">
+                {purchaseTotal > 0
+                  ? purchaseTotal.toLocaleString("id-ID")
+                  : "Dari input"}
               </span>
             </div>
 

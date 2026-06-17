@@ -1,6 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
+import { generateOrviaAiText, getSafeOrviaAiErrorMessage } from "@/lib/orvia-ai/provider";
 import {
   getCashPurchaseAssistantOptions,
   getCapitalDebtPaymentAssistantOptions,
@@ -82,19 +83,19 @@ function parseAmountFromText(text: string) {
   const normalized = text
     .toLowerCase()
     .replace(/\brp\.?\s?/g, "")
-    .replace(/(\d)(juta|ribu|rb)\b/g, "$1 $2")
-    .replace(/\b(juta|ribu|rb)(\d)/g, "$1 $2")
+    .replace(/(\d)(juta|jt|jta|ribu|rb)\b/g, "$1 $2")
+    .replace(/\b(juta|jt|jta|ribu|rb)(\d)/g, "$1 $2")
     .replace(/\s+/g, " ")
     .trim();
 
   const jutaRibuMatch = normalized.match(
-    /(\d+(?:[.,]\d+)?)\s*juta(?:\s*(\d+(?:[.,]\d+)?)(?:\s*(ribu|rb))?)?/
+    /(\d+(?:[.,]\d+)?)\s*(juta|jt|jta)(?:\s*(\d+(?:[.,]\d+)?)(?:\s*(ribu|rb))?)?/
   );
 
   if (jutaRibuMatch?.[1]) {
     const jutaPart = Number(jutaRibuMatch[1].replace(",", "."));
-    const tailRaw = jutaRibuMatch[2];
-    const tailUnit = jutaRibuMatch[3] ?? "";
+    const tailRaw = jutaRibuMatch[3];
+    const tailUnit = jutaRibuMatch[4] ?? "";
 
     if (!Number.isFinite(jutaPart) || jutaPart <= 0) {
       return 0;
@@ -2129,6 +2130,443 @@ async function handleSupplierDebtPayment({
 
   return NextResponse.json(responsePayload);
 }
+type UnitAssistantPayload = {
+  success?: boolean;
+  module?: string;
+  draft?: unknown;
+  summary?: string;
+  warnings?: unknown;
+  requires_user_confirmation?: boolean;
+  [key: string]: unknown;
+};
+
+type UnitAssistantDispatchArgs = {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  context: NonNullable<Awaited<ReturnType<typeof getLoginContext>>>;
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+};
+
+async function dispatchUnitAssistantModule({
+  supabase,
+  context,
+  assistantModule,
+  prompt,
+  today,
+}: UnitAssistantDispatchArgs) {
+  if (assistantModule === "operational_expense") {
+    return handleOperationalExpense({
+      supabase,
+      context,
+      assistantModule,
+      prompt,
+      today,
+    });
+  }
+
+  if (assistantModule === "revenue_receipt") {
+    return handleRevenueReceipt({
+      supabase,
+      context,
+      assistantModule,
+      prompt,
+      today,
+    });
+  }
+
+  if (assistantModule === "capital_expenditure") {
+    return handleCapitalExpenditure({
+      supabase,
+      context,
+      assistantModule,
+      prompt,
+      today,
+    });
+  }
+
+  if (assistantModule === "customer_payment") {
+    return handleCustomerPayment({
+      supabase,
+      context,
+      assistantModule,
+      prompt,
+      today,
+    });
+  }
+
+  if (assistantModule === "capital_debt_payment") {
+    return handleCapitalDebtPayment({
+      supabase,
+      context,
+      assistantModule,
+      prompt,
+      today,
+    });
+  }
+
+  if (assistantModule === "supplier_debt_payment") {
+    return handleSupplierDebtPayment({
+      supabase,
+      context,
+      assistantModule,
+      prompt,
+      today,
+    });
+  }
+
+  if (assistantModule === "credit_sale") {
+    return handleCreditSale({
+      supabase,
+      context,
+      assistantModule,
+      prompt,
+      today,
+    });
+  }
+
+  if (assistantModule === "cash_sale") {
+    return handleCashSale({
+      supabase,
+      context,
+      assistantModule,
+      prompt,
+      today,
+    });
+  }
+
+  if (assistantModule === "credit_purchase") {
+    return handleCreditPurchase({
+      supabase,
+      context,
+      assistantModule,
+      prompt,
+      today,
+    });
+  }
+
+  return handleCashPurchase({
+    supabase,
+    context,
+    assistantModule,
+    prompt,
+    today,
+  });
+}
+
+async function readUnitAssistantPayload(response: Response) {
+  try {
+    const payload = (await response.clone().json()) as UnitAssistantPayload;
+
+    if (!payload || typeof payload !== "object") {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function getWarningsFromPayload(payload: UnitAssistantPayload | null) {
+  if (!payload || !Array.isArray(payload.warnings)) {
+    return [];
+  }
+
+  return payload.warnings.map((warning) => String(warning));
+}
+
+function shouldUseAiPromptNormalizer({
+  payload,
+  prompt,
+}: {
+  payload: UnitAssistantPayload | null;
+  prompt: string;
+}) {
+  if (!payload?.success) {
+    return false;
+  }
+
+  const warnings = getWarningsFromPayload(payload);
+  const lowerPrompt = prompt.toLowerCase();
+
+  const hasMissingFieldWarning = warnings.some((warning) => {
+    const lowerWarning = warning.toLowerCase();
+
+    return (
+      lowerWarning.includes("belum terbaca") ||
+      lowerWarning.includes("pilih") ||
+      lowerWarning.includes("isi")
+    );
+  });
+
+  const draft =
+    payload.draft && typeof payload.draft === "object"
+      ? (payload.draft as Record<string, unknown>)
+      : null;
+
+  const amountLikeValues = draft
+    ? [
+        draft.amount,
+        draft.unit_cost,
+        draft.unit_price,
+        draft.total_amount,
+        draft.tax_amount,
+        draft.discount_amount,
+      ]
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0)
+    : [];
+
+  const promptMentionsMoney =
+    /\b(harga|senilai|nominal|bayar|dibayar|terima|masuk|keluar|belanja|beli)\b/.test(
+      lowerPrompt
+    );
+
+  const promptMentionsLargeMoneyUnit =
+    /\b(juta|jt|jta|ribu|rb)\b/.test(lowerPrompt);
+
+  const hasSuspiciousSmallMoneyValue =
+    promptMentionsMoney &&
+    promptMentionsLargeMoneyUnit &&
+    amountLikeValues.some((value) => value > 0 && value < 1_000);
+
+  return hasMissingFieldWarning || hasSuspiciousSmallMoneyValue;
+}
+function getAssistantModuleLabel(assistantModule: AssistantModule) {
+  const labels: Record<AssistantModule, string> = {
+    operational_expense: "Beban Operasional",
+    revenue_receipt: "Terima Pendapatan",
+    cash_purchase: "Beli Tunai",
+    credit_purchase: "Beli Kredit",
+    cash_sale: "Jual Tunai",
+    credit_sale: "Jual Kredit",
+    supplier_debt_payment: "Bayar Hutang Supplier",
+    capital_debt_payment: "Bayar Hutang Belanja Modal",
+    capital_expenditure: "Belanja Modal",
+    customer_payment: "Terima Bayar Pelanggan",
+  };
+
+  return labels[assistantModule];
+}
+
+function getAssistantModuleFieldOrder(assistantModule: AssistantModule) {
+  const fieldOrders: Record<AssistantModule, string> = {
+    operational_expense:
+      "tanggal, akun beban, nominal, kas/bank, keterangan, catatan",
+    revenue_receipt:
+      "tanggal, akun pendapatan, nominal, kas/bank, keterangan, catatan",
+    cash_purchase:
+      "tanggal pembelian, supplier, barang, jumlah, harga beli per barang, diskon, pajak, catatan",
+    credit_purchase:
+      "tanggal pembelian, supplier, barang, jumlah, harga beli per barang, tanggal jatuh tempo, diskon, pajak, catatan",
+    cash_sale:
+      "tanggal penjualan, pelanggan bila ada, barang, jumlah, diskon, pajak, catatan",
+    credit_sale:
+      "tanggal penjualan, pelanggan, barang, jumlah, tanggal jatuh tempo, diskon, pajak, catatan",
+    supplier_debt_payment:
+      "tanggal bayar, supplier/invoice hutang, nominal bayar, kas/bank sumber, catatan",
+    capital_debt_payment:
+      "tanggal bayar, transaksi hutang belanja modal, nominal bayar, kas/bank sumber, catatan",
+    capital_expenditure:
+      "tanggal belanja, cara bayar tunai/kredit, supplier, kas/bank bila tunai, kategori aset, nama aset, harga, jatuh tempo bila kredit, catatan",
+    customer_payment:
+      "tanggal terima bayar, pelanggan/invoice piutang, nominal terima, kas/bank tujuan, catatan",
+  };
+
+  return fieldOrders[assistantModule];
+}
+
+function extractJsonObjectFromAiText(text: string) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+
+  if (start < 0 || end <= start) {
+    throw new Error("ORVIA AI tidak mengembalikan JSON normalisasi.");
+  }
+
+  return JSON.parse(text.slice(start, end + 1)) as {
+    canonical_prompt?: unknown;
+    confidence?: unknown;
+    reason?: unknown;
+  };
+}
+
+async function normalizePromptWithOrviaAi({
+  assistantModule,
+  prompt,
+  today,
+}: {
+  assistantModule: AssistantModule;
+  prompt: string;
+  today: string;
+}) {
+  const moduleLabel = getAssistantModuleLabel(assistantModule);
+  const fieldOrder = getAssistantModuleFieldOrder(assistantModule);
+
+  const aiInput = `
+Anda adalah ORVIA Transaction AI Normalizer.
+
+Tugas Anda hanya merapikan kalimat transaksi operator agar mudah dibaca parser lokal ERP BUMDes.
+Jangan mengisi UUID.
+Jangan mengarang nama supplier, pelanggan, barang, invoice, atau akun kas/bank yang tidak ada di kalimat operator.
+Jangan memposting transaksi.
+Jangan mengubah saldo, stok, hutang, atau piutang.
+Jangan menambahkan markdown.
+Kembalikan hanya JSON valid.
+
+Modul transaksi: ${moduleLabel}
+Tanggal hari ini: ${today}
+Urutan field lokal: ${fieldOrder}
+
+Aturan normalisasi utama:
+- Tugasmu BUKAN mengisi field, BUKAN membuat daftar, dan BUKAN membuat CSV.
+- Tugasmu hanya mengubah kalimat operator menjadi SATU KALIMAT transaksi bahasa Indonesia yang sederhana.
+- Jangan pernah mengembalikan canonical_prompt dalam bentuk daftar koma seperti: tanggal, supplier, barang, jumlah, harga, 0, 0.
+- Jangan pernah menulis nilai kosong sebagai 0. Jika informasi tidak ada, jangan disebutkan.
+- Boleh memperbaiki typo umum dan bahasa operator tanpa mengarang data baru.
+- Contoh koreksi yang boleh: "bili" atau "bli" menjadi "beli"; "baras" atau "brs" menjadi "beras"; "pa indra" atau "sama indra" menjadi "dari indra"; "5jta" atau "5jt" menjadi "5 juta".
+- Jika operator menyebut jumlah tanpa satuan, tulis dengan pola "jumlah <angka>" agar parser lokal bisa membaca jumlah.
+- Jika operator menulis "kemarin", tetap pakai "kemarin". Jika menulis "hari ini", tetap pakai "hari ini".
+- Jika ada angka dengan kata "ribu", "rb", "juta", "jt", atau "jta", pertahankan maknanya.
+- Jangan mengarang nama supplier, pelanggan, barang, invoice, akun kas/bank, atau nominal yang tidak ada di kalimat operator.
+
+Contoh khusus pembelian:
+Input: kemarin dulu kita ada bili baras pa indra 10 harga 5 juta
+canonical_prompt: kemarin beli beras jumlah 10 dari indra harga 5 juta
+
+Input: dari indra ambil semen 10 sak kemarin harga 150 ribu
+canonical_prompt: kemarin beli semen 10 sak dari indra harga 150 ribu
+
+Format JSON:
+{
+  "canonical_prompt": "satu kalimat transaksi yang sudah rapi, bukan CSV",
+  "confidence": "low|medium|high",
+  "reason": "alasan singkat kenapa dirapikan"
+}
+
+Kalimat operator:
+${prompt}
+`.trim();
+
+  const aiResult = await generateOrviaAiText(aiInput);
+  const parsed = extractJsonObjectFromAiText(aiResult.text);
+  const canonicalPrompt = String(parsed.canonical_prompt ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!canonicalPrompt) {
+    throw new Error("ORVIA AI tidak menghasilkan canonical_prompt.");
+  }
+
+  const commaParts = canonicalPrompt
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const looksLikeFieldList =
+    commaParts.length >= 4 ||
+    /(^|,\s*)0(\s*,|$)/.test(canonicalPrompt) ||
+    /^([^.!?]+,\s*){3,}[^.!?]+$/.test(canonicalPrompt);
+
+  const hasTransactionVerb =
+    /\b(beli|jual|bayar|terima|belanja|pendapatan|beban|modal|utang|hutang|piutang|setor|masuk|keluar)\b/i.test(
+      canonicalPrompt
+    );
+
+  if (looksLikeFieldList || !hasTransactionVerb) {
+    throw new Error("ORVIA AI menghasilkan normalisasi yang tidak berbentuk kalimat transaksi.");
+  }
+
+  return {
+    provider: aiResult.provider,
+    model: aiResult.model,
+    canonicalPrompt,
+    confidence: String(parsed.confidence ?? "medium"),
+    reason: String(parsed.reason ?? "ORVIA AI merapikan kalimat operator."),
+  };
+}
+
+async function withAiNormalizerMetadata({
+  response,
+  originalPrompt,
+  normalizedPrompt,
+  provider,
+  model,
+  confidence,
+  reason,
+}: {
+  response: Response;
+  originalPrompt: string;
+  normalizedPrompt: string;
+  provider: string;
+  model: string;
+  confidence: string;
+  reason: string;
+}) {
+  const payload = await readUnitAssistantPayload(response);
+
+  if (!payload) {
+    return response;
+  }
+
+  const warnings = getWarningsFromPayload(payload);
+
+  return NextResponse.json(
+    {
+      ...payload,
+      summary:
+        typeof payload.summary === "string"
+          ? `${payload.summary} ORVIA AI merapikan kalimat operator sebelum parser lokal mengisi form.`
+          : "ORVIA AI merapikan kalimat operator sebelum parser lokal mengisi form.",
+      warnings: [
+        ...warnings,
+        `ORVIA AI dipakai karena kalimat awal belum terbaca lengkap. Confidence: ${confidence}.`,
+      ],
+      assistant_engine: "local_parser_with_ai_prompt_normalizer",
+      ai_attempted: true,
+      ai_used: true,
+      ai_status: "succeeded",
+      ai_provider: provider,
+      ai_model: model,
+      ai_original_prompt: originalPrompt,
+      ai_normalized_prompt: normalizedPrompt,
+      ai_reason: reason,
+      requires_user_confirmation: true,
+    },
+    { status: response.status }
+  );
+}
+
+async function withAiNormalizerFailureMetadata({
+  response,
+  error,
+}: {
+  response: Response;
+  error: unknown;
+}) {
+  const payload = await readUnitAssistantPayload(response);
+
+  if (!payload) {
+    return response;
+  }
+
+  const warnings = getWarningsFromPayload(payload);
+
+  return NextResponse.json(
+    {
+      ...payload,
+      warnings: [...warnings, getSafeOrviaAiErrorMessage(error)],
+      assistant_engine: "local_parser_with_failed_ai_prompt_normalizer",
+      ai_attempted: true,
+      ai_used: false,
+      ai_status: "failed",
+      ai_error: getSafeOrviaAiErrorMessage(error),
+      requires_user_confirmation: true,
+    },
+    { status: response.status }
+  );
+}
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -2199,104 +2637,56 @@ export async function POST(request: Request) {
       ? clientToday
       : formatDateInput(new Date());
 
-    if (assistantModule === "operational_expense") {
-      return handleOperationalExpense({
-        supabase,
-        context,
-        assistantModule,
-        prompt,
-        today,
-      });
-    }
-
-    if (assistantModule === "revenue_receipt") {
-      return handleRevenueReceipt({
-        supabase,
-        context,
-        assistantModule,
-        prompt,
-        today,
-      });
-    }
-
-    if (assistantModule === "capital_expenditure") {
-      return handleCapitalExpenditure({
-        supabase,
-        context,
-        assistantModule,
-        prompt,
-        today,
-      });
-    }
-
-    if (assistantModule === "customer_payment") {
-      return handleCustomerPayment({
-        supabase,
-        context,
-        assistantModule,
-        prompt,
-        today,
-      });
-    }
-
-    if (assistantModule === "capital_debt_payment") {
-      return handleCapitalDebtPayment({
-        supabase,
-        context,
-        assistantModule,
-        prompt,
-        today,
-      });
-    }
-
-    if (assistantModule === "supplier_debt_payment") {
-      return handleSupplierDebtPayment({
-        supabase,
-        context,
-        assistantModule,
-        prompt,
-        today,
-      });
-    }
-
-    if (assistantModule === "credit_sale") {
-      return handleCreditSale({
-        supabase,
-        context,
-        assistantModule,
-        prompt,
-        today,
-      });
-    }
-
-    if (assistantModule === "cash_sale") {
-      return handleCashSale({
-        supabase,
-        context,
-        assistantModule,
-        prompt,
-        today,
-      });
-    }
-
-    if (assistantModule === "credit_purchase") {
-      return handleCreditPurchase({
-        supabase,
-        context,
-        assistantModule,
-        prompt,
-        today,
-      });
-    }
-
-    return handleCashPurchase({
+    const localResponse = await dispatchUnitAssistantModule({
       supabase,
       context,
       assistantModule,
       prompt,
       today,
     });
-  } catch (error) {
+
+    const localPayload = await readUnitAssistantPayload(localResponse);
+
+    if (!shouldUseAiPromptNormalizer({ payload: localPayload, prompt })) {
+      return localResponse;
+    }
+
+    try {
+      const normalized = await normalizePromptWithOrviaAi({
+        assistantModule,
+        prompt,
+        today,
+      });
+
+      if (
+        normalizeText(normalized.canonicalPrompt) === normalizeText(prompt)
+      ) {
+        return localResponse;
+      }
+
+      const aiNormalizedResponse = await dispatchUnitAssistantModule({
+        supabase,
+        context,
+        assistantModule,
+        prompt: normalized.canonicalPrompt,
+        today,
+      });
+
+      return withAiNormalizerMetadata({
+        response: aiNormalizedResponse,
+        originalPrompt: prompt,
+        normalizedPrompt: normalized.canonicalPrompt,
+        provider: normalized.provider,
+        model: normalized.model,
+        confidence: normalized.confidence,
+        reason: normalized.reason,
+      });
+    } catch (aiError) {
+      return withAiNormalizerFailureMetadata({
+        response: localResponse,
+        error: aiError,
+      });
+    }} catch (error) {
     return NextResponse.json(
       {
         success: false,
