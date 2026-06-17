@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -34,6 +34,7 @@ import type { NavItem } from "@/lib/navigation/dashboard-config";
 
 type SidebarMenuItemProps = {
   item: NavItem;
+  collapsed?: boolean;
 };
 
 const iconMap: Record<string, LucideIcon> = {
@@ -109,7 +110,7 @@ function isPathActive(pathname: string, href?: string) {
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
 }
-export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
+export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProps) {
   const pathname = usePathname();
 
   const hasChildren = Boolean(item.children?.length);
@@ -147,7 +148,7 @@ export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
               <Icon className="h-4 w-4" />
             </span>
 
-            <span className="truncate">{item.label}</span>
+            {collapsed ? null : <span className="truncate">{item.label}</span>}
           </span>
 
           <ChevronDown
@@ -209,7 +210,7 @@ export function SidebarMenuItem({ item }: SidebarMenuItemProps) {
         <Icon className="h-4 w-4" />
       </span>
 
-      <span className="truncate">{item.label}</span>
+      {collapsed ? null : <span className="truncate">{item.label}</span>}
     </Link>
   );
 }

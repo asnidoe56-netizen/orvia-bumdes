@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import { MouseEvent, ReactNode, useEffect, useState } from "react";
-import { Bell, Menu, UserRound, X } from "lucide-react";
+import { Bell, Menu, PanelLeftClose, PanelLeftOpen, UserRound, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { GlobalActionNotice } from "@/components/ui/global-action-notice";
@@ -79,6 +79,7 @@ export function DashboardShellClient({
 }: DashboardShellClientProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [pendingFromPathname, setPendingFromPathname] = useState<string | null>(null);
 
@@ -143,31 +144,67 @@ export function DashboardShellClient({
         </div>
       ) : null}
 
-      <aside className="fixed inset-y-0 left-0 z-30 hidden h-dvh w-72 border-r border-slate-200 bg-white p-5 lg:flex lg:flex-col">
-        <div className="shrink-0 rounded-2xl bg-emerald-700 p-4 text-white">
-          <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-            ERP BUMDes
-          </p>
-          <h1 className="mt-1 truncate text-lg font-bold">{title}</h1>
+      <aside
+        className={[
+          "fixed inset-y-0 left-0 z-30 hidden h-dvh border-r border-slate-200 bg-white transition-all duration-300 lg:flex lg:flex-col",
+          isSidebarCollapsed ? "w-24 p-4" : "w-72 p-5",
+        ].join(" ")}
+      >
+        <div
+          className={[
+            "shrink-0 rounded-2xl bg-emerald-700 text-white transition-all duration-300",
+            isSidebarCollapsed
+              ? "flex h-16 items-center justify-center p-0"
+              : "p-4",
+          ].join(" ")}
+          title={title}
+        >
+          {isSidebarCollapsed ? (
+            <span className="text-sm font-black tracking-tight">ERP</span>
+          ) : (
+            <>
+              <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
+                ERP BUMDes
+              </p>
+              <h1 className="mt-1 truncate text-lg font-bold">{title}</h1>
+            </>
+          )}
         </div>
 
         <nav className="mt-6 min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-1">
           {navItems.map((item) => (
-            <SidebarMenuItem key={item.href ?? item.label} item={item} />
+            <SidebarMenuItem key={item.href ?? item.label} item={item} collapsed={isSidebarCollapsed} />
           ))}
         </nav>
 
         <div className="mt-4 shrink-0 border-t border-slate-200 pt-4">
-          <div className="mb-3 rounded-2xl bg-slate-50 p-3">
-            <p className="truncate text-sm font-black text-slate-950">
-              {displayName}
-            </p>
-            <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
-              {roleLabel}
-            </p>
-          </div>
+          {isSidebarCollapsed ? (
+            <div className="flex flex-col items-center gap-3">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600 text-xs font-black text-white shadow-sm"
+                title={`${displayName} - ${roleLabel}`}
+              >
+                {initials}
+              </div>
 
-          <LogoutButton />
+              <div className="max-w-16 overflow-hidden">
+                <LogoutButton />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="mb-3 rounded-2xl bg-slate-50 p-3">
+                <p className="truncate text-sm font-black text-slate-950">
+                  {displayName}
+                </p>
+                <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                  {roleLabel}
+                </p>
+              </div>
+
+              <LogoutButton />
+            </>
+          )}
         </div>
       </aside>
 
@@ -226,8 +263,18 @@ export function DashboardShellClient({
         </div>
       ) : null}
 
-      <div className="min-h-screen min-w-0 lg:pl-72">
-        <header className="fixed inset-x-0 top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-5 lg:left-72">
+      <div
+        className={[
+          "min-h-screen min-w-0 transition-all duration-300",
+          isSidebarCollapsed ? "lg:pl-24" : "lg:pl-72",
+        ].join(" ")}
+      >
+        <header
+          className={[
+            "fixed inset-x-0 top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur transition-all duration-300 sm:px-5",
+            isSidebarCollapsed ? "lg:left-24" : "lg:left-72",
+          ].join(" ")}
+        >
           <div className="flex min-w-0 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <button
@@ -237,6 +284,20 @@ export function DashboardShellClient({
                 onClick={() => setIsMobileMenuOpen(true)}
               >
                 <Menu className="h-5 w-5" />
+              </button>
+
+              <button
+                type="button"
+                aria-label={isSidebarCollapsed ? "Perlebar menu" : "Ringkas menu"}
+                title={isSidebarCollapsed ? "Perlebar menu" : "Ringkas menu"}
+                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-emerald-700 lg:inline-flex"
+                onClick={() => setIsSidebarCollapsed((current) => !current)}
+              >
+                {isSidebarCollapsed ? (
+                  <PanelLeftOpen className="h-5 w-5" />
+                ) : (
+                  <PanelLeftClose className="h-5 w-5" />
+                )}
               </button>
 
               <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 sm:flex">
