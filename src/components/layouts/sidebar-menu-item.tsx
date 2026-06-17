@@ -110,6 +110,14 @@ function isPathActive(pathname: string, href?: string) {
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
 }
+
+function CollapsedSidebarTooltip({ label }: { label: string }) {
+  return (
+    <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-black text-white opacity-0 shadow-2xl shadow-slate-900/20 transition duration-150 group-hover:translate-x-1 group-hover:opacity-100 group-focus-visible:translate-x-1 group-focus-visible:opacity-100">
+      {label}
+    </span>
+  );
+}
 export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProps) {
   const pathname = usePathname();
 
@@ -148,7 +156,11 @@ export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProp
               <Icon className="h-4 w-4" />
             </span>
 
-            {collapsed ? null : <span className="truncate">{item.label}</span>}
+            {collapsed ? (
+        <CollapsedSidebarTooltip label={item.label} />
+      ) : (
+        <span className="truncate">{item.label}</span>
+      )}
           </span>
 
           <ChevronDown
@@ -210,7 +222,11 @@ export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProp
         <Icon className="h-4 w-4" />
       </span>
 
-      {collapsed ? null : <span className="truncate">{item.label}</span>}
+      {collapsed ? (
+        <CollapsedSidebarTooltip label={item.label} />
+      ) : (
+        <span className="truncate">{item.label}</span>
+      )}
     </Link>
   );
 }

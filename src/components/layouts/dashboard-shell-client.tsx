@@ -171,7 +171,14 @@ export function DashboardShellClient({
           )}
         </div>
 
-        <nav className="mt-6 min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-1">
+        <nav
+          className={[
+            "mt-6 min-h-0 flex-1 space-y-1 overscroll-contain pr-1",
+            isSidebarCollapsed
+              ? "overflow-y-auto overflow-x-visible"
+              : "overflow-y-auto overflow-x-hidden",
+          ].join(" ")}
+        >
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href ?? item.label} item={item} collapsed={isSidebarCollapsed} />
           ))}
@@ -333,7 +340,7 @@ export function DashboardShellClient({
                     {displayName}
                   </p>
                   <p className="max-w-[150px] truncate text-[11px] font-semibold text-slate-500">
-                    {roleLabel} · {scopeLabel}
+                    {roleLabel} Â· {scopeLabel}
                   </p>
                 </div>
               </div>
