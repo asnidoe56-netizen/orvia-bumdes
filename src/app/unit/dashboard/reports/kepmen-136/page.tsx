@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowRight,
   BadgeCheck,
   BookOpenText,
@@ -27,6 +28,25 @@ type DashboardSummary = {
   reporting_package_status: string | null;
   is_ready_for_export: boolean | null;
   dashboard_note: string | null;
+};
+
+type PackageValidation = {
+  selisih_neraca: string | number | null;
+  selisih_laba_rugi_neraca: string | number | null;
+  selisih_arus_kas_neraca: string | number | null;
+  selisih_perubahan_ekuitas_neraca: string | number | null;
+  financial_statement_validation_status: string | null;
+  calk_validation_status: string | null;
+  reporting_package_status: string | null;
+  reporting_package_note: string | null;
+};
+
+type ReviewIssue = {
+  key: string;
+  title: string;
+  amount: number;
+  explanation: string;
+  steps: string[];
 };
 
 type ReportMenuItem = {
@@ -59,6 +79,85 @@ function getReportIcon(reportCode: string) {
   if (reportCode === "CALK") return BookOpenText;
   if (reportCode === "VALIDASI") return ShieldCheck;
   return FileSpreadsheet;
+}
+
+function buildKepmenReviewIssues(validation: PackageValidation | null) {
+  const issues: ReviewIssue[] = [];
+
+  const addIssue = (
+    key: string,
+    title: string,
+    value: string | number | null | undefined,
+    explanation: string,
+    steps: string[]
+  ) => {
+    const amount = Math.abs(toNumber(value));
+
+    if (amount > 0.5) {
+      issues.push({
+        key,
+        title,
+        amount,
+        explanation,
+        steps,
+      });
+    }
+  };
+
+  addIssue(
+    "neraca",
+    "Neraca belum seimbang",
+    validation?.selisih_neraca,
+    "Total aset belum sama dengan total kewajiban ditambah ekuitas.",
+    [
+      "Buka Cut-off Migrasi.",
+      "Periksa kembali saldo aset, kewajiban, dan ekuitas awal.",
+      "Pastikan setiap akun lama sudah masuk kelompok ORVIA yang benar.",
+      "Validasi ulang cut-off, lalu buka kembali Laporan Kepmen 136.",
+    ]
+  );
+
+  addIssue(
+    "laba-rugi",
+    "Laba Rugi belum sinkron dengan Neraca",
+    validation?.selisih_laba_rugi_neraca,
+    "Laba/rugi berjalan belum sama dengan dampaknya pada ekuitas.",
+    [
+      "Buka Laporan Laba Rugi.",
+      "Periksa pendapatan, HPP, dan beban usaha.",
+      "Pastikan transaksi penjualan, pembelian, dan beban sudah masuk periode yang benar.",
+      "Validasi ulang laporan setelah koreksi transaksi selesai.",
+    ]
+  );
+
+  addIssue(
+    "arus-kas",
+    "Arus Kas belum sinkron dengan Neraca",
+    validation?.selisih_arus_kas_neraca,
+    "Saldo kas menurut Neraca belum sama dengan rekonsiliasi arus kas.",
+    [
+      "Buka Cut-off Migrasi.",
+      "Periksa bagian Kas & Bank.",
+      "Pastikan Kas Tunai memakai KAS-UTAMA, bukan Kas Alokasi Bagi Hasil.",
+      "Pastikan rekening bank memakai BANK-UTAMA atau akun bank yang benar.",
+      "Validasi ulang cut-off dan buka kembali Laporan Kepmen 136.",
+    ]
+  );
+
+  addIssue(
+    "perubahan-ekuitas",
+    "Perubahan Ekuitas belum sinkron dengan Neraca",
+    validation?.selisih_perubahan_ekuitas_neraca,
+    "Saldo ekuitas akhir belum sesuai dengan modal awal, tambahan modal, pembagian hasil, dan laba/rugi berjalan.",
+    [
+      "Buka Cut-off Migrasi bagian Ekuitas.",
+      "Periksa modal awal, penyertaan modal, dan alokasi bagi hasil.",
+      "Pastikan Kas Alokasi Bagi Hasil hanya dipakai untuk alokasi bagi hasil, bukan kas operasional.",
+      "Validasi ulang paket laporan Kepmen 136.",
+    ]
+  );
+
+  return issues;
 }
 
 export default async function Kepmen136ReportDashboardPage() {
@@ -94,6 +193,15 @@ export default async function Kepmen136ReportDashboardPage() {
 
   const summary = summaryData as DashboardSummary | null;
 
+  const { data: validationData, error: validationError } = await supabase
+    .from("v_kepmen136_reporting_package_validation")
+    .select(
+      "selisih_neraca, selisih_laba_rugi_neraca, selisih_arus_kas_neraca, selisih_perubahan_ekuitas_neraca, financial_statement_validation_status, calk_validation_status, reporting_package_status, reporting_package_note"
+    )
+    .eq("tenant_id", context.tenant_id)
+    .eq("unit_id", context.unit_id)
+    .maybeSingle();
+
   const { data: menuData, error: menuError } = await supabase
     .from("v_kepmen136_report_catalog")
     .select(
@@ -103,8 +211,13 @@ export default async function Kepmen136ReportDashboardPage() {
 
   const reportMenu = (menuData ?? []) as ReportMenuItem[];
 
-  const statusLabel = summary?.reporting_package_status ?? "BELUM ADA DATA";
+  const validation = validationData as PackageValidation | null;
+  const statusLabel =
+    validation?.reporting_package_status ??
+    summary?.reporting_package_status ??
+    "BELUM ADA DATA";
   const isValid = statusLabel === "VALID";
+  const reviewIssues = buildKepmenReviewIssues(validation);
 
   return (
     <div className="space-y-5">
@@ -133,6 +246,18 @@ export default async function Kepmen136ReportDashboardPage() {
         <section className="rounded-3xl border border-rose-100 bg-rose-50 p-5 shadow-sm">
           <h2 className="font-bold text-rose-950">Menu gagal dimuat</h2>
           <p className="mt-2 text-sm text-rose-800">{menuError.message}</p>
+        </section>
+      ) : null}
+
+      {validationError ? (
+        <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5 shadow-sm">
+          <h2 className="font-bold text-amber-950">
+            Petunjuk penyelesaian belum lengkap
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-amber-800">
+            Status laporan tetap ditampilkan, tetapi rincian validasi belum bisa
+            dibaca: {validationError.message}
+          </p>
         </section>
       ) : null}
 
@@ -225,6 +350,73 @@ export default async function Kepmen136ReportDashboardPage() {
               </p>
             </div>
           </section>
+
+          {!isValid ? (
+            <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-amber-800">
+                    <AlertTriangle className="h-5 w-5" />
+                    <h2 className="text-lg font-bold">
+                      Petunjuk Penyelesaian
+                    </h2>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-amber-900">
+                    Paket laporan belum siap diekspor. Periksa poin di bawah ini
+                    sebelum membuka ulang laporan.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-amber-300 bg-white px-4 py-3 text-sm font-bold text-amber-900">
+                  Status: {statusLabel}
+                </div>
+              </div>
+
+              {validation?.reporting_package_note ? (
+                <p className="mt-4 rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                  {validation.reporting_package_note}
+                </p>
+              ) : null}
+
+              {reviewIssues.length > 0 ? (
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  {reviewIssues.map((issue) => (
+                    <div
+                      key={issue.key}
+                      className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm"
+                    >
+                      <p className="text-sm font-bold text-slate-950">
+                        {issue.title}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-rose-700">
+                        Selisih: {formatRupiah(issue.amount)}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {issue.explanation}
+                      </p>
+
+                      <div className="mt-3 rounded-xl bg-slate-50 p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                          Langkah perbaikan
+                        </p>
+                        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm leading-6 text-slate-700">
+                          {issue.steps.map((step) => (
+                            <li key={step}>{step}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-white p-4 text-sm leading-6 text-slate-700">
+                  Status masih perlu review, tetapi sistem belum menemukan angka
+                  selisih spesifik. Periksa Cut-off Migrasi, validasi ulang
+                  paket laporan, lalu buka kembali halaman ini.
+                </div>
+              )}
+            </section>
+          ) : null}
 
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-5 flex flex-col gap-1">
