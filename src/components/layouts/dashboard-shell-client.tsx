@@ -2,6 +2,7 @@
 
 import { MouseEvent, ReactNode, useEffect, useState } from "react";
 import { Bell, Menu, PanelLeftClose, PanelLeftOpen, UserRound, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { GlobalActionNotice } from "@/components/ui/global-action-notice";
@@ -68,6 +69,28 @@ function getScopeLabel(loginContext: LoginContext | null) {
   }
 
   return "Scope Platform";
+}
+
+function CollapsedSidebarTooltipPortal({
+  tooltip,
+}: {
+  tooltip: { label: string; top: number } | null;
+}) {
+  if (!tooltip || typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="pointer-events-none fixed z-[9999] -translate-y-1/2 pl-3"
+      style={{ left: 96, top: tooltip.top }}
+    >
+      <div className="whitespace-nowrap rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-black text-white shadow-2xl shadow-slate-900/20">
+        {tooltip.label}
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export function DashboardShellClient({
@@ -223,16 +246,9 @@ export function DashboardShellClient({
         </div>
       </aside>
 
-      {isSidebarCollapsed && collapsedTooltip ? (
-        <div
-          className="pointer-events-none fixed left-24 z-[80] -translate-y-1/2 pl-3"
-          style={{ top: collapsedTooltip.top }}
-        >
-          <div className="whitespace-nowrap rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-black text-white shadow-2xl shadow-slate-900/20">
-            {collapsedTooltip.label}
-          </div>
-        </div>
-      ) : null}
+      <CollapsedSidebarTooltipPortal
+        tooltip={isSidebarCollapsed ? collapsedTooltip : null}
+      />
 
       {isMobileMenuOpen ? (
         <div className="fixed inset-0 z-40 overflow-hidden overscroll-none lg:hidden">
@@ -359,7 +375,7 @@ export function DashboardShellClient({
                     {displayName}
                   </p>
                   <p className="max-w-[150px] truncate text-[11px] font-semibold text-slate-500">
-                    {roleLabel} Ã‚Â· {scopeLabel}
+                    {roleLabel} Ãƒâ€šÃ‚Â· {scopeLabel}
                   </p>
                 </div>
               </div>
