@@ -1,4 +1,4 @@
-﻿import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
@@ -67,7 +67,15 @@ function statusClass(status: string | null) {
   }
 }
 
-export default async function BumdesCutoffMigrasiPage() {
+export default async function BumdesCutoffMigrasiPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const noticeValue = resolvedSearchParams.notice;
+  const notice = Array.isArray(noticeValue) ? noticeValue[0] : noticeValue;
+
   const context = await getLoginContext();
 
   if (!context?.tenant_id) {
@@ -89,6 +97,9 @@ export default async function BumdesCutoffMigrasiPage() {
   }
 
   const rows = (data ?? []) as CutoffRow[];
+  const canPostCutoff = ["admin_bumdes", "direktur_bumdes"].includes(
+    String(context.role ?? "")
+  );
 
   return (
     <div className="space-y-6">
@@ -108,6 +119,34 @@ export default async function BumdesCutoffMigrasiPage() {
           mengalir ke engine kas-bank, persediaan, aset tetap, dan ekuitas.
         </p>
       </div>
+
+      {notice === "period_not_open" ? (
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+          <p className="font-bold text-amber-950">
+            Posting belum dapat dilakukan karena periode ORVIA belum terbuka.
+          </p>
+          <p className="mt-2">
+            Langkah penyelesaian: buka menu Periode Akuntansi di Dashboard
+            BUMDes, pilih unit terkait, lalu pastikan periode sesuai tanggal
+            mulai ORVIA sudah berstatus terbuka/open. Setelah itu kembali ke
+            halaman ini dan ulangi Posting Cut-off.
+          </p>
+        </div>
+      ) : null}
+
+      {notice === "prepare_failed" || notice === "posting_failed" ? (
+        <div className="rounded-3xl border border-rose-200 bg-rose-50 p-5 text-sm leading-6 text-rose-800">
+          Posting cut-off belum berhasil diproses oleh engine database. Periksa
+          periode akuntansi, status cut-off, dan kelengkapan data saldo awal.
+        </div>
+      ) : null}
+
+      {notice === "posting_role" ? (
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+          Posting Cut-off hanya dapat dilakukan oleh Admin BUMDes atau Direktur
+          BUMDes.
+        </div>
+      ) : null}
 
       <Card className="overflow-hidden">
         <div className="border-b border-slate-200 p-5">
@@ -169,7 +208,7 @@ export default async function BumdesCutoffMigrasiPage() {
                       {formatRupiah(row.total_equity)}
                     </td>
                     <td className="whitespace-nowrap px-5 py-4">
-                      {row.status === "approved" ? (
+                      {row.status === "approved" && canPostCutoff ? (
                         <form action={postBumdesCutoffMigrationAction}>
                           <input
                             type="hidden"
@@ -183,6 +222,12 @@ export default async function BumdesCutoffMigrasiPage() {
                             Posting Cut-off
                           </button>
                         </form>
+                      ) : null}
+
+                      {row.status === "approved" && !canPostCutoff ? (
+                        <p className="text-xs font-medium text-amber-700">
+                          Menunggu Admin/Direktur BUMDes untuk posting.
+                        </p>
                       ) : null}
 
                       {row.status === "posted" ? (

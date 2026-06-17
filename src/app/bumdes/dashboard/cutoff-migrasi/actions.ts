@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -53,18 +53,20 @@ export async function prepareBumdesCutoffAccountingPeriodsAction(formData: FormD
 
 export async function postBumdesCutoffMigrationAction(formData: FormData) {
   const context = await getLoginContext();
+  const role = context?.role ?? "";
+  const cutoffMigrationId = String(formData.get("cutoff_migration_id") ?? "").trim();
 
   if (!context?.user_id) {
-    throw new Error("Konteks login BUMDes tidak valid.");
+    redirect("/login");
   }
 
-  assertBumdesPostingRole(context.role);
+  if (!["admin_bumdes", "direktur_bumdes"].includes(role)) {
+    redirect("/bumdes/dashboard/cutoff-migrasi?notice=posting_role");
+  }
 
-  const cutoffMigrationId = getRequiredString(
-    formData,
-    "cutoff_migration_id",
-    "ID cut-off migrasi tidak ditemukan."
-  );
+  if (!cutoffMigrationId) {
+    redirect("/bumdes/dashboard/cutoff-migrasi?notice=cutoff_missing");
+  }
 
   const supabase = await createClient();
 
@@ -76,8 +78,23 @@ export async function postBumdesCutoffMigrationAction(formData: FormData) {
   );
 
   if (prepareError) {
-    throw new Error(
-      prepareError.message || "Gagal menyiapkan periode akuntansi cut-off."
+    const message = prepareError.message || "";
+
+    console.error("prepare_unit_cutoff_migration_accounting_periods failed", {
+      cutoffMigrationId,
+      role,
+      message,
+    });
+
+    const normalizedMessage = message.toLowerCase();
+    const notice =
+      normalizedMessage.includes("orvia start date period is not open") ||
+      normalizedMessage.includes("period is not open")
+        ? "period_not_open"
+        : "prepare_failed";
+
+    redirect(
+      `/bumdes/dashboard/cutoff-migrasi?notice=${notice}&cutoff=${cutoffMigrationId}`
     );
   }
 
@@ -86,7 +103,15 @@ export async function postBumdesCutoffMigrationAction(formData: FormData) {
   });
 
   if (error) {
-    throw new Error(error.message || "Posting cut-off migrasi gagal.");
+    console.error("post_unit_cutoff_migration failed", {
+      cutoffMigrationId,
+      role,
+      message: error.message,
+    });
+
+    redirect(
+      `/bumdes/dashboard/cutoff-migrasi?notice=posting_failed&cutoff=${cutoffMigrationId}`
+    );
   }
 
   revalidatePath("/bumdes/dashboard");
@@ -103,4 +128,3 @@ export async function postBumdesCutoffMigrationAction(formData: FormData) {
 
   redirect(`/bumdes/dashboard/cutoff-migrasi?posted=${cutoffMigrationId}`);
 }
-
