@@ -1,4 +1,5 @@
-import { ResponsiveTableShell } from "@/components/ui/responsive-table-shell";
+﻿import { ResponsiveTableShell } from "@/components/ui/responsive-table-shell";
+import { OrviaAiUnitSummaryCard } from "./_components/orvia-ai-unit-summary-card";
 export const dynamic = "force-dynamic";
 
 import {
@@ -149,6 +150,8 @@ export default async function UnitDashboardPage() {
           </div>
         </div>
       </section>
+
+      <OrviaAiUnitSummaryCard />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -339,8 +342,4 @@ export default async function UnitDashboardPage() {
     </div>
   );
 }
-
-
-
-
 
