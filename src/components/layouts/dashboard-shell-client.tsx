@@ -80,8 +80,16 @@ export function DashboardShellClient({
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [collapsedTooltip, setCollapsedTooltip] = useState<{
+    label: string;
+    top: number;
+  } | null>(null);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [pendingFromPathname, setPendingFromPathname] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCollapsedTooltip(null);
+  }, [pathname, isSidebarCollapsed]);
 
   useEffect(() => {
     if (!pendingHref) {
@@ -180,7 +188,7 @@ export function DashboardShellClient({
           ].join(" ")}
         >
           {navItems.map((item) => (
-            <SidebarMenuItem key={item.href ?? item.label} item={item} collapsed={isSidebarCollapsed} />
+            <SidebarMenuItem key={item.href ?? item.label} item={item} collapsed={isSidebarCollapsed} onCollapsedTooltipChange={setCollapsedTooltip} />
           ))}
         </nav>
 
@@ -214,6 +222,17 @@ export function DashboardShellClient({
           )}
         </div>
       </aside>
+
+      {isSidebarCollapsed && collapsedTooltip ? (
+        <div
+          className="pointer-events-none fixed left-24 z-[80] -translate-y-1/2 pl-3"
+          style={{ top: collapsedTooltip.top }}
+        >
+          <div className="whitespace-nowrap rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-black text-white shadow-2xl shadow-slate-900/20">
+            {collapsedTooltip.label}
+          </div>
+        </div>
+      ) : null}
 
       {isMobileMenuOpen ? (
         <div className="fixed inset-0 z-40 overflow-hidden overscroll-none lg:hidden">
@@ -340,7 +359,7 @@ export function DashboardShellClient({
                     {displayName}
                   </p>
                   <p className="max-w-[150px] truncate text-[11px] font-semibold text-slate-500">
-                    {roleLabel} Â· {scopeLabel}
+                    {roleLabel} Ã‚Â· {scopeLabel}
                   </p>
                 </div>
               </div>

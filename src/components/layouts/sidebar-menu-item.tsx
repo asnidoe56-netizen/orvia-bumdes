@@ -35,6 +35,7 @@ import type { NavItem } from "@/lib/navigation/dashboard-config";
 type SidebarMenuItemProps = {
   item: NavItem;
   collapsed?: boolean;
+  onCollapsedTooltipChange?: (tooltip: { label: string; top: number } | null) => void;
 };
 
 const iconMap: Record<string, LucideIcon> = {
@@ -111,14 +112,7 @@ function isPathActive(pathname: string, href?: string) {
     : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function CollapsedSidebarTooltip({ label }: { label: string }) {
-  return (
-    <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-black text-white opacity-0 shadow-2xl shadow-slate-900/20 transition duration-150 group-hover:translate-x-1 group-hover:opacity-100 group-focus-visible:translate-x-1 group-focus-visible:opacity-100">
-      {label}
-    </span>
-  );
-}
-export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProps) {
+export function SidebarMenuItem({ item, collapsed = false, onCollapsedTooltipChange }: SidebarMenuItemProps) {
   const pathname = usePathname();
 
   const hasChildren = Boolean(item.children?.length);
@@ -130,6 +124,20 @@ export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProp
   const [open, setOpen] = useState(isChildActive);
 
   const Icon = iconMap[item.label] ?? LayoutDashboard;
+
+  function handleCollapsedTooltipEnter(label: string, element: HTMLElement) {
+    if (!collapsed || !onCollapsedTooltipChange) return;
+
+    const rect = element.getBoundingClientRect();
+    onCollapsedTooltipChange({
+      label,
+      top: rect.top + rect.height / 2,
+    });
+  }
+
+  function handleCollapsedTooltipLeave() {
+    onCollapsedTooltipChange?.(null);
+  }
 
   if (hasChildren) {
     return (
@@ -156,11 +164,7 @@ export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProp
               <Icon className="h-4 w-4" />
             </span>
 
-            {collapsed ? (
-        <CollapsedSidebarTooltip label={item.label} />
-      ) : (
-        <span className="truncate">{item.label}</span>
-      )}
+            {collapsed ? null : <span className="truncate">{item.label}</span>}
           </span>
 
           <ChevronDown
@@ -222,11 +226,7 @@ export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProp
         <Icon className="h-4 w-4" />
       </span>
 
-      {collapsed ? (
-        <CollapsedSidebarTooltip label={item.label} />
-      ) : (
-        <span className="truncate">{item.label}</span>
-      )}
+      {collapsed ? null : <span className="truncate">{item.label}</span>}
     </Link>
   );
 }
