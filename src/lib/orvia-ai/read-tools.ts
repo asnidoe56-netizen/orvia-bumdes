@@ -379,3 +379,151 @@ export async function getAiSupplierPayables(prompt?: string | null) {
     rows,
   };
 }
+
+export type AiInventoryPositionRow = {
+  item_id: string;
+  unit_id: string | null;
+  item_code: string;
+  item_name: string;
+  description: string | null;
+  unit_of_measure: string;
+  item_type: string;
+  minimum_stock: number;
+  default_sales_price: number;
+  current_stock: number;
+  last_purchase_price: number;
+  average_unit_cost: number;
+  inventory_value: number;
+  stock_status: string;
+  is_active: boolean;
+};
+
+type InventoryPositionDbRow = {
+  id: string | null;
+  unit_id: string | null;
+  item_code: string | null;
+  item_name: string | null;
+  description: string | null;
+  unit_of_measure: string | null;
+  item_type: string | null;
+  minimum_stock: number | string | null;
+  default_sales_price: number | string | null;
+  current_stock: number | string | null;
+  last_purchase_price: number | string | null;
+  average_unit_cost: number | string | null;
+  inventory_value: number | string | null;
+  stock_status: string | null;
+  is_active: boolean | null;
+};
+
+/**
+ * Read-only ORVIA AI tool.
+ *
+ * Purpose:
+ * - Read tenant-bound inventory position for AI answers and future MCP tools.
+ *
+ * Hard boundaries:
+ * - no insert
+ * - no update
+ * - no delete
+ * - no posting
+ * - no journal mutation
+ * - no inventory mutation
+ * - no stock mutation
+ * - tenant_id and unit_id are derived from authenticated login context only
+ */
+export async function getAiInventoryPosition(prompt?: string | null) {
+  const supabase = await createClient();
+  const context = await getOrviaAiContext();
+
+  assertAiRoleAllowed(context, "read.inventory");
+  assertAiTenantScope(context);
+  assertAiUnitScope(context);
+
+  const scopeFilter = getAiReadableScopeFilter(context);
+
+  let query = supabase
+    .from("v_inventory_item_stock_summary")
+    .select(
+      "id, unit_id, item_code, item_name, description, unit_of_measure, item_type, minimum_stock, default_sales_price, current_stock, last_purchase_price, average_unit_cost, inventory_value, stock_status, is_active"
+    )
+    .eq("tenant_id", scopeFilter.tenantId)
+    .eq("item_type", "stock")
+    .eq("is_active", true)
+    .order("item_name", { ascending: true });
+
+  if (scopeFilter.scope === "unit") {
+    query = query.eq("unit_id", scopeFilter.unitId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Gagal membaca posisi stok: ${error.message}`);
+  }
+
+  const rows: AiInventoryPositionRow[] = (
+    (data ?? []) as InventoryPositionDbRow[]
+  )
+    .filter((row) => Boolean(row.id))
+    .map((row) => ({
+      item_id: row.id as string,
+      unit_id: row.unit_id ?? null,
+      item_code: row.item_code ?? "-",
+      item_name: row.item_name ?? "-",
+      description: row.description ?? null,
+      unit_of_measure: row.unit_of_measure ?? "-",
+      item_type: row.item_type ?? "-",
+      minimum_stock: toNumber(row.minimum_stock),
+      default_sales_price: toNumber(row.default_sales_price),
+      current_stock: toNumber(row.current_stock),
+      last_purchase_price: toNumber(row.last_purchase_price),
+      average_unit_cost: toNumber(row.average_unit_cost),
+      inventory_value: toNumber(row.inventory_value),
+      stock_status: row.stock_status ?? "-",
+      is_active: Boolean(row.is_active),
+    }));
+
+  const totalInventoryValue = rows.reduce(
+    (sum, row) => sum + row.inventory_value,
+    0
+  );
+
+  const lowOrEmptyItems = rows.filter(
+    (row) => row.stock_status === "low" || row.stock_status === "empty"
+  );
+
+  const largestInventoryValueItems = [...rows]
+    .sort((a, b) => b.inventory_value - a.inventory_value)
+    .slice(0, 5);
+
+  await logOrviaAiToolUsage(supabase, context, {
+    toolName: "orvia.read.inventory_position",
+    permission: "read.inventory",
+    prompt: prompt ?? null,
+    summary: "ORVIA AI membaca posisi stok barang.",
+    metadata: {
+      row_count: rows.length,
+      low_or_empty_count: lowOrEmptyItems.length,
+      total_inventory_value: totalInventoryValue,
+      largest_inventory_value_count: largestInventoryValueItems.length,
+    },
+  });
+
+  return {
+    mode: "read_only",
+    tool: "orvia.read.inventory_position",
+    requires_user_confirmation: false,
+    scope: scopeFilter.scope,
+    tenant_id: context.tenantId,
+    unit_id: scopeFilter.unitId,
+    totals: {
+      item_count: rows.length,
+      low_or_empty_count: lowOrEmptyItems.length,
+      inventory_value: totalInventoryValue,
+    },
+    low_or_empty_items: lowOrEmptyItems,
+    largest_inventory_value_items: largestInventoryValueItems,
+    rows,
+  };
+}
