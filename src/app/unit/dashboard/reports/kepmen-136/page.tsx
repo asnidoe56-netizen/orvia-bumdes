@@ -206,12 +206,9 @@ export default async function Kepmen136ReportDashboardPage() {
 
   const summary = summaryData as DashboardSummary | null;
   const reportMenu = (menuData ?? []) as ReportMenuItem[];
-  const validation: PackageValidation | null = null;
-  const validationError: { message: string } | null = null;
-  const statusLabel =
-    validation?.reporting_package_status ??
-    summary?.reporting_package_status ??
-    "BELUM ADA DATA";
+  const validation = null as PackageValidation | null;
+  const validationError = null as { message: string } | null;
+  const statusLabel = summary?.reporting_package_status ?? "BELUM ADA DATA";
   const isValid = statusLabel === "VALID";
   const reviewIssues = buildKepmenReviewIssues(validation);
 
