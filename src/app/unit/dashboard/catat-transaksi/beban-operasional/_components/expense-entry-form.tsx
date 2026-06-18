@@ -109,10 +109,6 @@ function pickExpenseAccount(
       accountName: "administrasi",
     },
     {
-      keywords: ["penyusutan", "depresiasi"],
-      accountName: "penyusutan",
-    },
-    {
       keywords: ["cadangan", "kerugian pinjaman"],
       accountName: "cadangan",
     },
@@ -703,6 +699,8 @@ export function ExpenseEntryForm({
     </form>
   );
 }
+
+
 
 
 

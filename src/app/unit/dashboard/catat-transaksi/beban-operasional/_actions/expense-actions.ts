@@ -9,6 +9,18 @@ export type OperationalExpenseActionState = {
   message: string;
 };
 
+const MANUAL_EXPENSE_BLOCKED_ACCOUNT_CODES = new Set([
+  "6172",
+  "6173",
+  "6174",
+  "6175",
+  "6176",
+  "6400",
+]);
+
+const DEPRECIATION_BLOCK_MESSAGE =
+  "Akun penyusutan/amortisasi dicatat melalui menu Aset Tetap, bukan melalui Beban Operasional.";
+
 function formatDateInput(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -99,6 +111,37 @@ export async function createAndPostOperationalExpense(
     }
     const supabase = await createClient();
 
+    // Validasi akun beban manual agar akun penyusutan/amortisasi tidak bisa diposting dari form ini.
+    const { data: expenseAccount, error: expenseAccountError } = await supabase
+      .from("chart_of_accounts")
+      .select("kode, nama, tipe, account_type, normal_balance, is_active, is_postable")
+      .eq("id", expenseAccountId)
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .maybeSingle();
+
+    if (expenseAccountError || !expenseAccount) {
+      throw new Error("Jenis beban tidak valid untuk unit ini.");
+    }
+
+    if (
+      expenseAccount.tipe !== "beban" ||
+      expenseAccount.account_type !== "BEBAN" ||
+      expenseAccount.normal_balance !== "debit" ||
+      !expenseAccount.is_active ||
+      !expenseAccount.is_postable
+    ) {
+      throw new Error("Jenis beban tidak dapat dipakai untuk transaksi manual.");
+    }
+
+    if (
+      MANUAL_EXPENSE_BLOCKED_ACCOUNT_CODES.has(
+        String(expenseAccount.kode ?? "")
+      )
+    ) {
+      throw new Error(DEPRECIATION_BLOCK_MESSAGE);
+    }
+
     const { error } = await supabase.rpc("create_and_post_operational_expense_v2", {
       p_tenant_id: context.tenant_id,
       p_unit_id: context.unit_id,
@@ -137,6 +180,8 @@ export async function createAndPostOperationalExpense(
     };
   }
 }
+
+
 
 
 

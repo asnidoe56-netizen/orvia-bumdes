@@ -16,6 +16,15 @@ export type CashBankAccountOption = {
   current_balance: number;
 };
 
+const MANUAL_EXPENSE_EXCLUDED_ACCOUNT_CODES = new Set([
+  "6172",
+  "6173",
+  "6174",
+  "6175",
+  "6176",
+  "6400",
+]);
+
 export async function ExpenseEntrySection() {
   const context = await getLoginContext();
 
@@ -58,13 +67,16 @@ export async function ExpenseEntrySection() {
     );
   }
 
-  const expenseOptions: ExpenseAccountOption[] = (expenseAccounts ?? []).map(
-    (account) => ({
+  const expenseOptions: ExpenseAccountOption[] = (expenseAccounts ?? [])
+    .filter(
+      (account) =>
+        !MANUAL_EXPENSE_EXCLUDED_ACCOUNT_CODES.has(String(account.kode ?? ""))
+    )
+    .map((account) => ({
       id: account.id,
       kode: account.kode,
       nama: account.nama,
-    })
-  );
+    }));
 
   const cashBankOptions: CashBankAccountOption[] = (cashBankAccounts ?? [])
     .filter((account) => Boolean(account.cash_bank_account_id))
@@ -85,6 +97,7 @@ export async function ExpenseEntrySection() {
         <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
           Catat pengeluaran operasional unit seperti gaji pegawai, listrik,
           transportasi, administrasi, pemeliharaan, dan beban usaha lainnya.
+          Penyusutan aset dicatat melalui menu Aset Tetap, bukan melalui form ini.
         </p>
       </div>
 
@@ -95,4 +108,6 @@ export async function ExpenseEntrySection() {
     </section>
   );
 }
+
+
 
