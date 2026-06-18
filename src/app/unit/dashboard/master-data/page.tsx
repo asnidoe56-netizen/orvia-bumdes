@@ -1,9 +1,15 @@
 ﻿import Link from "next/link";
 import { PageBackButton } from "@/components/ui/page-back-button";
-import { Package, Truck, UsersRound, ArrowRight, Database } from "lucide-react";
+import { Package, Truck, UsersRound, ArrowRight, Database, BookOpen } from "lucide-react";
 
 const masterDataMenus = [
   {
+    title: "Daftar Akun",
+    description:
+      "Lihat daftar akun unit usaha yang menjadi dasar kas-bank, transaksi, jurnal, dan laporan.",
+    href: "/unit/dashboard/master-data/daftar-akun",
+    icon: BookOpen,
+  },{
     title: "Persediaan Barang",
     description:
       "Kelola master barang, jasa, satuan, tipe item, dan referensi akun persediaan.",
@@ -94,3 +100,6 @@ export default function UnitMasterDataPage() {
     </div>
   );
 }
+
+
+
