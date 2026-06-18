@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { MouseEvent, ReactNode, useEffect, useState } from "react";
 import { Bell, Menu, PanelLeftClose, PanelLeftOpen, UserRound, X } from "lucide-react";
@@ -109,10 +109,6 @@ export function DashboardShellClient({
   } | null>(null);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [pendingFromPathname, setPendingFromPathname] = useState<string | null>(null);
-
-  useEffect(() => {
-    setCollapsedTooltip(null);
-  }, [pathname, isSidebarCollapsed]);
 
   useEffect(() => {
     if (!pendingHref) {
@@ -375,7 +371,7 @@ export function DashboardShellClient({
                     {displayName}
                   </p>
                   <p className="max-w-[150px] truncate text-[11px] font-semibold text-slate-500">
-                    {roleLabel} Ãƒâ€šÃ‚Â· {scopeLabel}
+                    {roleLabel} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {scopeLabel}
                   </p>
                 </div>
               </div>
@@ -390,11 +386,3 @@ export function DashboardShellClient({
     </div>
   );
 }
-
-
-
-
-
-
-
-

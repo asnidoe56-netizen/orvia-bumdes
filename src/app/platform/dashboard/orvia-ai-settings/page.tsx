@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -183,8 +183,12 @@ export default function OrviaAiSettingsPage() {
   }
 
   useEffect(() => {
-    void loadSettings();
-    void loadTenantAccess();
+    const timeoutId = window.setTimeout(() => {
+      void loadSettings();
+      void loadTenantAccess();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   async function saveSettings(event: React.FormEvent<HTMLFormElement>) {
@@ -597,7 +601,7 @@ export default function OrviaAiSettingsPage() {
                           {tenant.nama_bumdes ?? "-"}
                         </p>
                         <p className="mt-1 text-xs font-bold text-slate-500">
-                          {tenant.kode_bumdes ?? "Tanpa kode"} Ã‚Â· ID{" "}
+                          {tenant.kode_bumdes ?? "Tanpa kode"} Ãƒâ€šÃ‚Â· ID{" "}
                           {tenant.tenant_id.slice(0, 8)}...
                         </p>
                       </td>

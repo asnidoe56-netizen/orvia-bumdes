@@ -29,18 +29,13 @@ export async function RevenueReceiptEntrySection() {
 
   const supabase = await createClient();
 
-  const { data: revenueAccounts, error: revenueError } = await supabase
-    .from("chart_of_accounts")
-    .select("id, kode, nama")
-    .eq("tenant_id", context.tenant_id)
-    .eq("unit_id", context.unit_id)
-    .eq("tipe", "pendapatan")
-    .eq("account_type", "PENDAPATAN")
-    .eq("normal_balance", "credit")
-    .eq("is_active", true)
-    .eq("is_postable", true)
-    .in("kode", ["4200", "4310", "4400"])
-    .order("kode", { ascending: true });
+  const { data: revenueAccounts, error: revenueError } = await supabase.rpc(
+    "get_revenue_receipt_account_options",
+    {
+      p_tenant_id: context.tenant_id,
+      p_unit_id: context.unit_id,
+    }
+  );
 
   const { data: cashBankAccounts, error: cashError } = await supabase
     .from("v_cash_bank_balance")
@@ -59,7 +54,9 @@ export async function RevenueReceiptEntrySection() {
     );
   }
 
-  const revenueOptions: RevenueAccountOption[] = (revenueAccounts ?? []).map(
+  const typedRevenueAccounts = (revenueAccounts ?? []) as RevenueAccountOption[];
+
+  const revenueOptions: RevenueAccountOption[] = typedRevenueAccounts.map(
     (account) => ({
       id: account.id,
       kode: account.kode,
@@ -96,5 +93,3 @@ export async function RevenueReceiptEntrySection() {
     </section>
   );
 }
-
-

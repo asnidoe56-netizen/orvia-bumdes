@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $ProjectDir = "D:\ERP-BUMDES"
 $VpsHost = "31.97.110.246"
@@ -7,8 +7,12 @@ $VpsUser = "root"
 $KeyPath = "$env:USERPROFILE\.ssh\erp_bumdes_vps_ed25519"
 $RemoteArchive = "/root/erp-bumdes-deploy.tar.gz"
 $RemoteDeployScript = "/root/deploy-erp-bumdes.sh"
-$LocalArchive = Join-Path $env:TEMP "erp-bumdes-deploy.tar.gz"
-$LocalRemoteScript = Join-Path $env:TEMP "deploy-erp-bumdes-remote.sh"
+$LocalTempDir = Join-Path $ProjectDir ".deploy-tmp"
+if (!(Test-Path $LocalTempDir)) {
+  New-Item -ItemType Directory -Force -Path $LocalTempDir | Out-Null
+}
+$LocalArchive = Join-Path $LocalTempDir "erp-bumdes-deploy.tar.gz"
+$LocalRemoteScript = Join-Path $LocalTempDir "deploy-erp-bumdes-remote.sh"
 
 function Stop-IfFailed {
   param([string]$Message)
@@ -32,6 +36,8 @@ try {
     --exclude=.git `
     --exclude=.next `
     --exclude=node_modules `
+    --exclude=.deploy-tmp `
+    --exclude=backups `
     --exclude=.env `
     --exclude=.env.local `
     --exclude=.env.production `

@@ -49,3 +49,6 @@ backups/
 # Local environment secrets
 .env*.local
 
+
+# Local deploy temporary archive
+.deploy-tmp/
