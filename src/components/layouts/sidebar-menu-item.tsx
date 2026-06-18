@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -112,7 +112,7 @@ function isPathActive(pathname: string, href?: string) {
     : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function SidebarMenuItem({ item, collapsed = false, onCollapsedTooltipChange }: SidebarMenuItemProps) {
+export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProps) {
   const pathname = usePathname();
 
   const hasChildren = Boolean(item.children?.length);
@@ -124,20 +124,6 @@ export function SidebarMenuItem({ item, collapsed = false, onCollapsedTooltipCha
   const [open, setOpen] = useState(isChildActive);
 
   const Icon = iconMap[item.label] ?? LayoutDashboard;
-
-  function handleCollapsedTooltipEnter(label: string, element: HTMLElement) {
-    if (!collapsed || !onCollapsedTooltipChange) return;
-
-    const rect = element.getBoundingClientRect();
-    onCollapsedTooltipChange({
-      label,
-      top: rect.top + rect.height / 2,
-    });
-  }
-
-  function handleCollapsedTooltipLeave() {
-    onCollapsedTooltipChange?.(null);
-  }
 
   if (hasChildren) {
     return (
@@ -230,18 +216,3 @@ export function SidebarMenuItem({ item, collapsed = false, onCollapsedTooltipCha
     </Link>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

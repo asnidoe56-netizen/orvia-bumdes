@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import {
@@ -182,36 +182,32 @@ export default async function Kepmen136ReportDashboardPage() {
 
   const supabase = await createClient();
 
-  const { data: summaryData, error: summaryError } = await supabase
-    .from("v_kepmen136_dashboard_summary")
-    .select(
-      "tenant_id, unit_id, cakupan_laporan, total_aset, total_kewajiban, total_ekuitas, financial_statement_validation_status, total_calk_sections, calk_validation_status, reporting_package_status, is_ready_for_export, dashboard_note"
-    )
-    .eq("tenant_id", context.tenant_id)
-    .eq("unit_id", context.unit_id)
-    .maybeSingle();
+  const [summaryResult, menuResult] = await Promise.all([
+    supabase
+      .from("v_kepmen136_dashboard_summary")
+      .select(
+        "tenant_id, unit_id, cakupan_laporan, total_aset, total_kewajiban, total_ekuitas, financial_statement_validation_status, total_calk_sections, calk_validation_status, reporting_package_status, is_ready_for_export, dashboard_note"
+      )
+      .eq("tenant_id", context.tenant_id)
+      .eq("unit_id", context.unit_id)
+      .limit(1)
+      .maybeSingle(),
+
+    supabase
+      .from("v_kepmen136_report_catalog")
+      .select(
+        "report_order, report_code, report_name, summary_view, detail_view, report_note"
+      )
+      .order("report_order", { ascending: true }),
+  ]);
+
+  const { data: summaryData, error: summaryError } = summaryResult;
+  const { data: menuData, error: menuError } = menuResult;
 
   const summary = summaryData as DashboardSummary | null;
-
-  const { data: validationData, error: validationError } = await supabase
-    .from("v_kepmen136_reporting_package_validation")
-    .select(
-      "selisih_neraca, selisih_laba_rugi_neraca, selisih_arus_kas_neraca, selisih_perubahan_ekuitas_neraca, financial_statement_validation_status, calk_validation_status, reporting_package_status, reporting_package_note"
-    )
-    .eq("tenant_id", context.tenant_id)
-    .eq("unit_id", context.unit_id)
-    .maybeSingle();
-
-  const { data: menuData, error: menuError } = await supabase
-    .from("v_kepmen136_report_catalog")
-    .select(
-      "report_order, report_code, report_name, summary_view, detail_view, report_note"
-    )
-    .order("report_order", { ascending: true });
-
   const reportMenu = (menuData ?? []) as ReportMenuItem[];
-
-  const validation = validationData as PackageValidation | null;
+  const validation: PackageValidation | null = null;
+  const validationError: { message: string } | null = null;
   const statusLabel =
     validation?.reporting_package_status ??
     summary?.reporting_package_status ??

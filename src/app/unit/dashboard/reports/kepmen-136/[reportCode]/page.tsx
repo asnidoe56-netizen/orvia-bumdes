@@ -1,9 +1,7 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
-import Link from "next/link";
-import { ArrowLeft, Database, FileSpreadsheet, ShieldCheck } from "lucide-react";
+import { FileSpreadsheet, ShieldCheck } from "lucide-react";
 import { PageBackButton } from "@/components/ui/page-back-button";
-import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
@@ -243,15 +241,6 @@ function slugToReportCode(slug: string) {
   return slug.toUpperCase().replaceAll("-", "_");
 }
 
-function getReadableScope(reportCode: string) {
-  if (reportCode === "NERACA") return "Laporan Posisi Keuangan";
-  if (reportCode === "LABA_RUGI") return "Laporan Laba Rugi";
-  if (reportCode === "ARUS_KAS") return "Laporan Arus Kas";
-  if (reportCode === "PERUBAHAN_EKUITAS") return "Laporan Perubahan Ekuitas";
-  if (reportCode === "CALK") return "Catatan atas Laporan Keuangan";
-  if (reportCode === "VALIDASI") return "Validasi Paket Laporan";
-  return "Laporan Kepmen 136";
-}
 
 function toNumber(value: string | number | null | undefined) {
   const parsed = Number(value ?? 0);
@@ -2258,4 +2247,3 @@ export default async function Kepmen136ReportDetailPage({ params }: PageProps) {
     </div>
   );
 }
-
