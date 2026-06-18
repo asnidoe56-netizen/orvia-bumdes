@@ -17,6 +17,7 @@ export type CashBankAccountOption = {
 };
 
 const MANUAL_EXPENSE_EXCLUDED_ACCOUNT_CODES = new Set([
+  "6000",
   "6172",
   "6173",
   "6174",
@@ -108,6 +109,7 @@ export async function ExpenseEntrySection() {
     </section>
   );
 }
+
 
 
 

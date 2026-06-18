@@ -10,6 +10,7 @@ export type OperationalExpenseActionState = {
 };
 
 const MANUAL_EXPENSE_BLOCKED_ACCOUNT_CODES = new Set([
+  "6000",
   "6172",
   "6173",
   "6174",
@@ -180,6 +181,7 @@ export async function createAndPostOperationalExpense(
     };
   }
 }
+
 
 
 
