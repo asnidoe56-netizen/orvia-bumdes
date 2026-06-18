@@ -117,7 +117,10 @@ as $$
       (
         uc.kode_template = 'JASA'
         and (
-          coa.kode like '42%'
+          (
+            coa.kode like '42%'
+            and coa.kode <> '4281'
+          )
           or coa.kode = '4300'
         )
       )

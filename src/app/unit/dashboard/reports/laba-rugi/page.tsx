@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import { FileSpreadsheet } from "lucide-react";
 import { PageBackButton } from "@/components/ui/page-back-button";
@@ -79,6 +79,15 @@ function formatRupiah(value: string | number | null | undefined) {
   }).format(toNumber(value));
 }
 
+function formatAccountingRupiah(value: string | number | null | undefined) {
+  const numberValue = toNumber(value);
+
+  if (numberValue === 0) {
+    return formatRupiah(0);
+  }
+
+  return `(${formatRupiah(Math.abs(numberValue))})`;
+}
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
 
@@ -98,10 +107,16 @@ function getPeriodLabel(summary: LabaRugiSummary | null) {
   return `${monthName} ${summary.period_year}`;
 }
 
-function amountClass(value: string | number | null | undefined) {
+function amountClass(
+  value: string | number | null | undefined,
+  deduction = false
+) {
   const numberValue = toNumber(value);
 
-  if (numberValue < 0) return "text-rose-700";
+  if ((deduction && numberValue > 0) || numberValue < 0) {
+    return "text-rose-700";
+  }
+
   if (numberValue > 0) return "text-slate-950";
 
   return "text-slate-500";
@@ -113,13 +128,18 @@ function ReportLine({
   bold = false,
   indent = false,
   muted = false,
+  deduction = false,
 }: {
   label: string;
   value?: string | number | null;
   bold?: boolean;
   indent?: boolean;
   muted?: boolean;
+  deduction?: boolean;
 }) {
+  const numberValue = toNumber(value);
+  const shouldUseAccountingFormat =
+    (deduction && numberValue > 0) || numberValue < 0;
   return (
     <div
       className={`grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(170px,auto)] gap-6 border-b border-slate-100 py-3 ${
@@ -131,10 +151,15 @@ function ReportLine({
       </div>
       <div
         className={`whitespace-nowrap text-right tabular-nums ${amountClass(
-          value
+          value,
+          deduction
         )}`}
       >
-        {value === undefined ? "" : formatRupiah(value)}
+        {value === undefined
+          ? ""
+          : shouldUseAccountingFormat
+            ? formatAccountingRupiah(value)
+            : formatRupiah(value)}
       </div>
     </div>
   );
@@ -143,9 +168,11 @@ function ReportLine({
 function AccountRows({
   rows,
   emptyText,
+  deduction = false,
 }: {
   rows: LabaRugiDetail[];
   emptyText: string;
+  deduction?: boolean;
 }) {
   if (rows.length === 0) {
     return (
@@ -163,6 +190,7 @@ function AccountRows({
           label={`${row.account_code} - ${row.account_name}`}
           value={row.amount}
           indent
+          deduction={deduction}
         />
       ))}
     </>
@@ -567,8 +595,9 @@ export default async function LabaRugiReportPage({ searchParams }: PageProps) {
               <AccountRows
                 rows={hppRows}
                 emptyText="Tidak ada akun HPP yang memiliki transaksi."
+                deduction
               />
-              <ReportLine label="Total HPP" value={summary.total_hpp} bold />
+              <ReportLine label="Total HPP" value={summary.total_hpp} bold deduction />
 
               <ReportLine
                 label="LABA KOTOR"
@@ -582,8 +611,9 @@ export default async function LabaRugiReportPage({ searchParams }: PageProps) {
               <AccountRows
                 rows={bebanRows}
                 emptyText="Tidak ada akun beban yang memiliki transaksi."
+                deduction
               />
-              <ReportLine label="Total Beban" value={summary.total_beban} bold />
+              <ReportLine label="Total Beban" value={summary.total_beban} bold deduction />
 
               <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
                 <div className="grid grid-cols-[1fr_auto] gap-4">
@@ -601,7 +631,9 @@ export default async function LabaRugiReportPage({ searchParams }: PageProps) {
                       labaBersih < 0 ? "text-rose-700" : "text-emerald-700"
                     }`}
                   >
-                    {formatRupiah(summary.laba_rugi_bersih)}
+                    {labaBersih < 0
+                      ? formatAccountingRupiah(summary.laba_rugi_bersih)
+                      : formatRupiah(summary.laba_rugi_bersih)}
                   </div>
                 </div>
               </div>
@@ -619,7 +651,3 @@ export default async function LabaRugiReportPage({ searchParams }: PageProps) {
     </div>
   );
 }
-
-
-
-
