@@ -1,4 +1,4 @@
-﻿export type AppRole =
+export type AppRole =
   | "super_admin_platform"
   | "direktur_bumdes"
   | "admin_bumdes"
@@ -16,8 +16,8 @@ export type LoginContext = {
   user_id: string;
   role: AppRole | null;
   tenant_id: string | null;
+  tenant_status?: string | null;
   unit_id: string | null;
   redirect_path: string;
   full_name?: string | null;
 };
-
