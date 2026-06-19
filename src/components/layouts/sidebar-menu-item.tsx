@@ -1,29 +1,39 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  ArchiveRestore,
   BarChart3,
   Building2,
+  CalendarClock,
   ChevronDown,
   ClipboardCheck,
   ClipboardList,
   Database,
-  Landmark,
+  FilePenLine,
   FileText,
   HandCoins,
+  Landmark,
   LayoutDashboard,
-  Package,
+  Newspaper,
+  NotebookPen,
+  PackageSearch,
+  Radar,
   ReceiptText,
-  RotateCcw,
-  ShieldCheck,
-  ShoppingCart,
-  Store,
+  Scale,
   Settings,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingCart,
+  Sparkles,
+  Store,
   TrendingUp,
   Truck,
+  UnlockKeyhole,
   UserRoundCheck,
+  UserRoundCog,
   UsersRound,
   WalletCards,
   Workflow,
@@ -39,15 +49,20 @@ type SidebarMenuItemProps = {
 };
 
 const iconMap: Record<string, LucideIcon> = {
+  // Platform
   "Ringkasan Platform": LayoutDashboard,
-  "Registrasi BUMDes": ClipboardList,
-  "Registrasi Pendamping": UsersRound,
-  "Registrasi Bupati": UserRoundCheck,
+  "Registrasi BUMDes": Landmark,
+  "Registrasi Pendamping": UserRoundCog,
+  "Registrasi Pengawas": ShieldCheck,
+  "Registrasi Bupati": Landmark,
   "Data BUMDes": Building2,
   "Users & Role": UsersRound,
-  Governance: ShieldCheck,
-  "Konten Publik": FileText,
+  "User Online": Radar,
+  Governance: Scale,
+  "ORVIA AI": Sparkles,
+  "Konten Publik": Newspaper,
 
+  // BUMDes
   "Ringkasan BUMDes": LayoutDashboard,
   "Master Plan": ClipboardList,
   "Unit Usaha": Store,
@@ -55,37 +70,42 @@ const iconMap: Record<string, LucideIcon> = {
   Pengguna: UsersRound,
   "Laporan Konsolidasi": BarChart3,
   Monitoring: Activity,
+  "Cut-off Migrasi": ArchiveRestore,
   "Bagi Hasil": HandCoins,
-  "Koreksi Transaksi": RotateCcw,
+  "Manajemen Periode": CalendarClock,
+  "Persetujuan Audit": ShieldCheck,
+  "Koreksi Transaksi": FilePenLine,
 
+  // Unit / Akuntansi
   "Ringkasan Unit": LayoutDashboard,
+  "Master Data": Database,
+  "Permintaan Buka Periode": UnlockKeyhole,
+  "Daftar Stok Tersedia": PackageSearch,
+  "Catat Transaksi": FilePenLine,
+  "Cek Alur Transaksi": Workflow,
+  "Riwayat Pembelian": ShoppingBag,
+  "Riwayat Penjualan": ShoppingCart,
+  "Kas & Bank": WalletCards,
+  "Aset Tetap": Building2,
+  "Buku Jurnal": NotebookPen,
+  Laporan: BarChart3,
+
+  // Simpan Pinjam
   "Data Anggota": UsersRound,
-  "Kelompok Anggota": UsersRound,
+  "Kelompok Anggota": UserRoundCog,
   "Pengajuan Pinjaman": ClipboardList,
   "Simpanan Anggota": WalletCards,
   "Pencairan Pinjaman": HandCoins,
-  "Angsuran Pinjaman": HandCoins,
-  "Master Data": Database,
-  Landmark,
-  "Catat Transaksi": ReceiptText,
-  "Cek Alur Transaksi": Workflow,
-  "Persediaan Barang": Package,
-  "Daftar Stok Tersedia": Package,
-  ReceiptText,
-  RotateCcw,
+  "Angsuran Pinjaman": ReceiptText,
+
+  // Master data child labels
+  "Persediaan Barang": PackageSearch,
   Supplier: Truck,
-  UserRoundCheck,
   Customer: UsersRound,
   Pembelian: ClipboardCheck,
-  "Riwayat Pembelian": ClipboardCheck,
   Penjualan: ShoppingCart,
-  "Riwayat Penjualan": ShoppingCart,
-  "Kas & Bank": WalletCards,
-  Workflow,
-  "Aset Tetap": Landmark,
-  "Buku Jurnal": FileText,
-  Laporan: FileText,
 
+  // Governance roles
   Audit: ShieldCheck,
   Pendampingan: UsersRound,
   "Review Proposal": ClipboardCheck,
@@ -134,8 +154,8 @@ export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProp
           className={[
             "group flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-semibold transition",
             isChildActive
-              ? "bg-emerald-50 text-emerald-800 shadow-sm"
-              : "text-slate-600 hover:bg-slate-50 hover:text-slate-950",
+              ? "bg-emerald-50 text-emerald-900 shadow-sm ring-1 ring-emerald-100"
+              : "text-slate-700 hover:bg-emerald-50/70 hover:text-emerald-900",
           ].join(" ")}
         >
           <span className="flex min-w-0 items-center gap-3">
@@ -143,8 +163,8 @@ export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProp
               className={[
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition",
                 isChildActive
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "bg-slate-100 text-slate-500 group-hover:bg-emerald-50 group-hover:text-emerald-700",
+                  ? "bg-gradient-to-br from-emerald-600 to-emerald-800 text-white shadow-md shadow-emerald-200"
+                  : "border border-emerald-100 bg-white text-emerald-700 shadow-sm group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-800",
               ].join(" ")}
             >
               <Icon className="h-4 w-4" />
@@ -197,16 +217,16 @@ export function SidebarMenuItem({ item, collapsed = false }: SidebarMenuItemProp
       className={[
         "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition",
         isActive
-          ? "bg-emerald-50 text-emerald-800 shadow-sm"
-          : "text-slate-600 hover:bg-slate-50 hover:text-slate-950",
+          ? "bg-emerald-50 text-emerald-900 shadow-sm ring-1 ring-emerald-100"
+          : "text-slate-700 hover:bg-emerald-50/70 hover:text-emerald-900",
       ].join(" ")}
     >
       <span
         className={[
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition",
           isActive
-            ? "bg-emerald-600 text-white shadow-sm"
-            : "bg-slate-100 text-slate-500 group-hover:bg-emerald-50 group-hover:text-emerald-700",
+            ? "bg-gradient-to-br from-emerald-600 to-emerald-800 text-white shadow-md shadow-emerald-200"
+            : "border border-emerald-100 bg-white text-emerald-700 shadow-sm group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-800",
         ].join(" ")}
       >
         <Icon className="h-4 w-4" />
