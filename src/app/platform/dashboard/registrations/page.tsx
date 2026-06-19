@@ -1,11 +1,8 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { Clock, CheckCircle2, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import {
-  approveTenantRegistration,
-  rejectTenantRegistration,
-} from "./actions";
 
 type TenantRegistration = {
   id: string;
@@ -47,7 +44,20 @@ function StatusBadge({ status }: { status: TenantRegistration["status"] }) {
   );
 }
 
-export default async function PlatformRegistrationsPage() {
+type PageProps = {
+  searchParams: Promise<{
+    success?: string;
+    error?: string;
+  }>;
+};
+
+export default async function PlatformRegistrationsPage({
+  searchParams,
+}: PageProps) {
+  const resolvedSearchParams = await searchParams;
+  const successMessage = resolvedSearchParams.success;
+  const errorMessage = resolvedSearchParams.error;
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -73,9 +83,21 @@ export default async function PlatformRegistrationsPage() {
           Registrasi BUMDes
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Review pengajuan BUMDes, lalu setujui menjadi tenant aktif atau tolak dengan alasan.
+          Review pengajuan BUMDes melalui halaman detail sebelum disetujui atau ditolak.
         </p>
       </section>
+
+      {successMessage ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700">
+          {successMessage}
+        </div>
+      ) : null}
+
+      {errorMessage ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {errorMessage}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -166,38 +188,12 @@ export default async function PlatformRegistrationsPage() {
                       </td>
 
                       <td className="px-4 py-4">
-                        {item.status === "pending" ? (
-                          <div className="flex min-w-72 flex-col gap-2">
-                            <form action={approveTenantRegistration}>
-                              <input type="hidden" name="registration_id" value={item.id} />
-                              <button
-                                type="submit"
-                                className="w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
-                              >
-                                Setujui
-                              </button>
-                            </form>
-
-                            <form action={rejectTenantRegistration} className="flex gap-2">
-                              <input type="hidden" name="registration_id" value={item.id} />
-                              <input
-                                name="rejection_reason"
-                                placeholder="Alasan tolak"
-                                className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                              />
-                              <button
-                                type="submit"
-                                className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100"
-                              >
-                                Tolak
-                              </button>
-                            </form>
-                          </div>
-                        ) : (
-                          <span className="text-xs font-semibold text-slate-400">
-                            Sudah diproses
-                          </span>
-                        )}
+                        <Link
+                          href={`/platform/dashboard/registrations/${item.id}`}
+                          className="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                        >
+                          Detail
+                        </Link>
                       </td>
                     </tr>
                   ))

@@ -1,13 +1,20 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+
+const registrationsPath = "/platform/dashboard/registrations";
+
+function redirectWithError(message: string) {
+  redirect(`${registrationsPath}?error=${encodeURIComponent(message)}`);
+}
 
 export async function approveTenantRegistration(formData: FormData) {
   const registrationId = String(formData.get("registration_id") ?? "");
 
   if (!registrationId) {
-    throw new Error("ID registrasi tidak ditemukan.");
+    redirectWithError("ID registrasi tidak ditemukan.");
   }
 
   const supabase = await createClient();
@@ -20,13 +27,16 @@ export async function approveTenantRegistration(formData: FormData) {
   );
 
   if (approveError) {
-    throw new Error(
+    console.error("approve_tenant_registration error:", approveError);
+    redirectWithError(
       approveError.message || "Gagal menyetujui registrasi BUMDes."
     );
   }
 
   revalidatePath("/platform/dashboard");
-  revalidatePath("/platform/dashboard/registrations");
+  revalidatePath(registrationsPath);
+
+  redirect(`${registrationsPath}?success=${encodeURIComponent("Registrasi BUMDes berhasil disetujui.")}`);
 }
 
 export async function rejectTenantRegistration(formData: FormData) {
@@ -34,11 +44,11 @@ export async function rejectTenantRegistration(formData: FormData) {
   const rejectionReason = String(formData.get("rejection_reason") ?? "");
 
   if (!registrationId) {
-    throw new Error("ID registrasi tidak ditemukan.");
+    redirectWithError("ID registrasi tidak ditemukan.");
   }
 
   if (!rejectionReason.trim()) {
-    throw new Error("Alasan penolakan wajib diisi.");
+    redirectWithError("Alasan penolakan wajib diisi.");
   }
 
   const supabase = await createClient();
@@ -49,9 +59,12 @@ export async function rejectTenantRegistration(formData: FormData) {
   });
 
   if (error) {
-    throw new Error(error.message || "Gagal menolak registrasi BUMDes.");
+    console.error("reject_tenant_registration error:", error);
+    redirectWithError(error.message || "Gagal menolak registrasi BUMDes.");
   }
 
   revalidatePath("/platform/dashboard");
-  revalidatePath("/platform/dashboard/registrations");
+  revalidatePath(registrationsPath);
+
+  redirect(`${registrationsPath}?success=${encodeURIComponent("Registrasi BUMDes berhasil ditolak.")}`);
 }
