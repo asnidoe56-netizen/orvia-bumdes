@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { MouseEvent, ReactNode, useEffect, useState } from "react";
 import { Bell, Menu, PanelLeftClose, PanelLeftOpen, UserRound, X } from "lucide-react";
@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { GlobalActionNotice } from "@/components/ui/global-action-notice";
 import { SidebarMenuItem } from "@/components/layouts/sidebar-menu-item";
+import { PresenceHeartbeat } from "@/components/layouts/presence-heartbeat";
 import type { NavItem } from "@/lib/navigation/dashboard-config";
 import type { LoginContext } from "@/types/auth";
 
@@ -158,6 +159,7 @@ export function DashboardShellClient({
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-100">
       <GlobalActionNotice />
+      <PresenceHeartbeat enabled={Boolean(loginContext?.user_id)} />
 
       {isRoutePending ? (
         <div className="fixed inset-x-0 top-0 z-[60]">
@@ -371,7 +373,7 @@ export function DashboardShellClient({
                     {displayName}
                   </p>
                   <p className="max-w-[150px] truncate text-[11px] font-semibold text-slate-500">
-                    {roleLabel} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {scopeLabel}
+                    {roleLabel} · {scopeLabel}
                   </p>
                 </div>
               </div>

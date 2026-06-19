@@ -12,6 +12,7 @@ export const platformNav: NavItem[] = [
   { label: "Registrasi Bupati", href: "/platform/dashboard/bupati-registrations" },
   { label: "Data BUMDes", href: "/platform/dashboard/bumdes" },
   { label: "Users & Role", href: "/platform/dashboard/users" },
+  { label: "User Online", href: "/platform/dashboard/user-online" },
   { label: "Governance", href: "/platform/dashboard/governance" },
   { label: "ORVIA AI", href: "/platform/dashboard/orvia-ai-settings" },
   { label: "Konten Publik", href: "/platform/dashboard/public-content" },
