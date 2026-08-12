@@ -124,6 +124,11 @@ function redirectWithMessage(
     params.set("tenant", tenantId);
   }
 
+  // URL yang unik per aksi. Tanpa ini dua penghapusan berturut-turut menuju URL
+  // yang persis sama, dan cache router/proxy bisa menyajikan daftar tenant lama
+  // sehingga BUMDes yang baru dihapus terlihat masih ada.
+  params.set("t", Date.now().toString(36));
+
   redirect(`${PLATFORM_BUMDES_PATH}?${params.toString()}`);
 }
 
@@ -202,6 +207,9 @@ type DeleteTenantResult = {
   error?: string;
   error_state?: string;
   batch_id?: string;
+  tenant_name?: string;
+  auth_cleanup_mode?: "none" | "deleted" | "banned" | string;
+  auth_users_affected?: number;
 };
 
 export async function deleteTenantWithAudit(formData: FormData) {
@@ -245,5 +253,17 @@ export async function deleteTenantWithAudit(formData: FormData) {
   }
 
   revalidatePath(PLATFORM_BUMDES_PATH);
-  redirectWithMessage("success", "Tenant berhasil dihapus dengan backup audit.");
+
+  const operatorCount = result?.auth_users_affected ?? 0;
+  const operatorNote =
+    operatorCount > 0
+      ? result?.auth_cleanup_mode === "banned"
+        ? ` ${operatorCount} akun operator dikunci dan sesinya dicabut.`
+        : ` ${operatorCount} akun operator ikut dihapus.`
+      : " Tidak ada akun operator yang perlu dihapus.";
+
+  redirectWithMessage(
+    "success",
+    `${result?.tenant_name ?? "Tenant"} dihapus dengan backup audit.${operatorNote}`,
+  );
 }

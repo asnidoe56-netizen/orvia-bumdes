@@ -50,6 +50,11 @@ type PlatformBumdesPageProps = {
   }>;
 };
 
+// Daftar ini harus selalu mencerminkan isi database saat itu juga. Tanpa ini
+// halaman sempat menyajikan render lama — banner sukses muncul di URL tanpa
+// query param, dan tenant yang sudah dihapus terlihat masih ada.
+export const dynamic = "force-dynamic";
+
 // Hapus tenant menyalin seluruh data BUMDes ke tabel backup sebelum menghapus,
 // jadi butuh jendela eksekusi lebih panjang dari default platform.
 export const maxDuration = 60;
