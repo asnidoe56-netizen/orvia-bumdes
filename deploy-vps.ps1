@@ -1,6 +1,8 @@
 ﻿$ErrorActionPreference = "Stop"
 
-$ProjectDir = "D:\ERP-BUMDES"
+# Folder tempat skrip ini berada. Sebelumnya di-hardcode ke "D:\ERP-BUMDES"
+# yang sudah tidak ada, sehingga deploy berhenti di precheck.
+$ProjectDir = $PSScriptRoot
 $VpsHost = "31.97.110.246"
 $VpsPort = 2222
 $VpsUser = "root"
