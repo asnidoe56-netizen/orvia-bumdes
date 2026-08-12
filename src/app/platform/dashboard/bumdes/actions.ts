@@ -112,8 +112,19 @@ export async function unpublishTenantPublicProfile(formData: FormData) {
 
 const PLATFORM_BUMDES_PATH = "/platform/dashboard/bumdes";
 
-function redirectWithMessage(type: "success" | "error", message: string): never {
-  redirect(`${PLATFORM_BUMDES_PATH}?${type}=${encodeURIComponent(message)}`);
+function redirectWithMessage(
+  type: "success" | "error",
+  message: string,
+  tenantId?: string,
+): never {
+  const params = new URLSearchParams({ [type]: message });
+
+  if (tenantId) {
+    // Dipakai halaman untuk membuka kembali panel tenant yang bersangkutan.
+    params.set("tenant", tenantId);
+  }
+
+  redirect(`${PLATFORM_BUMDES_PATH}?${params.toString()}`);
 }
 
 function getRequiredString(formData: FormData, key: string, label: string) {
@@ -186,6 +197,13 @@ export async function activateTenant(formData: FormData) {
   redirectWithMessage("success", "Tenant berhasil diaktifkan.");
 }
 
+type DeleteTenantResult = {
+  ok?: boolean;
+  error?: string;
+  error_state?: string;
+  batch_id?: string;
+};
+
 export async function deleteTenantWithAudit(formData: FormData) {
   let tenantId = "";
   let confirmationText = "";
@@ -204,14 +222,26 @@ export async function deleteTenantWithAudit(formData: FormData) {
 
   const supabase = await createClient();
 
-  const { error } = await supabase.rpc("delete_tenant_with_audit", {
+  const { data, error } = await supabase.rpc("delete_tenant_with_audit", {
     p_tenant_id: tenantId,
     p_confirmation_text: confirmationText,
     p_reason: reason,
   });
 
   if (error) {
-    redirectWithMessage("error", error.message);
+    redirectWithMessage("error", error.message, tenantId);
+  }
+
+  // Kegagalan operasional dikembalikan sebagai payload, bukan exception, supaya
+  // status batch 'failed' ikut tersimpan di database.
+  const result = data as DeleteTenantResult | null;
+
+  if (result && result.ok === false) {
+    redirectWithMessage(
+      "error",
+      result.error ?? "Hapus tenant gagal tanpa pesan dari database.",
+      tenantId,
+    );
   }
 
   revalidatePath(PLATFORM_BUMDES_PATH);

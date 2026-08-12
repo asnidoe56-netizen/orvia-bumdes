@@ -46,8 +46,13 @@ type PlatformBumdesPageProps = {
   searchParams?: Promise<{
     success?: string;
     error?: string;
+    tenant?: string;
   }>;
 };
+
+// Hapus tenant menyalin seluruh data BUMDes ke tabel backup sebelum menghapus,
+// jadi butuh jendela eksekusi lebih panjang dari default platform.
+export const maxDuration = 60;
 
 export default async function PlatformBumdesPage({
   searchParams,
@@ -55,6 +60,7 @@ export default async function PlatformBumdesPage({
   const params = await searchParams;
   const successMessage = params?.success;
   const errorMessage = params?.error;
+  const focusedTenantId = params?.tenant;
 
   const supabase = await createClient();
 
@@ -155,6 +161,10 @@ export default async function PlatformBumdesPage({
                   const publicPath = profile?.public_slug
                     ? `/bumdes/${profile.public_slug}`
                     : null;
+                  const deleteError =
+                    errorMessage && focusedTenantId === tenant.id
+                      ? errorMessage
+                      : null;
 
                   return (
                     <tr key={tenant.id} className="align-top">
@@ -325,7 +335,10 @@ export default async function PlatformBumdesPage({
                               </form>
                             )}
 
-                            <details className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3">
+                            <details
+                              open={Boolean(deleteError)}
+                              className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3"
+                            >
                               <summary className="cursor-pointer text-xs font-black text-red-700">
                                 Hapus Tenant
                               </summary>
@@ -335,6 +348,11 @@ export default async function PlatformBumdesPage({
                                 <p className="text-xs font-bold leading-5 text-red-700">
                                   Menghapus tenant akan membuat backup audit terlebih dahulu, lalu menghapus data BUMDes ini dari sistem.
                                 </p>
+                                {deleteError ? (
+                                  <p className="rounded-xl border border-red-300 bg-white px-3 py-2 text-xs font-bold leading-5 text-red-700">
+                                    Gagal menghapus: {deleteError}
+                                  </p>
+                                ) : null}
                                 <p className="text-xs font-bold text-red-700">
                                   Ketik kode: HAPUS-{tenant.kode_bumdes ?? ""}
                                 </p>
