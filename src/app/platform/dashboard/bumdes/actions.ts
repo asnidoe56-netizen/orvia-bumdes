@@ -252,7 +252,10 @@ export async function deleteTenantWithAudit(formData: FormData) {
     );
   }
 
-  revalidatePath(PLATFORM_BUMDES_PATH);
+  // Tenant yang dihapus muncul di banyak halaman lain (ringkasan platform,
+  // users, user online, governance). Batalkan cache seluruh pohon route, bukan
+  // hanya halaman ini, supaya BUMDes yang sudah hilang tidak menyembul lagi.
+  revalidatePath("/", "layout");
 
   const operatorCount = result?.auth_users_affected ?? 0;
   const operatorNote =
