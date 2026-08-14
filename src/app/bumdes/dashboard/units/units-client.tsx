@@ -1,10 +1,12 @@
 ﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
   CheckCircle2,
   KeyRound,
+  Loader2,
   PlusCircle,
   ShieldCheck,
   Store,
@@ -12,9 +14,14 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { createBusinessUnitWithAccess } from "./actions";
+import { createBusinessUnitWithAccess, type CreateUnitState } from "./actions";
 import { UnitAccessPasswordFields } from "./unit-access-password-fields";
 import type { BusinessUnit, UnitAccessCredential, UnitTemplate } from "./page";
+
+const createUnitInitialState: CreateUnitState = {
+  status: "idle",
+  message: "",
+};
 
 type UnitsClientProps = {
   templates: UnitTemplate[];
@@ -115,9 +122,26 @@ function StatCard({
   );
 }
 
-function CreateUnitForm({ templates }: { templates: UnitTemplate[] }) {
+function CreateUnitForm({
+  templates,
+  onSuccess,
+}: {
+  templates: UnitTemplate[];
+  onSuccess: (message: string) => void;
+}) {
+  const [state, formAction, isPending] = useActionState(
+    createBusinessUnitWithAccess,
+    createUnitInitialState
+  );
+
+  useEffect(() => {
+    if (state.status === "success") {
+      onSuccess(state.message);
+    }
+  }, [state, onSuccess]);
+
   return (
-    <form action={createBusinessUnitWithAccess} className="space-y-6">
+    <form action={formAction} className="space-y-6">
       <div>
         <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.18em] text-slate-500">
           Data Unit
@@ -278,12 +302,33 @@ function CreateUnitForm({ templates }: { templates: UnitTemplate[] }) {
         </p>
       </div>
 
-      <div className="sticky bottom-0 -mx-1 border-t border-slate-200 bg-white/95 px-1 pt-4 backdrop-blur">
+      {/* Pesan gagal duduk tepat di atas tombol simpan — dialognya panjang, dan
+          pesan di bagian paling atas form akan terlewat begitu saja. */}
+      <div className="sticky bottom-0 -mx-1 space-y-3 border-t border-slate-200 bg-white/95 px-1 pt-4 backdrop-blur">
+        {state.status === "error" ? (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+          >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{state.message}</span>
+          </div>
+        ) : null}
+
         <button
           type="submit"
-          className="w-full rounded-2xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:-translate-y-0.5 hover:bg-emerald-800 md:w-auto"
+          disabled={isPending}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:-translate-y-0.5 hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 md:w-auto"
         >
-          Simpan Unit & Generate Akses
+          {isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Menyimpan unit…
+            </>
+          ) : (
+            "Simpan Unit & Generate Akses"
+          )}
         </button>
       </div>
     </form>
@@ -297,6 +342,17 @@ export function UnitsClient({
   errorMessage,
 }: UnitsClientProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handleCreateSuccess = useCallback((message: string) => {
+    setIsCreateDialogOpen(false);
+    setSuccessMessage(message);
+  }, []);
+
+  const openCreateDialog = useCallback(() => {
+    setSuccessMessage(null);
+    setIsCreateDialogOpen(true);
+  }, []);
 
   const credentialsByUnit = useMemo(
     () =>
@@ -346,7 +402,7 @@ export function UnitsClient({
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
               <button
                 type="button"
-                onClick={() => setIsCreateDialogOpen(true)}
+                onClick={openCreateDialog}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-emerald-800"
               >
                 <PlusCircle className="h-4 w-4" />
@@ -363,6 +419,16 @@ export function UnitsClient({
 
         </div>
       </section>
+
+      {successMessage ? (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800"
+        >
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{successMessage}</span>
+        </div>
+      ) : null}
 
       {errorMessage ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -437,7 +503,7 @@ export function UnitsClient({
             </p>
             <button
               type="button"
-              onClick={() => setIsCreateDialogOpen(true)}
+              onClick={openCreateDialog}
               className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:-translate-y-0.5 hover:bg-emerald-800"
             >
               <PlusCircle className="h-4 w-4" />
@@ -581,7 +647,10 @@ export function UnitsClient({
               </div>
 
               <div className="p-5 md:p-6">
-                <CreateUnitForm templates={templates} />
+                <CreateUnitForm
+                  templates={templates}
+                  onSuccess={handleCreateSuccess}
+                />
               </div>
             </div>
           </div>

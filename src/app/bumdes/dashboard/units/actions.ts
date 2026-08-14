@@ -1,16 +1,63 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
+import type { PostgrestError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getLoginContext } from "@/lib/auth/get-login-context";
+
+export type CreateUnitState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
+
+type UnitRole = "manager_unit" | "operator_unit";
 
 function clean(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
 }
 
+function fail(message: string): CreateUnitState {
+  return { status: "error", message };
+}
+
+function buildLoginCode(role: UnitRole) {
+  const prefix = role === "manager_unit" ? "MGR" : "OPR";
+  const randomPart = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `${prefix}-${randomPart}`;
+}
+
+/**
+ * Pesan Postgres/PostgREST mentah tidak berguna untuk Direktur BUMDes. Kode yang
+ * sudah pasti artinya diterjemahkan; sisanya tetap ditampilkan apa adanya supaya
+ * penyebab nyata tidak hilang di layar error kosong seperti sebelumnya.
+ */
+function describeDatabaseError(
+  error: PostgrestError | null,
+  fallback: string
+): string {
+  if (!error) return fallback;
+
+  const message = error.message ?? "";
+
+  // Fungsi RPC belum ada di database (skema produksi tertinggal dari kode).
+  if (error.code === "PGRST202" || /schema cache/i.test(message)) {
+    return `Fungsi database untuk membuat unit usaha belum tersedia di Supabase. Detail: ${message}`;
+  }
+
+  if (error.code === "23505") {
+    return "Kode unit sudah dipakai. Ganti kode unit lalu simpan lagi.";
+  }
+
+  if (error.code === "42501") {
+    return "Akun Anda tidak memiliki izin untuk membuat unit usaha di database.";
+  }
+
+  return message || fallback;
+}
+
 async function createAuthUnitUser(params: {
-  role: "manager_unit" | "operator_unit";
+  role: UnitRole;
   fullName: string;
   email: string;
   password: string;
@@ -26,7 +73,7 @@ async function createAuthUnitUser(params: {
       full_name: params.fullName,
       tenant_id: params.tenantId,
       role: params.role,
-      source: "business_unit_atomic_creation",
+      source: "business_unit_creation",
     },
   });
 
@@ -45,6 +92,86 @@ async function createAuthUnitUser(params: {
   return data.user.id;
 }
 
+/**
+ * Profil, role, dan kredensial akses unit. Urutannya sama dengan penambahan
+ * pengguna unit di `../users/actions.ts` supaya satu unit hanya punya satu pola
+ * pembuatan akses.
+ */
+async function grantUnitAccess(params: {
+  userId: string;
+  tenantId: string;
+  unitId: string;
+  role: UnitRole;
+  fullName: string;
+  email: string;
+  generatedBy: string;
+}) {
+  const admin = createAdminClient();
+
+  const { error: profileError } = await admin.from("profiles").upsert(
+    {
+      id: params.userId,
+      full_name: params.fullName,
+      default_tenant_id: params.tenantId,
+    },
+    {
+      onConflict: "id",
+    }
+  );
+
+  if (profileError) {
+    throw new Error(
+      describeDatabaseError(profileError, "Profil pengguna gagal disimpan.")
+    );
+  }
+
+  const { error: roleError } = await admin.from("user_roles").insert({
+    user_id: params.userId,
+    role: params.role,
+    tenant_id: params.tenantId,
+    unit_id: params.unitId,
+  });
+
+  if (roleError) {
+    throw new Error(
+      describeDatabaseError(roleError, `Role ${params.role} gagal disimpan.`)
+    );
+  }
+
+  // login_code punya keunikan sendiri di database, jadi tabrakan acak diulang.
+  const maxAttempts = 5;
+  let lastCredentialError: PostgrestError | null = null;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const { error: credentialError } = await admin
+      .from("unit_access_credentials")
+      .insert({
+        user_id: params.userId,
+        tenant_id: params.tenantId,
+        unit_id: params.unitId,
+        login_code: buildLoginCode(params.role),
+        email_virtual: params.email,
+        role: params.role,
+        must_change_password: false,
+        access_status: "active",
+        generated_by: params.generatedBy,
+      });
+
+    if (!credentialError) return;
+
+    lastCredentialError = credentialError;
+
+    if (credentialError.code !== "23505") break;
+  }
+
+  throw new Error(
+    describeDatabaseError(
+      lastCredentialError,
+      `Kredensial akses ${params.role} gagal dibuat.`
+    )
+  );
+}
+
 async function deleteAuthUserIfExists(userId: string | null) {
   if (!userId) return;
 
@@ -53,12 +180,58 @@ async function deleteAuthUserIfExists(userId: string | null) {
   await admin.auth.admin.deleteUser(userId);
 }
 
-export async function createBusinessUnitWithAccess(formData: FormData) {
+/**
+ * Kompensasi kalau salah satu langkah gagal: akun login yang terlanjur dibuat
+ * dihapus supaya emailnya bisa dipakai lagi saat mencoba ulang, lalu unit yang
+ * masih kosong ikut dihapus. Kegagalan pembersihan dilaporkan ke pengguna, tidak
+ * ditelan diam-diam.
+ */
+async function rollbackPartialUnit(params: {
+  userIds: string[];
+  unitId: string | null;
+  tenantId: string;
+}) {
+  const notes: string[] = [];
+
+  for (const userId of params.userIds) {
+    try {
+      await deleteAuthUserIfExists(userId);
+    } catch {
+      notes.push("akun login yang terlanjur dibuat gagal dihapus otomatis");
+    }
+  }
+
+  if (params.unitId) {
+    const admin = createAdminClient();
+
+    const { error } = await admin
+      .from("business_units")
+      .delete()
+      .eq("id", params.unitId)
+      .eq("tenant_id", params.tenantId);
+
+    if (error) {
+      notes.push("unit yang terlanjur dibuat gagal dihapus otomatis");
+    }
+  }
+
+  if (!notes.length) return "";
+
+  return ` Catatan: ${notes.join(" dan ")}, mohon periksa manual sebelum mencoba lagi.`;
+}
+
+export async function createBusinessUnitWithAccess(
+  _prevState: CreateUnitState,
+  formData: FormData
+): Promise<CreateUnitState> {
   const context = await getLoginContext();
 
-  if (!context || !context.user_id || !context.tenant_id) {
-    throw new Error("Sesi login tidak valid.");
+  if (!context?.user_id || !context.tenant_id) {
+    return fail("Sesi login tidak valid. Silakan login ulang.");
   }
+
+  const tenantId = context.tenant_id;
+  const actorId = context.user_id;
 
   const templateId = clean(formData.get("template_id"));
   const kodeUnit = clean(formData.get("kode_unit")).toUpperCase();
@@ -80,54 +253,98 @@ export async function createBusinessUnitWithAccess(formData: FormData) {
     formData.get("operator_confirm_password") ?? ""
   );
 
-  if (!templateId) throw new Error("Template unit wajib dipilih.");
-  if (!kodeUnit) throw new Error("Kode unit wajib diisi.");
-  if (!namaUnit) throw new Error("Nama unit wajib diisi.");
-  if (!jenisUnit) throw new Error("Jenis unit wajib diisi.");
-  if (!managerName) throw new Error("Nama Manager Unit wajib diisi.");
-  if (!managerEmail) throw new Error("Email Manager Unit wajib diisi.");
+  if (!templateId) return fail("Template unit wajib dipilih.");
+  if (!kodeUnit) return fail("Kode unit wajib diisi.");
+  if (!namaUnit) return fail("Nama unit wajib diisi.");
+  if (!jenisUnit) return fail("Jenis unit wajib diisi.");
+  if (!managerName) return fail("Nama Manager Unit wajib diisi.");
+  if (!managerEmail) return fail("Email Manager Unit wajib diisi.");
 
   if (managerPassword.length < 8) {
-    throw new Error("Password Manager Unit minimal 8 karakter.");
+    return fail("Password Manager Unit minimal 8 karakter.");
   }
 
   if (managerPassword !== managerConfirmPassword) {
-    throw new Error("Konfirmasi password Manager Unit tidak sama.");
+    return fail("Konfirmasi password Manager Unit tidak sama.");
   }
 
   if (createOperator) {
     if (!operatorName || !operatorEmail) {
-      throw new Error(
+      return fail(
         "Nama dan email Operator Unit wajib diisi jika operator dibuat."
       );
     }
 
     if (operatorPassword.length < 8) {
-      throw new Error("Password Operator Unit minimal 8 karakter.");
+      return fail("Password Operator Unit minimal 8 karakter.");
     }
 
     if (operatorPassword !== operatorConfirmPassword) {
-      throw new Error("Konfirmasi password Operator Unit tidak sama.");
+      return fail("Konfirmasi password Operator Unit tidak sama.");
     }
 
     if (operatorEmail === managerEmail) {
-      throw new Error(
+      return fail(
         "Email Operator Unit tidak boleh sama dengan Email Manager Unit."
       );
     }
   }
 
-  let managerUserId: string | null = null;
-  let operatorUserId: string | null = null;
+  const createdUserIds: string[] = [];
+  let createdUnitId: string | null = null;
 
   try {
-    managerUserId = await createAuthUnitUser({
+    const admin = createAdminClient();
+
+    // Akses unit ditulis dengan service-role (lewat RLS), jadi izin pemanggil
+    // harus dicek sendiri di sini — layout dashboard tidak menjaga Server Action.
+    const { data: permissionRows, error: permissionError } = await admin
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", actorId)
+      .eq("tenant_id", tenantId)
+      .in("role", ["direktur_bumdes", "admin_bumdes"])
+      .limit(1);
+
+    if (permissionError) {
+      return fail(
+        describeDatabaseError(permissionError, "Izin pengguna gagal diperiksa.")
+      );
+    }
+
+    if (!permissionRows?.length) {
+      return fail("Anda tidak memiliki izin untuk membuat unit usaha.");
+    }
+
+    const { data: existingUnit, error: existingUnitError } = await admin
+      .from("business_units")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("kode_unit", kodeUnit)
+      .maybeSingle();
+
+    if (existingUnitError) {
+      return fail(
+        describeDatabaseError(existingUnitError, "Kode unit gagal diperiksa.")
+      );
+    }
+
+    if (existingUnit) {
+      return fail(`Kode unit ${kodeUnit} sudah dipakai di BUMDes ini.`);
+    }
+
+    // Akun login dibuat lebih dulu karena inilah langkah yang paling bersih
+    // dibatalkan kalau ada yang gagal setelahnya.
+    const managerUserId = await createAuthUnitUser({
       role: "manager_unit",
       fullName: managerName,
       email: managerEmail,
       password: managerPassword,
-      tenantId: context.tenant_id,
+      tenantId,
     });
+    createdUserIds.push(managerUserId);
+
+    let operatorUserId: string | null = null;
 
     if (createOperator) {
       operatorUserId = await createAuthUnitUser({
@@ -135,41 +352,77 @@ export async function createBusinessUnitWithAccess(formData: FormData) {
         fullName: operatorName,
         email: operatorEmail,
         password: operatorPassword,
-        tenantId: context.tenant_id,
+        tenantId,
       });
+      createdUserIds.push(operatorUserId);
     }
 
     const supabase = await createClient();
 
-    const { error } = await supabase.rpc(
-      "create_business_unit_with_existing_access",
+    const { data: unitId, error: unitError } = await supabase.rpc(
+      "create_business_unit",
       {
-        p_tenant_id: context.tenant_id,
+        p_tenant_id: tenantId,
         p_template_id: templateId,
         p_kode_unit: kodeUnit,
         p_nama_unit: namaUnit,
         p_jenis_unit: jenisUnit,
-        p_manager_user_id: managerUserId,
-        p_manager_email: managerEmail,
-        p_manager_full_name: managerName,
-        p_manager_login_code: null,
-        p_operator_user_id: operatorUserId,
-        p_operator_email: createOperator ? operatorEmail : null,
-        p_operator_full_name: createOperator ? operatorName : null,
-        p_operator_login_code: null,
       }
     );
 
-    if (error) {
-      throw new Error(error.message || "Unit usaha dan kredensial gagal dibuat.");
+    if (unitError || !unitId) {
+      throw new Error(
+        describeDatabaseError(unitError, "Unit usaha gagal dibuat.")
+      );
+    }
+
+    createdUnitId = unitId as string;
+
+    await grantUnitAccess({
+      userId: managerUserId,
+      tenantId,
+      unitId: createdUnitId,
+      role: "manager_unit",
+      fullName: managerName,
+      email: managerEmail,
+      generatedBy: actorId,
+    });
+
+    if (operatorUserId) {
+      await grantUnitAccess({
+        userId: operatorUserId,
+        tenantId,
+        unitId: createdUnitId,
+        role: "operator_unit",
+        fullName: operatorName,
+        email: operatorEmail,
+        generatedBy: actorId,
+      });
     }
 
     revalidatePath("/bumdes/dashboard");
     revalidatePath("/bumdes/dashboard/units");
-  } catch (error) {
-    await deleteAuthUserIfExists(operatorUserId);
-    await deleteAuthUserIfExists(managerUserId);
 
-    throw error;
+    return {
+      status: "success",
+      message: createOperator
+        ? `Unit ${namaUnit} dibuat beserta akun Manager dan Operator Unit.`
+        : `Unit ${namaUnit} dibuat beserta akun Manager Unit.`,
+    };
+  } catch (error) {
+    console.error("[bumdes/units] pembuatan unit usaha gagal", error);
+
+    const cleanupNote = await rollbackPartialUnit({
+      userIds: createdUserIds,
+      unitId: createdUnitId,
+      tenantId,
+    });
+
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Terjadi kesalahan tak terduga saat membuat unit usaha.";
+
+    return fail(`${message}${cleanupNote}`);
   }
 }
