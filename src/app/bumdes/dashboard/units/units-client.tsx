@@ -157,7 +157,7 @@ function CreateUnitForm({
               required
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
             >
-              <option value="">Pilih template</option>
+              <option value="">Pilih Templeate</option>
               {templates.map((template) => (
                 <option key={template.id} value={template.id}>
                   {template.nama_template}
@@ -168,7 +168,7 @@ function CreateUnitForm({
 
           <label className="space-y-2">
             <span className="text-sm font-semibold text-slate-700">
-              Jenis Unit *
+              Jenis Unit
             </span>
             <input
               name="jenis_unit"
