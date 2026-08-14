@@ -27,6 +27,13 @@ function buildLoginCode(role: UnitRole) {
   return `${prefix}-${randomPart}`;
 }
 
+/** RPC yang dipanggil tidak ada di database ini. */
+function isMissingFunction(error: PostgrestError | null) {
+  if (!error) return false;
+
+  return error.code === "PGRST202" || /schema cache/i.test(error.message ?? "");
+}
+
 /**
  * Pesan Postgres/PostgREST mentah tidak berguna untuk Direktur BUMDes. Kode yang
  * sudah pasti artinya diterjemahkan; sisanya tetap ditampilkan apa adanya supaya
@@ -39,11 +46,6 @@ function describeDatabaseError(
   if (!error) return fallback;
 
   const message = error.message ?? "";
-
-  // Fungsi RPC belum ada di database (skema produksi tertinggal dari kode).
-  if (error.code === "PGRST202" || /schema cache/i.test(message)) {
-    return `Fungsi database untuk membuat unit usaha belum tersedia di Supabase. Detail: ${message}`;
-  }
 
   if (error.code === "23505") {
     return "Kode unit sudah dipakai. Ganti kode unit lalu simpan lagi.";
@@ -170,6 +172,97 @@ async function grantUnitAccess(params: {
       `Kredensial akses ${params.role} gagal dibuat.`
     )
   );
+}
+
+type UnitCreationOutcome = {
+  /** null kalau unit dibuat lewat RPC atomik yang tidak mengembalikan id. */
+  unitId: string | null;
+  /** RPC atomik sekalian menulis role dan kredensial; jalur lama tidak. */
+  accessAlreadyGranted: boolean;
+};
+
+/**
+ * Skema database proyek ini tidak ada di repo (lihat AUDIT_KESIAPAN_123_DESA.md
+ * T-04), jadi tidak bisa dipastikan dari kode fungsi mana yang benar-benar ada di
+ * Supabase produksi. Dua-duanya dicoba: yang atomik dulu karena ia membuat unit,
+ * role, dan kredensial dalam satu transaksi; kalau fungsinya memang tidak ada,
+ * baru turun ke RPC lama dan akses ditulis dari sisi aplikasi.
+ *
+ * Yang dijadikan pemicu turun jalur hanya "fungsi tidak ditemukan". Error lain —
+ * kode unit bentrok, izin ditolak, aturan bisnis — tetap dilempar apa adanya,
+ * supaya kegagalan nyata tidak tersamarkan oleh percobaan kedua.
+ */
+async function createUnitInDatabase(params: {
+  tenantId: string;
+  templateId: string;
+  kodeUnit: string;
+  namaUnit: string;
+  jenisUnit: string;
+  managerUserId: string;
+  managerEmail: string;
+  managerName: string;
+  operatorUserId: string | null;
+  operatorEmail: string | null;
+  operatorName: string | null;
+}): Promise<UnitCreationOutcome> {
+  const supabase = await createClient();
+
+  const { error: atomicError } = await supabase.rpc(
+    "create_business_unit_with_existing_access",
+    {
+      p_tenant_id: params.tenantId,
+      p_template_id: params.templateId,
+      p_kode_unit: params.kodeUnit,
+      p_nama_unit: params.namaUnit,
+      p_jenis_unit: params.jenisUnit,
+      p_manager_user_id: params.managerUserId,
+      p_manager_email: params.managerEmail,
+      p_manager_full_name: params.managerName,
+      p_manager_login_code: null,
+      p_operator_user_id: params.operatorUserId,
+      p_operator_email: params.operatorEmail,
+      p_operator_full_name: params.operatorName,
+      p_operator_login_code: null,
+    }
+  );
+
+  if (!atomicError) {
+    return { unitId: null, accessAlreadyGranted: true };
+  }
+
+  if (!isMissingFunction(atomicError)) {
+    throw new Error(
+      describeDatabaseError(
+        atomicError,
+        "Unit usaha dan kredensial gagal dibuat."
+      )
+    );
+  }
+
+  const { data: unitId, error: unitError } = await supabase.rpc(
+    "create_business_unit",
+    {
+      p_tenant_id: params.tenantId,
+      p_template_id: params.templateId,
+      p_kode_unit: params.kodeUnit,
+      p_nama_unit: params.namaUnit,
+      p_jenis_unit: params.jenisUnit,
+    }
+  );
+
+  if (unitError || !unitId) {
+    if (isMissingFunction(unitError)) {
+      throw new Error(
+        "Database BUMDes ini tidak memiliki fungsi pembuat unit usaha " +
+          "(create_business_unit_with_existing_access maupun create_business_unit). " +
+          "Hubungi tim teknis untuk menambahkannya di Supabase."
+      );
+    }
+
+    throw new Error(describeDatabaseError(unitError, "Unit usaha gagal dibuat."));
+  }
+
+  return { unitId: String(unitId), accessAlreadyGranted: false };
 }
 
 async function deleteAuthUserIfExists(userId: string | null) {
@@ -357,47 +450,44 @@ export async function createBusinessUnitWithAccess(
       createdUserIds.push(operatorUserId);
     }
 
-    const supabase = await createClient();
-
-    const { data: unitId, error: unitError } = await supabase.rpc(
-      "create_business_unit",
-      {
-        p_tenant_id: tenantId,
-        p_template_id: templateId,
-        p_kode_unit: kodeUnit,
-        p_nama_unit: namaUnit,
-        p_jenis_unit: jenisUnit,
-      }
-    );
-
-    if (unitError || !unitId) {
-      throw new Error(
-        describeDatabaseError(unitError, "Unit usaha gagal dibuat.")
-      );
-    }
-
-    createdUnitId = unitId as string;
-
-    await grantUnitAccess({
-      userId: managerUserId,
+    const outcome = await createUnitInDatabase({
       tenantId,
-      unitId: createdUnitId,
-      role: "manager_unit",
-      fullName: managerName,
-      email: managerEmail,
-      generatedBy: actorId,
+      templateId,
+      kodeUnit,
+      namaUnit,
+      jenisUnit,
+      managerUserId,
+      managerEmail,
+      managerName,
+      operatorUserId,
+      operatorEmail: operatorUserId ? operatorEmail : null,
+      operatorName: operatorUserId ? operatorName : null,
     });
 
-    if (operatorUserId) {
+    createdUnitId = outcome.unitId;
+
+    if (!outcome.accessAlreadyGranted) {
       await grantUnitAccess({
-        userId: operatorUserId,
+        userId: managerUserId,
         tenantId,
-        unitId: createdUnitId,
-        role: "operator_unit",
-        fullName: operatorName,
-        email: operatorEmail,
+        unitId: outcome.unitId as string,
+        role: "manager_unit",
+        fullName: managerName,
+        email: managerEmail,
         generatedBy: actorId,
       });
+
+      if (operatorUserId) {
+        await grantUnitAccess({
+          userId: operatorUserId,
+          tenantId,
+          unitId: outcome.unitId as string,
+          role: "operator_unit",
+          fullName: operatorName,
+          email: operatorEmail,
+          generatedBy: actorId,
+        });
+      }
     }
 
     revalidatePath("/bumdes/dashboard");

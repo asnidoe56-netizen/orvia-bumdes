@@ -23,6 +23,15 @@ export function UnitAccessPasswordFields({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Ketidakcocokan password adalah kegagalan tersering saat membuat unit — dan
+  // paling sering karena password manager browser hanya mengisi satu kolom.
+  // Dicocokkan di sini supaya ketahuan sebelum form dikirim, bukan sesudahnya.
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const isTooShort = password.length > 0 && password.length < 8;
+  const isMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+
   return (
     <div className={`grid gap-4 md:grid-cols-2 ${className}`}>
       <label className="space-y-2">
@@ -38,6 +47,10 @@ export function UnitAccessPasswordFields({
             placeholder="Minimal 8 karakter"
             minLength={8}
             required={required}
+            autoComplete="new-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            aria-invalid={isTooShort}
             className="w-full rounded-xl border border-slate-200 px-3 py-2 pr-11 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           />
           <button
@@ -53,6 +66,12 @@ export function UnitAccessPasswordFields({
             )}
           </button>
         </div>
+
+        {isTooShort ? (
+          <span className="block text-xs font-semibold text-red-600">
+            Password minimal 8 karakter.
+          </span>
+        ) : null}
       </label>
 
       <label className="space-y-2">
@@ -68,7 +87,15 @@ export function UnitAccessPasswordFields({
             placeholder="Ulangi password"
             minLength={8}
             required={required}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 pr-11 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            aria-invalid={isMismatch}
+            className={`w-full rounded-xl border px-3 py-2 pr-11 text-sm outline-none focus:ring-2 ${
+              isMismatch
+                ? "border-red-300 focus:border-red-500 focus:ring-red-100"
+                : "border-slate-200 focus:border-emerald-500 focus:ring-emerald-100"
+            }`}
           />
           <button
             type="button"
@@ -87,6 +114,12 @@ export function UnitAccessPasswordFields({
             )}
           </button>
         </div>
+
+        {isMismatch ? (
+          <span role="alert" className="block text-xs font-semibold text-red-600">
+            Konfirmasi password belum sama. Klik ikon mata untuk membandingkan.
+          </span>
+        ) : null}
       </label>
     </div>
   );
