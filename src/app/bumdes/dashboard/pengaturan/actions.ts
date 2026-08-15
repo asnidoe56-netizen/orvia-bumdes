@@ -11,6 +11,12 @@ const ALLOWED_ROLE_GROUPS = new Set([
   "pelaksana_operasional",
 ]);
 
+const PHOTO_BUCKET = "bumdes-public";
+const PHOTO_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const PHOTO_MAX_BYTES = 4 * 1024 * 1024;
+
+type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
 function cleanText(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
   return text.length > 0 ? text : null;
@@ -44,6 +50,101 @@ function cleanRoleGroup(value: FormDataEntryValue | null) {
   }
 
   return roleGroup;
+}
+
+function getSafeFileName(fileName: string) {
+  return fileName
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function storagePathFromPublicUrl(photoUrl: string | null) {
+  if (!photoUrl) {
+    return null;
+  }
+
+  const marker = `/storage/v1/object/public/${PHOTO_BUCKET}/`;
+  const markerIndex = photoUrl.indexOf(marker);
+
+  if (markerIndex === -1) {
+    return null;
+  }
+
+  return decodeURIComponent(photoUrl.slice(markerIndex + marker.length));
+}
+
+/**
+ * Hapus berkas lama supaya bucket tidak menumpuk foto yang sudah diganti.
+ * Jalur wajib berada di folder tenant ini — `photo_url` lama dikirim dari form,
+ * jadi tanpa penjagaan ini sebuah tenant bisa menghapus foto tenant lain.
+ */
+async function removeMemberPhoto(
+  supabase: ServerSupabaseClient,
+  tenantId: string,
+  photoUrl: string | null,
+) {
+  const path = storagePathFromPublicUrl(photoUrl);
+
+  if (!path || !path.startsWith(`pengurus/${tenantId}/`)) {
+    return;
+  }
+
+  await supabase.storage.from(PHOTO_BUCKET).remove([path]);
+}
+
+/**
+ * Menentukan foto final dari form: berkas baru yang diunggah, permintaan hapus,
+ * atau foto lama yang dibiarkan apa adanya. `replacedUrl` adalah foto lama yang
+ * sudah tidak dipakai lagi, baru boleh dihapus setelah database tersimpan.
+ */
+async function resolveMemberPhotoUrl(
+  supabase: ServerSupabaseClient,
+  tenantId: string,
+  formData: FormData,
+) {
+  const currentUrl = cleanText(formData.get("photo_url"));
+  const shouldClear = formData.get("clear_photo") === "on";
+  const photoFile = formData.get("photo_file");
+  const hasUpload = photoFile instanceof File && photoFile.size > 0;
+
+  if (!hasUpload) {
+    return {
+      photoUrl: shouldClear ? null : currentUrl,
+      replacedUrl: shouldClear ? currentUrl : null,
+    };
+  }
+
+  if (!PHOTO_ALLOWED_TYPES.includes(photoFile.type)) {
+    throw new Error("Format foto harus JPG, PNG, atau WEBP.");
+  }
+
+  if (photoFile.size > PHOTO_MAX_BYTES) {
+    throw new Error("Ukuran foto maksimal 4MB.");
+  }
+
+  const uploadPath = `pengurus/${tenantId}/${Date.now()}-${getSafeFileName(photoFile.name)}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(PHOTO_BUCKET)
+    .upload(uploadPath, photoFile, {
+      cacheControl: "3600",
+      contentType: photoFile.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(`Upload foto gagal: ${uploadError.message}`);
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from(PHOTO_BUCKET)
+    .getPublicUrl(uploadPath);
+
+  return {
+    photoUrl: publicUrlData.publicUrl,
+    replacedUrl: currentUrl,
+  };
 }
 
 async function revalidatePengaturanAndPublicPage(tenantId: string) {
@@ -180,7 +281,11 @@ export async function createPublicMemberSettingAction(formData: FormData) {
   const name = requiredText(formData.get("name"), "Nama pengurus");
   const position = requiredText(formData.get("position"), "Jabatan");
   const roleGroup = cleanRoleGroup(formData.get("role_group"));
-  const photoUrl = cleanText(formData.get("photo_url"));
+  const { photoUrl } = await resolveMemberPhotoUrl(
+    supabase,
+    context.tenant_id,
+    formData,
+  );
   const displayOrder = cleanInteger(formData.get("display_order"), 100);
   const isPublished = formData.get("is_published") === "on";
 
@@ -199,6 +304,8 @@ export async function createPublicMemberSettingAction(formData: FormData) {
     });
 
   if (error) {
+    // Barisnya gagal dibuat, jadi foto yang terlanjur naik tidak punya pemilik.
+    await removeMemberPhoto(supabase, context.tenant_id, photoUrl);
     throw new Error(error.message);
   }
 
@@ -226,7 +333,11 @@ export async function updatePublicMemberSettingAction(formData: FormData) {
   const name = requiredText(formData.get("name"), "Nama pengurus");
   const position = requiredText(formData.get("position"), "Jabatan");
   const roleGroup = cleanRoleGroup(formData.get("role_group"));
-  const photoUrl = cleanText(formData.get("photo_url"));
+  const { photoUrl, replacedUrl } = await resolveMemberPhotoUrl(
+    supabase,
+    context.tenant_id,
+    formData,
+  );
   const displayOrder = cleanInteger(formData.get("display_order"), 100);
   const isPublished = formData.get("is_published") === "on";
 
@@ -245,7 +356,15 @@ export async function updatePublicMemberSettingAction(formData: FormData) {
     .eq("tenant_id", context.tenant_id);
 
   if (error) {
+    if (photoUrl !== replacedUrl) {
+      await removeMemberPhoto(supabase, context.tenant_id, photoUrl);
+    }
+
     throw new Error(error.message);
+  }
+
+  if (replacedUrl && replacedUrl !== photoUrl) {
+    await removeMemberPhoto(supabase, context.tenant_id, replacedUrl);
   }
 
   await revalidatePengaturanAndPublicPage(context.tenant_id);

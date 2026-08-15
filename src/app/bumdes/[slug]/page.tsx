@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+﻿import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowRight,
@@ -54,6 +55,7 @@ type PublicOrgMember = {
   name: string;
   position: string;
   role_group: string;
+  photo_url: string | null;
 };
 
 type PublicUnit = {
@@ -473,7 +475,18 @@ export default async function PublicBumdesPage({
                 {members.map((member) => (
                   <div key={member.id} className={styles.memberCard}>
                     <div className={styles.memberVisual}>
-                      <UsersRound size={78} />
+                      {member.photo_url ? (
+                        <Image
+                          src={member.photo_url}
+                          alt={`Foto ${member.name}`}
+                          fill
+                          unoptimized
+                          sizes="(max-width: 720px) 100vw, 320px"
+                          className={styles.memberPhoto}
+                        />
+                      ) : (
+                        <UsersRound size={78} />
+                      )}
                     </div>
                     <h3>{member.name}</h3>
                     <p>{member.position}</p>

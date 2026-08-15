@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+﻿import Image from "next/image";
+import Link from "next/link";
 import { ArrowRight, Eye, EyeOff, Globe2, Settings, Store, UserRound, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -53,6 +54,12 @@ type PublicMemberRow = {
   display_order: number;
   is_published: boolean;
 };
+
+// Dibatasi ke format yang juga diterima bucket `bumdes-public`, supaya penolakan
+// terjadi di file picker dan bukan setelah unggahan gagal di server.
+const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp";
+const PHOTO_INPUT_CLASS =
+  "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 outline-none transition file:mr-3 file:rounded-xl file:border-0 file:bg-emerald-700 file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white hover:file:bg-emerald-800 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50";
 
 const ROLE_GROUP_OPTIONS = [
   { value: "penasihat", label: "Penasihat" },
@@ -583,13 +590,17 @@ export default async function BumdesPengaturanPage() {
 
             <label className="block">
               <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-                URL Foto
+                Foto
               </span>
               <input
-                name="photo_url"
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
-                placeholder="Opsional"
+                type="file"
+                name="photo_file"
+                accept={PHOTO_ACCEPT}
+                className={PHOTO_INPUT_CLASS}
               />
+              <span className="mt-2 block text-xs font-semibold text-slate-500">
+                Opsional. JPG, PNG, atau WEBP maksimal 4MB.
+              </span>
             </label>
 
             <label className="block">
@@ -696,17 +707,62 @@ export default async function BumdesPengaturanPage() {
                     </p>
                   </label>
 
-                  <label className="block">
+                  <div className="block">
                     <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-                      URL Foto
+                      Foto
                     </span>
                     <input
+                      type="hidden"
                       name="photo_url"
-                      defaultValue={member.photo_url ?? ""}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-50"
-                      placeholder="Opsional"
+                      value={member.photo_url ?? ""}
                     />
-                  </label>
+
+                    <div className="mt-2 flex items-start gap-3">
+                      {member.photo_url ? (
+                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                          <Image
+                            src={member.photo_url}
+                            alt={`Foto ${member.name}`}
+                            fill
+                            unoptimized
+                            sizes="56px"
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-slate-400">
+                          <UserRound className="h-6 w-6" />
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <label className="block">
+                          <span className="sr-only">Ganti foto pengurus</span>
+                          <input
+                            type="file"
+                            name="photo_file"
+                            accept={PHOTO_ACCEPT}
+                            className={PHOTO_INPUT_CLASS}
+                          />
+                        </label>
+
+                        {member.photo_url ? (
+                          <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-slate-500">
+                            <input
+                              type="checkbox"
+                              name="clear_photo"
+                              className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-700"
+                            />
+                            Hapus foto saat disimpan
+                          </label>
+                        ) : (
+                          <span className="mt-2 block text-xs font-semibold text-slate-500">
+                            JPG, PNG, atau WEBP maksimal 4MB.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
                   <label className="block">
                     <span className="text-xs font-black uppercase tracking-wide text-slate-500">
