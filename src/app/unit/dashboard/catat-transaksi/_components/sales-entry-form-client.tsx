@@ -5,6 +5,7 @@ import { PlusCircle } from "lucide-react";
 import {
   createAndPostSalesInvoice,
   previewSalesLineDiscountPercent,
+  type SalesLinePreview,
 } from "../_actions/sales-actions";
 
 type PaymentType = "cash" | "credit";
@@ -23,18 +24,6 @@ type InventoryItem = {
   default_sales_price: number;
   active_sales_price?: number | null;
   current_stock: number;
-};
-
-type SalesLinePreview = {
-  unit_price: number;
-  unit_cost: number;
-  quantity: number;
-  discount_percent: number;
-  discount_amount: number;
-  tax_amount: number;
-  gross_amount: number;
-  line_total: number;
-  gross_profit: number;
 };
 
 type AssistantResult = {
@@ -160,7 +149,13 @@ export function SalesEntryFormClient({
           invoiceDate: invoiceDate || undefined,
         });
 
-        setPreview(result);
+        if (!result.ok) {
+          setPreview(null);
+          setPreviewError(result.message);
+          return;
+        }
+
+        setPreview(result.preview);
         setPreviewError(null);
       } catch (error) {
         setPreview(null);

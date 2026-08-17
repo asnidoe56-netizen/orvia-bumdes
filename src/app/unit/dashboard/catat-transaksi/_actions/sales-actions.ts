@@ -2,8 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { PostgrestError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
+
+/** RPC yang dipanggil tidak ada di database ini. */
+function isMissingFunction(error: PostgrestError | null) {
+  if (!error) return false;
+
+  return error.code === "PGRST202" || /schema cache/i.test(error.message ?? "");
+}
 
 function generateSalesInvoiceNo(paymentType: string) {
   const prefix = paymentType === "credit" ? "JK" : "JT";
@@ -68,15 +76,45 @@ type SalesLinePreviewInput = {
   invoiceDate?: string;
 };
 
-export async function previewSalesLineDiscountPercent(input: SalesLinePreviewInput) {
-  await getLoginContext();
+export type SalesLinePreview = {
+  unit_price: number;
+  unit_cost: number;
+  quantity: number;
+  discount_percent: number;
+  discount_amount: number;
+  tax_amount: number;
+  gross_amount: number;
+  line_total: number;
+  gross_profit: number;
+};
+
+export type SalesLinePreviewResult =
+  | { ok: true; preview: SalesLinePreview | null }
+  | { ok: false; message: string };
+
+/**
+ * Engine preview me-`raise exception` untuk keadaan bisnis yang wajar — harga
+ * jual aktif belum diisi, barang belum pernah dibeli sehingga HPP belum ada.
+ * Kalau itu dilempar dari Server Function, tiap ketikan di form menghasilkan
+ * respons 500 dan pesannya disamarkan Next.js di produksi. Sesuai panduan
+ * error handling Next, kegagalan yang memang bisa terjadi dikembalikan sebagai
+ * nilai, bukan dilempar.
+ */
+export async function previewSalesLineDiscountPercent(
+  input: SalesLinePreviewInput
+): Promise<SalesLinePreviewResult> {
+  const context = await getLoginContext();
+
+  if (!context?.tenant_id || !context.unit_id) {
+    return { ok: false, message: "Sesi unit tidak valid. Silakan masuk ulang." };
+  }
 
   if (!input.itemId) {
-    return null;
+    return { ok: true, preview: null };
   }
 
   if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
-    return null;
+    return { ok: true, preview: null };
   }
 
   const supabase = await createClient();
@@ -92,21 +130,22 @@ export async function previewSalesLineDiscountPercent(input: SalesLinePreviewInp
     }
   );
 
-  if (error) {
-    throw new Error(error.message || "Preview perhitungan penjualan gagal.");
+  if (isMissingFunction(error)) {
+    return {
+      ok: false,
+      message:
+        "Fungsi hitung penjualan belum tersedia di database. Ringkasan tidak bisa ditampilkan, tetapi perhitungan saat posting tetap dilakukan database.",
+    };
   }
 
-  return data as {
-    unit_price: number;
-    unit_cost: number;
-    quantity: number;
-    discount_percent: number;
-    discount_amount: number;
-    tax_amount: number;
-    gross_amount: number;
-    line_total: number;
-    gross_profit: number;
-  };
+  if (error) {
+    return {
+      ok: false,
+      message: error.message || "Preview perhitungan penjualan gagal.",
+    };
+  }
+
+  return { ok: true, preview: data as SalesLinePreview };
 }
 export async function createAndPostSalesInvoice(
   _previousState: SalesInvoiceActionState,
@@ -188,6 +227,13 @@ export async function createAndPostSalesInvoice(
         ],
       }
     );
+
+    if (isMissingFunction(error)) {
+      return {
+        success: false,
+        message: `Fungsi posting penjualan belum tersedia di database Supabase, jadi transaksi tidak disimpan. Detail: ${error?.message ?? ""}`,
+      };
+    }
 
     if (error) {
       return {
