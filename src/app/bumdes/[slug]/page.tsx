@@ -1,4 +1,5 @@
-﻿import Image from "next/image";
+﻿import type { CSSProperties } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -472,18 +473,33 @@ export default async function PublicBumdesPage({
             <SectionTitle accent="Struktur" title="Pengurus" />
             {members && members.length > 0 ? (
               <div className={styles.memberGrid}>
-                {members.map((member) => (
-                  <div key={member.id} className={styles.memberCard}>
+                {members.map((member, index) => (
+                  <div
+                    key={member.id}
+                    className={styles.memberCard}
+                    style={{ "--member-index": index } as CSSProperties}
+                  >
                     <div className={styles.memberVisual}>
                       {member.photo_url ? (
-                        <Image
-                          src={member.photo_url}
-                          alt={`Foto ${member.name}`}
-                          fill
-                          unoptimized
-                          sizes="(max-width: 720px) 100vw, 320px"
-                          className={styles.memberPhoto}
-                        />
+                        <>
+                          <Image
+                            src={member.photo_url}
+                            alt=""
+                            aria-hidden
+                            fill
+                            unoptimized
+                            sizes="(max-width: 720px) 100vw, 340px"
+                            className={styles.memberPhotoBackdrop}
+                          />
+                          <Image
+                            src={member.photo_url}
+                            alt={`Foto ${member.name}`}
+                            fill
+                            unoptimized
+                            sizes="(max-width: 720px) 100vw, 340px"
+                            className={styles.memberPhoto}
+                          />
+                        </>
                       ) : (
                         <UsersRound size={78} />
                       )}
