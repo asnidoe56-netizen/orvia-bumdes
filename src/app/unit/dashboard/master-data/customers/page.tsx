@@ -7,16 +7,10 @@ import { PageBackButton } from "@/components/ui/page-back-button";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createCustomerAction } from "./actions";
-
-type Customer = {
-  id: string;
-  customer_code: string;
-  customer_name: string;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  is_active: boolean;
-};
+import {
+  CustomerRowActions,
+  type CustomerRecord,
+} from "./customer-row-actions";
 
 export default async function MasterDataCustomersPage() {
   const context = await getLoginContext();
@@ -38,7 +32,7 @@ export default async function MasterDataCustomersPage() {
     throw new Error(error.message);
   }
 
-  const customers = (data ?? []) as Customer[];
+  const customers = (data ?? []) as CustomerRecord[];
 
   return (
     <div className="space-y-5">
@@ -232,6 +226,10 @@ export default async function MasterDataCustomersPage() {
                         {customer.address || "Alamat belum diisi"}
                       </p>
                     </div>
+
+                    <div className="flex justify-end border-t border-slate-100 pt-3">
+                      <CustomerRowActions customer={customer} />
+                    </div>
                   </div>
                 </article>
               ))
@@ -246,6 +244,7 @@ export default async function MasterDataCustomersPage() {
                   <th className="px-4 py-3">Nama Customer</th>
                   <th className="px-4 py-3">Kontak</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Aksi</th>
                 </tr>
               </thead>
 
@@ -253,7 +252,7 @@ export default async function MasterDataCustomersPage() {
                 {customers.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       className="px-4 py-8 text-center text-sm text-slate-500"
                     >
                       Belum ada customer. Simpan customer pertama dari form di sebelah kiri.
@@ -289,6 +288,11 @@ export default async function MasterDataCustomersPage() {
                         >
                           {customer.is_active ? "Aktif" : "Nonaktif"}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end">
+                          <CustomerRowActions customer={customer} />
+                        </div>
                       </td>
                     </tr>
                   ))
