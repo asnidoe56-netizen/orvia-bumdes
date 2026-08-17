@@ -9,6 +9,7 @@
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AddUserDialog } from "./add-user-dialog";
+import { DeleteUserButton } from "./delete-user-button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -131,6 +132,7 @@ function buildCredentialKey(userId: string, unitId: string | null, role: string)
 export default async function BumdesUsersPage() {
   const context = await getLoginContext();
   const tenantId = context?.tenant_id ?? null;
+  const currentUserId = context?.user_id ?? null;
   const supabase = await createClient();
 
   const userRolesResult = tenantId
@@ -313,7 +315,7 @@ export default async function BumdesUsersPage() {
               </div>
             ) : (
               <div className="overflow-x-auto px-5 pb-5">
-                <table className="min-w-[1040px] w-full border-separate border-spacing-y-3 text-left text-sm">
+                <table className="min-w-[1160px] w-full border-separate border-spacing-y-3 text-left text-sm">
                   <thead>
                     <tr className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                       <th className="px-4">Nama</th>
@@ -323,6 +325,7 @@ export default async function BumdesUsersPage() {
                       <th className="px-4">Status Akses</th>
                       <th className="px-4">Password</th>
                       <th className="px-4">Dibuat</th>
+                      <th className="px-4 text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -397,8 +400,23 @@ export default async function BumdesUsersPage() {
                           )}
                         </td>
 
-                        <td className="rounded-r-2xl px-4 py-4 align-top text-slate-600">
+                        <td className="px-4 py-4 align-top text-slate-600">
                           {formatDate(user.createdAt)}
+                        </td>
+
+                        <td className="rounded-r-2xl px-4 py-4 align-top">
+                          <div className="flex justify-end">
+                            <DeleteUserButton
+                              roleId={user.roleId}
+                              name={user.fullName ?? "Nama belum diisi"}
+                              login={
+                                user.emailVirtual ?? `User ID: ${user.userId}`
+                              }
+                              roleLabel={formatRole(user.role)}
+                              unitLabel={user.unitName ?? "Tenant BUMDes"}
+                              isSelf={user.userId === currentUserId}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))}

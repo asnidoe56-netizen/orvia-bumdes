@@ -1,8 +1,11 @@
 ﻿"use server";
 
 import { revalidatePath } from "next/cache";
+import type { PostgrestError } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
+import { DELETE_USER_CONFIRMATION } from "./constants";
 
 function clean(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -22,6 +25,97 @@ async function deleteAuthUserIfExists(userId: string | null) {
 
   const admin = createAdminClient();
   await admin.auth.admin.deleteUser(userId);
+}
+
+export type DeleteBumdesUserResult = {
+  ok: boolean;
+  message: string;
+};
+
+function failed(message: string): DeleteBumdesUserResult {
+  return { ok: false, message };
+}
+
+/** RPC yang dipanggil tidak ada di database ini. */
+function isMissingFunction(error: PostgrestError | null) {
+  if (!error) return false;
+
+  return error.code === "PGRST202" || /schema cache/i.test(error.message ?? "");
+}
+
+/** Hasil pembersihan akun login yang dilaporkan engine, diterjemahkan. */
+const AUTH_CLEANUP_MESSAGE: Record<string, string> = {
+  deleted: "Pengguna dan akun loginnya berhasil dihapus.",
+  banned:
+    "Akses pengguna dihapus. Akun loginnya tidak bisa dihapus karena masih terkait data transaksi, jadi akun itu diblokir permanen.",
+  failed:
+    "Akses pengguna dihapus, tetapi akun loginnya masih aktif dan gagal diblokir. Segera laporkan ke tim teknis.",
+  kept: "Akses pengguna di BUMDes ini dihapus. Akun loginnya tetap ada karena masih memegang peran lain.",
+};
+
+/**
+ * Seluruh aturan penghapusan ada di engine database
+ * `delete_bumdes_tenant_user`, bukan di sini: izin pemanggil, batas tenant,
+ * larangan menghapus akun sendiri, dan perlindungan direktur terakhir. Satu
+ * transaksi, jadi tidak ada baris yang setengah terhapus.
+ *
+ * Dipanggil dengan client milik pengguna, bukan service-role: engine memakai
+ * auth.uid() untuk mengenali pemanggil, dan service-role membuatnya null.
+ *
+ * Kegagalan dikembalikan sebagai nilai, tidak dilempar. Error yang dilempar
+ * dari Server Function di-set 500 oleh Next dan pesannya disamarkan di
+ * produksi, sehingga Direktur cuma melihat layar gagal tanpa keterangan.
+ */
+export async function deleteBumdesUser(
+  formData: FormData,
+): Promise<DeleteBumdesUserResult> {
+  const context = await getLoginContext();
+
+  if (!context?.user_id || !context.tenant_id) {
+    return failed("Sesi login tidak valid. Silakan masuk ulang.");
+  }
+
+  const roleId = clean(formData.get("role_id"));
+  const confirmation = clean(formData.get("confirmation")).toUpperCase();
+
+  if (!roleId) {
+    return failed("Baris pengguna tidak dikenali. Muat ulang halaman.");
+  }
+
+  if (confirmation !== DELETE_USER_CONFIRMATION) {
+    return failed(
+      `Ketik ${DELETE_USER_CONFIRMATION} pada kolom konfirmasi untuk melanjutkan.`,
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("delete_bumdes_tenant_user", {
+    p_role_id: roleId,
+    p_confirmation_text: confirmation,
+  });
+
+  if (isMissingFunction(error)) {
+    return failed(
+      "Fungsi hapus pengguna belum ada di database Supabase, jadi tidak ada yang dihapus. " +
+        "Jalankan migrasi 20260817080000_create_bumdes_user_delete_engine.sql. " +
+        `Detail: ${error?.message ?? ""}`,
+    );
+  }
+
+  if (error) {
+    return failed(error.message || "Pengguna gagal dihapus.");
+  }
+
+  revalidatePath("/bumdes/dashboard/users");
+
+  const mode =
+    (data as { auth_cleanup_mode?: string } | null)?.auth_cleanup_mode ?? "kept";
+
+  return {
+    ok: true,
+    message: AUTH_CLEANUP_MESSAGE[mode] ?? AUTH_CLEANUP_MESSAGE.kept,
+  };
 }
 
 export async function createBumdesUnitUser(formData: FormData) {
