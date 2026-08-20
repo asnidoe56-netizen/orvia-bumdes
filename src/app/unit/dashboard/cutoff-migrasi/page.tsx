@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
@@ -112,8 +113,46 @@ export default async function UnitCutoffMigrasiPage() {
             Belum ada draft cut-off migrasi untuk unit ini.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <>
+          <div className="space-y-3 p-5 xl:hidden">
+            {rows.map((row) => (
+              <MobileRecordCard
+                key={row.id}
+                title={
+                  <Link
+                    href={`/unit/dashboard/cutoff-migrasi/${row.id}`}
+                    className="text-emerald-700 hover:text-emerald-900 hover:underline"
+                  >
+                    {row.cutoff_no ?? "-"}
+                  </Link>
+                }
+                subtitle={`Cut-off: ${formatDate(row.cutoff_date)} · Mulai ORVIA: ${formatDate(row.orvia_start_date)}`}
+                badge={
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    {statusLabel(row.status)}
+                  </span>
+                }
+                rows={[
+                  {
+                    label: "Aset",
+                    value: formatRupiah(row.total_assets),
+                    fullWidth: true,
+                  },
+                  {
+                    label: "Kewajiban",
+                    value: formatRupiah(row.total_liabilities),
+                  },
+                  {
+                    label: "Ekuitas",
+                    value: formatRupiah(row.total_equity),
+                  },
+                ]}
+              />
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="min-w-[880px] w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Nomor</th>
@@ -161,6 +200,7 @@ export default async function UnitCutoffMigrasiPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
     </div>

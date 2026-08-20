@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
@@ -163,8 +164,80 @@ export default async function BumdesCutoffMigrasiPage({
             Belum ada cut-off migrasi dari unit usaha.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <>
+          <div className="space-y-3 p-5 xl:hidden">
+            {rows.map((row) => (
+              <MobileRecordCard
+                key={row.id}
+                title={row.cutoff_no ?? "-"}
+                subtitle={`Cut-off: ${formatDate(row.cutoff_date)} · Mulai ORVIA: ${formatDate(row.orvia_start_date)}`}
+                badge={
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClass(
+                      row.status
+                    )}`}
+                  >
+                    {statusLabel(row.status)}
+                  </span>
+                }
+                rows={[
+                  {
+                    label: "Aset",
+                    value: formatRupiah(row.total_assets),
+                    fullWidth: true,
+                  },
+                  {
+                    label: "Kewajiban",
+                    value: formatRupiah(row.total_liabilities),
+                  },
+                  {
+                    label: "Ekuitas",
+                    value: formatRupiah(row.total_equity),
+                  },
+                ]}
+                footer={
+                  <>
+                    {row.status === "approved" && canPostCutoff ? (
+                      <form action={postBumdesCutoffMigrationAction}>
+                        <input
+                          type="hidden"
+                          name="cutoff_migration_id"
+                          value={row.id}
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
+                        >
+                          Posting Cut-off
+                        </button>
+                      </form>
+                    ) : null}
+
+                    {row.status === "approved" && !canPostCutoff ? (
+                      <p className="text-xs font-medium text-amber-700">
+                        Menunggu Admin/Direktur BUMDes untuk posting.
+                      </p>
+                    ) : null}
+
+                    {row.status === "posted" ? (
+                      <p className="text-xs font-medium text-indigo-700">
+                        Sudah diposting ke engine ORVIA.
+                      </p>
+                    ) : null}
+
+                    {row.status !== "approved" && row.status !== "posted" ? (
+                      <p className="text-xs text-slate-500">
+                        Menunggu status disetujui Pengawas.
+                      </p>
+                    ) : null}
+                  </>
+                }
+              />
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="min-w-[960px] w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Nomor</th>
@@ -247,6 +320,7 @@ export default async function BumdesCutoffMigrasiPage({
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
     </div>

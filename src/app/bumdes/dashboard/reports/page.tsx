@@ -11,6 +11,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { createClient } from "@/lib/supabase/server";
@@ -691,7 +692,51 @@ export default async function BumdesReportsPage() {
                 Belum ada aktivitas arus kas untuk tenant BUMDes ini.
               </div>
             ) : (
-              <div className="overflow-x-auto px-5 pb-5">
+              <>
+              <div className="space-y-3 px-5 pb-5 xl:hidden">
+                {cashFlowRows.map((row, index) => (
+                  <MobileRecordCard
+                    key={`${row.transaction_no ?? "cash"}-${index}`}
+                    title={row.activity_name ?? row.activity_section_name ?? "-"}
+                    subtitle={`${formatDate(row.created_at)} · ${row.transaction_no ?? "-"}`}
+                    badge={
+                      <Badge variant={getStatusBadge(row.status)}>
+                        {row.status ?? "-"}
+                      </Badge>
+                    }
+                    rows={[
+                      {
+                        label: "Unit",
+                        value: `${row.nama_unit ?? "-"} (${row.kode_unit ?? "-"})`,
+                        fullWidth: true,
+                      },
+                      {
+                        label: "Kas Masuk",
+                        value: (
+                          <span className="text-emerald-700">
+                            {formatCurrency(row.cash_in_amount)}
+                          </span>
+                        ),
+                      },
+                      {
+                        label: "Kas Keluar",
+                        value: (
+                          <span className="text-orange-700">
+                            {formatCurrency(row.cash_out_amount)}
+                          </span>
+                        ),
+                      },
+                      {
+                        label: "Efek Kas",
+                        value: formatCurrency(row.cash_effect_amount),
+                        fullWidth: true,
+                      },
+                    ]}
+                  />
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto px-5 pb-5 xl:block">
                 <table className="min-w-[980px] w-full border-separate border-spacing-y-3 text-left text-sm">
                   <thead>
                     <tr className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
@@ -744,6 +789,7 @@ export default async function BumdesReportsPage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </Card>
         </>

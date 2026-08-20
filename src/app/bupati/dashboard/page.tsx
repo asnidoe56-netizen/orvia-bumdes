@@ -17,6 +17,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { createClient } from "@/lib/supabase/server";
 
 type DashboardSummary = {
@@ -536,7 +537,43 @@ export default async function BupatiDashboardPage() {
             action={<Badge variant="warning">Prioritas</Badge>}
           />
 
-          <div className="overflow-x-auto">
+          <div className="space-y-3 xl:hidden">
+            {priorityRows.length > 0 ? (
+              priorityRows.map((item) => (
+                <MobileRecordCard
+                  key={`${item.kode_bumdes}-${item.nama_unit}`}
+                  title={item.nama_bumdes}
+                  subtitle={`${item.nama_desa} · ${item.nama_unit}`}
+                  badge={
+                    <Badge variant={statusVariant(item.dashboard_health_status)}>
+                      {normalizeStatus(item.dashboard_health_status)}
+                    </Badge>
+                  }
+                  rows={[
+                    {
+                      label: "Kecamatan",
+                      value: item.nama_kecamatan,
+                    },
+                    {
+                      label: "Skor",
+                      value: `${numberFormatter.format(toNumber(item.skor_kesehatan))}/${numberFormatter.format(toNumber(item.skor_maksimal) || 100)}`,
+                    },
+                    {
+                      label: "Masalah Utama",
+                      value: item.masalah_utama || "Perlu review lanjutan",
+                      fullWidth: true,
+                    },
+                  ]}
+                />
+              ))
+            ) : (
+              <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+                Tidak ada BUMDes yang masuk prioritas perhatian.
+              </p>
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto xl:block">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">

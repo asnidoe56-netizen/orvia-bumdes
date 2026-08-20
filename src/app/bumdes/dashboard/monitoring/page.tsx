@@ -8,6 +8,7 @@
   UserRoundCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -209,7 +210,51 @@ export default async function BumdesMonitoringPage() {
               berjalan, riwayatnya akan tampil di sini.
             </div>
           ) : (
-            <div className="overflow-x-auto px-5 pb-5">
+            <>
+            <div className="space-y-3 px-5 pb-5 xl:hidden">
+              {activities.map((activity) => (
+                <MobileRecordCard
+                  key={activity.id}
+                  title={formatEventLabel(activity.event_type)}
+                  subtitle={formatDateTime(activity.created_at)}
+                  badge={
+                    <Badge variant={getEventBadgeVariant(activity.event_type)}>
+                      {formatEventLabel(activity.event_type)}
+                    </Badge>
+                  }
+                  rows={[
+                    {
+                      label: "Deskripsi",
+                      value:
+                        activity.description ?? "Tidak ada deskripsi aktivitas.",
+                      fullWidth: true,
+                    },
+                    {
+                      label: "Entitas",
+                      value: formatEventLabel(activity.entity_type),
+                    },
+                    {
+                      label: "Aktor",
+                      value: activity.actor_role
+                        ? formatEventLabel(activity.actor_role)
+                        : "Sistem",
+                    },
+                    {
+                      label: "Sumber",
+                      value: activity.source_type
+                        ? formatEventLabel(activity.source_type)
+                        : "-",
+                    },
+                    {
+                      label: "Catatan",
+                      value: getMetadataPreview(activity.metadata),
+                    },
+                  ]}
+                />
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto px-5 pb-5 xl:block">
               <table className="min-w-[980px] w-full border-separate border-spacing-y-3 text-left text-sm">
                 <thead>
                   <tr className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
@@ -303,6 +348,7 @@ export default async function BumdesMonitoringPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Card>
       )}

@@ -1,4 +1,5 @@
 ﻿import { Card } from "@/components/ui/card";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 import { createClient } from "@/lib/supabase/server";
@@ -69,6 +70,87 @@ function statusClass(status: string | null) {
   }
 }
 
+function ReviewAction({ cutoff }: { cutoff: CutoffRow }) {
+  return (
+    <>
+      {cutoff.status === "submitted" ? (
+                        <form action={startReviewCutoffMigrationAction}>
+                          <input
+                            type="hidden"
+                            name="cutoff_migration_id"
+                            value={cutoff.id}
+                          />
+                          <button
+                            type="submit"
+                            className="inline-flex items-center justify-center rounded-lg border border-sky-600 bg-white px-3 py-2 text-xs font-semibold text-sky-700 shadow-sm hover:bg-sky-50"
+                          >
+                            Mulai Review
+                          </button>
+                        </form>
+                      ) : null}
+
+                      {cutoff.status === "under_review" ? (
+                        <div className="flex flex-col gap-2">
+                          <form action={approveCutoffMigrationAction}>
+                            <input
+                              type="hidden"
+                              name="cutoff_migration_id"
+                              value={cutoff.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="governance_notes"
+                              value="Disetujui oleh Pengawas."
+                            />
+                            <button
+                              type="submit"
+                              className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
+                            >
+                              Setujui
+                            </button>
+                          </form>
+
+                          <form
+                            action={rejectCutoffMigrationAction}
+                            className="flex min-w-[260px] gap-2"
+                          >
+                            <input
+                              type="hidden"
+                              name="cutoff_migration_id"
+                              value={cutoff.id}
+                            />
+                            <input
+                              type="text"
+                              name="rejection_reason"
+                              placeholder="Alasan tolak"
+                              required
+                              className="w-36 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 outline-none focus:border-rose-500"
+                            />
+                            <button
+                              type="submit"
+                              className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-rose-700"
+                            >
+                              Tolak
+                            </button>
+                          </form>
+                        </div>
+                      ) : null}
+
+                      {cutoff.status === "approved" ? (
+                        <p className="text-xs text-emerald-700">
+                          Sudah disetujui. Menunggu proses posting BUMDes.
+                        </p>
+                      ) : null}
+
+                      {cutoff.status === "rejected" ? (
+                        <p className="text-xs text-rose-700">
+                          Sudah ditolak. Unit perlu memperbaiki cut-off migrasi.
+                        </p>
+                      ) : null}
+    </>
+  );
+}
+
 export default async function PengawasCutoffMigrasiPage() {
   const context = await getLoginContext();
 
@@ -128,8 +210,44 @@ export default async function PengawasCutoffMigrasiPage() {
             Belum ada cut-off migrasi yang perlu direview.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <>
+          <div className="space-y-3 p-5 xl:hidden">
+            {rows.map((row) => (
+              <MobileRecordCard
+                key={row.id}
+                title={row.cutoff_no ?? "-"}
+                subtitle={`Cut-off: ${formatDate(row.cutoff_date)} · Mulai ORVIA: ${formatDate(row.orvia_start_date)}`}
+                badge={
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClass(
+                      row.status
+                    )}`}
+                  >
+                    {statusLabel(row.status)}
+                  </span>
+                }
+                rows={[
+                  {
+                    label: "Aset",
+                    value: formatRupiah(row.total_assets),
+                    fullWidth: true,
+                  },
+                  {
+                    label: "Kewajiban",
+                    value: formatRupiah(row.total_liabilities),
+                  },
+                  {
+                    label: "Ekuitas",
+                    value: formatRupiah(row.total_equity),
+                  },
+                ]}
+                footer={<ReviewAction cutoff={row} />}
+              />
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="min-w-[1100px] w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Nomor</th>
@@ -173,86 +291,14 @@ export default async function PengawasCutoffMigrasiPage() {
                       {formatRupiah(row.total_equity)}
                     </td>
                     <td className="min-w-[280px] px-5 py-4">
-                      {row.status === "submitted" ? (
-                        <form action={startReviewCutoffMigrationAction}>
-                          <input
-                            type="hidden"
-                            name="cutoff_migration_id"
-                            value={row.id}
-                          />
-                          <button
-                            type="submit"
-                            className="inline-flex items-center justify-center rounded-lg border border-sky-600 bg-white px-3 py-2 text-xs font-semibold text-sky-700 shadow-sm hover:bg-sky-50"
-                          >
-                            Mulai Review
-                          </button>
-                        </form>
-                      ) : null}
-
-                      {row.status === "under_review" ? (
-                        <div className="flex flex-col gap-2">
-                          <form action={approveCutoffMigrationAction}>
-                            <input
-                              type="hidden"
-                              name="cutoff_migration_id"
-                              value={row.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="governance_notes"
-                              value="Disetujui oleh Pengawas."
-                            />
-                            <button
-                              type="submit"
-                              className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
-                            >
-                              Setujui
-                            </button>
-                          </form>
-
-                          <form
-                            action={rejectCutoffMigrationAction}
-                            className="flex min-w-[260px] gap-2"
-                          >
-                            <input
-                              type="hidden"
-                              name="cutoff_migration_id"
-                              value={row.id}
-                            />
-                            <input
-                              type="text"
-                              name="rejection_reason"
-                              placeholder="Alasan tolak"
-                              required
-                              className="w-36 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 outline-none focus:border-rose-500"
-                            />
-                            <button
-                              type="submit"
-                              className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-rose-700"
-                            >
-                              Tolak
-                            </button>
-                          </form>
-                        </div>
-                      ) : null}
-
-                      {row.status === "approved" ? (
-                        <p className="text-xs text-emerald-700">
-                          Sudah disetujui. Menunggu proses posting BUMDes.
-                        </p>
-                      ) : null}
-
-                      {row.status === "rejected" ? (
-                        <p className="text-xs text-rose-700">
-                          Sudah ditolak. Unit perlu memperbaiki cut-off migrasi.
-                        </p>
-                      ) : null}
+                      <ReviewAction cutoff={row} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
     </div>

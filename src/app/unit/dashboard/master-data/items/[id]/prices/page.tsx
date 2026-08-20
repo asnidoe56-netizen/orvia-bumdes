@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { redirect } from "next/navigation";
 import { CalendarDays, CheckCircle2, History, Tag } from "lucide-react";
 import { PageBackButton } from "@/components/ui/page-back-button";
@@ -215,7 +216,42 @@ export default async function ItemPricesPage({ params }: PageProps) {
           </Link>
         </div>
 
-        <div className="mt-5 overflow-x-auto">
+        <div className="mt-5 space-y-3 xl:hidden">
+          {(prices ?? []).map((price) => (
+            <MobileRecordCard
+              key={price.id}
+              title={formatCurrency(price.sales_price)}
+              subtitle={`${formatDate(price.effective_from)} s/d ${formatDate(price.effective_until)}`}
+              badge={
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  price.status === "active" && price.is_active
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-slate-100 text-slate-600"
+                }`}>
+                  {getStatusLabel(price.status, price.is_active)}
+                </span>
+              }
+              rows={[
+                {
+                  label: "Jenis",
+                  value: <span className="capitalize">{price.price_type}</span>,
+                },
+                {
+                  label: "Alasan",
+                  value: price.reason || "Oleh Sistem",
+                },
+              ]}
+            />
+          ))}
+
+          {(prices ?? []).length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+              Belum ada riwayat harga. Buat harga pertama dari form di atas.
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-5 hidden overflow-x-auto xl:block">
           <table className="min-w-[820px] w-full text-left text-sm">
             <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
               <tr>

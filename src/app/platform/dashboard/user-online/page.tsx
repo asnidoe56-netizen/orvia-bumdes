@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { Clock, MonitorDot, Users, Wifi, WifiOff } from "lucide-react";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { createClient } from "@/lib/supabase/server";
 
 type OnlineUser = {
@@ -190,9 +191,46 @@ export default async function PlatformUserOnlinePage() {
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
+        <div className="space-y-3 xl:hidden">
+          {users.length > 0 ? (
+            users.map((user) => (
+              <MobileRecordCard
+                key={user.user_id}
+                title={getDisplayName(user)}
+                subtitle={user.email || user.phone || "-"}
+                badge={<StatusBadge online={user.is_online} />}
+                rows={[
+                  {
+                    label: "Role",
+                    value: getRoleLabel(user.role),
+                  },
+                  {
+                    label: "Scope",
+                    value: getScopeLabel(user),
+                  },
+                  {
+                    label: "Halaman",
+                    value: user.page_title || user.current_path || "-",
+                    fullWidth: true,
+                  },
+                  {
+                    label: "Terakhir Aktif",
+                    value: `${formatLastSeen(user.seconds_since_seen)} · ${formatDateTime(user.last_seen_at)}`,
+                    fullWidth: true,
+                  },
+                ]}
+              />
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+              Belum ada aktivitas user. Data akan muncul setelah user membuka dashboard.
+            </div>
+          )}
+        </div>
+
+        <div className="hidden overflow-hidden rounded-2xl border border-slate-200 xl:block">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <table className="min-w-[900px] w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">Pengguna</th>

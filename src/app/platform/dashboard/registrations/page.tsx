@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { Clock, CheckCircle2, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -141,9 +142,58 @@ export default async function PlatformRegistrationsPage({
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
+        <div className="space-y-3 xl:hidden">
+          {registrations.length > 0 ? (
+            registrations.map((item) => (
+              <MobileRecordCard
+                key={item.id}
+                title={item.nama_bumdes}
+                subtitle={item.kode_bumdes}
+                badge={<StatusBadge status={item.status} />}
+                rows={[
+                  {
+                    label: "Desa",
+                    value: item.nama_desa,
+                  },
+                  {
+                    label: "Kecamatan",
+                    value: item.nama_kecamatan,
+                  },
+                  {
+                    label: "Pemohon",
+                    value: `${item.requester_name || "-"} (${item.requester_phone || item.requester_email || "-"})`,
+                    fullWidth: true,
+                  },
+                  {
+                    label: "Tanggal",
+                    value: new Date(item.created_at).toLocaleDateString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    }),
+                    fullWidth: true,
+                  },
+                ]}
+                footer={
+                  <Link
+                    href={`/platform/dashboard/registrations/${item.id}`}
+                    className="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                  >
+                    Detail
+                  </Link>
+                }
+              />
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+              Belum ada pengajuan registrasi.
+            </div>
+          )}
+        </div>
+
+        <div className="hidden overflow-hidden rounded-2xl border border-slate-200 xl:block">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <table className="min-w-[900px] w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">BUMDes</th>

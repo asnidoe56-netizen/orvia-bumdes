@@ -130,6 +130,74 @@ function displayStatus(periodStatus: string | null, requestStatus?: string | nul
   return normalize(periodStatus) || "missing";
 }
 
+function DirectorAction({
+  unitId,
+  activeRequest,
+}: {
+  unitId: string;
+  activeRequest: ReopenRequestRecord | null | undefined;
+}) {
+  return (
+    <>
+      {activeRequest?.status === "pending" ? (
+                          <form action={reviewPeriodReopenRequest} className="space-y-3">
+                            <input type="hidden" name="unit_id" value={unitId} />
+                            <input type="hidden" name="request_id" value={activeRequest.id} />
+                            <textarea
+                              name="notes"
+                              rows={2}
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                              placeholder="Catatan Direktur, opsional."
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="submit"
+                                name="action_type"
+                                value="approve"
+                                className="inline-flex items-center gap-1 rounded-xl bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                                Setujui
+                              </button>
+                              <button
+                                type="submit"
+                                name="action_type"
+                                value="reject"
+                                className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                              >
+                                <XCircle className="h-4 w-4" />
+                                Tolak
+                              </button>
+                            </div>
+                          </form>
+                        ) : activeRequest?.status === "approved" ? (
+                          <form action={reviewPeriodReopenRequest} className="space-y-3">
+                            <input type="hidden" name="unit_id" value={unitId} />
+                            <input type="hidden" name="request_id" value={activeRequest.id} />
+                            <textarea
+                              name="notes"
+                              rows={2}
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                              placeholder="Catatan penutupan kembali, opsional."
+                            />
+                            <button
+                              type="submit"
+                              name="action_type"
+                              value="close_again"
+                              className="inline-flex rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-900"
+                            >
+                              Tutup Kembali
+                            </button>
+                          </form>
+                        ) : (
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
+                            Tidak ada aksi Direktur untuk bulan ini.
+                          </div>
+                        )}
+    </>
+  );
+}
+
 export default async function UnitPeriodeAkuntansiDetailPage({ params, searchParams }: PageProps) {
   const context = await requireRole(["direktur_bumdes", "admin_bumdes"]);
 
@@ -334,8 +402,57 @@ export default async function UnitPeriodeAkuntansiDetailPage({ params, searchPar
             </p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-sm">
+          <div className="space-y-3 p-5 xl:hidden">
+            {monthNames.map((monthName, index) => {
+              const month = index + 1;
+              const period = periodsByMonth.get(month);
+              const activeRequest = period ? activeRequestByPeriod.get(period.id) : null;
+              const latestRequest = period ? latestRequestByPeriod.get(period.id) : null;
+              const currentStatus = displayStatus(period?.status || null, activeRequest?.status || null);
+
+              return (
+                <article
+                  key={month}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-black text-slate-950">{monthName}</h3>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {period ? `${formatDate(period.period_start)} - ${formatDate(period.period_end)}` : "-"}
+                      </p>
+                    </div>
+                    <span className={`inline-flex shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusStyles[currentStatus] || statusStyles.missing}`}>
+                      {statusLabel(currentStatus)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 border-t border-slate-100 pt-3">
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Permintaan</p>
+                    {latestRequest ? (
+                      <div className="mt-2 space-y-2">
+                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${requestStatusStyles[latestRequest.status] || "border-slate-200 bg-slate-50 text-slate-600"}`}>
+                          {requestStatusLabel(latestRequest.status)}
+                        </span>
+                        <p className="text-xs leading-5 text-slate-500">{latestRequest.reason}</p>
+                        <p className="text-xs text-slate-400">Diajukan: {formatDateTime(latestRequest.created_at)}</p>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs text-slate-400">Belum ada permintaan</p>
+                    )}
+                  </div>
+
+                  <div className="mt-3 border-t border-slate-100 pt-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Aksi Direktur</p>
+                    <DirectorAction unitId={unit.id} activeRequest={activeRequest} />
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="min-w-[960px] w-full divide-y divide-slate-100 text-sm">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Bulan</th>
@@ -378,61 +495,7 @@ export default async function UnitPeriodeAkuntansiDetailPage({ params, searchPar
                         )}
                       </td>
                       <td className="min-w-[320px] px-5 py-4">
-                        {activeRequest?.status === "pending" ? (
-                          <form action={reviewPeriodReopenRequest} className="space-y-3">
-                            <input type="hidden" name="unit_id" value={unit.id} />
-                            <input type="hidden" name="request_id" value={activeRequest.id} />
-                            <textarea
-                              name="notes"
-                              rows={2}
-                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                              placeholder="Catatan Direktur, opsional."
-                            />
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                type="submit"
-                                name="action_type"
-                                value="approve"
-                                className="inline-flex items-center gap-1 rounded-xl bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800"
-                              >
-                                <CheckCircle2 className="h-4 w-4" />
-                                Setujui
-                              </button>
-                              <button
-                                type="submit"
-                                name="action_type"
-                                value="reject"
-                                className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
-                              >
-                                <XCircle className="h-4 w-4" />
-                                Tolak
-                              </button>
-                            </div>
-                          </form>
-                        ) : activeRequest?.status === "approved" ? (
-                          <form action={reviewPeriodReopenRequest} className="space-y-3">
-                            <input type="hidden" name="unit_id" value={unit.id} />
-                            <input type="hidden" name="request_id" value={activeRequest.id} />
-                            <textarea
-                              name="notes"
-                              rows={2}
-                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                              placeholder="Catatan penutupan kembali, opsional."
-                            />
-                            <button
-                              type="submit"
-                              name="action_type"
-                              value="close_again"
-                              className="inline-flex rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-900"
-                            >
-                              Tutup Kembali
-                            </button>
-                          </form>
-                        ) : (
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
-                            Tidak ada aksi Direktur untuk bulan ini.
-                          </div>
-                        )}
+                        <DirectorAction unitId={unit.id} activeRequest={activeRequest} />
                       </td>
                     </tr>
                   );

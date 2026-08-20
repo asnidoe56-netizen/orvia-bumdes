@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AddUserDialog } from "./add-user-dialog";
 import { DeleteUserButton } from "./delete-user-button";
 import { Card, CardHeader } from "@/components/ui/card";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { createClient } from "@/lib/supabase/server";
@@ -314,7 +315,61 @@ export default async function BumdesUsersPage() {
                 muncul di sini.
               </div>
             ) : (
-              <div className="overflow-x-auto px-5 pb-5">
+              <>
+              <div className="space-y-3 px-5 pb-5 xl:hidden">
+                {tenantUsers.map((user) => (
+                  <MobileRecordCard
+                    key={user.roleId}
+                    title={user.fullName ?? "Nama belum diisi"}
+                    subtitle={user.emailVirtual ?? "Akun tenant"}
+                    badge={
+                      <Badge variant={getAccessBadgeVariant(user.accessStatus)}>
+                        {user.accessStatus ?? "Tenant Role"}
+                      </Badge>
+                    }
+                    rows={[
+                      {
+                        label: "Role",
+                        value: formatRole(user.role),
+                      },
+                      {
+                        label: "Unit",
+                        value: `${user.unitName ?? "Tenant BUMDes"} (${user.unitCode ?? "Level BUMDes"})`,
+                      },
+                      {
+                        label: "Login",
+                        value: user.loginCode ?? `User ID: ${user.userId.slice(0, 8)}`,
+                      },
+                      {
+                        label: "Dibuat",
+                        value: formatDate(user.createdAt),
+                      },
+                      {
+                        label: "Password",
+                        value:
+                          user.mustChangePassword === null
+                            ? "Tidak berlaku"
+                            : user.mustChangePassword
+                              ? "Wajib diganti"
+                              : "Sudah aman",
+                        fullWidth: true,
+                      },
+                    ]}
+                    footer={
+                      <DeleteUserButton
+                        roleId={user.roleId}
+                        name={user.fullName ?? "Nama belum diisi"}
+                        login={user.emailVirtual ?? `User ID: ${user.userId}`}
+                        roleLabel={formatRole(user.role)}
+                        unitLabel={user.unitName ?? "Tenant BUMDes"}
+                        isSelf={user.userId === currentUserId}
+                      />
+                    }
+                  />
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto px-5 pb-5 xl:block">
                 <table className="min-w-[1160px] w-full border-separate border-spacing-y-3 text-left text-sm">
                   <thead>
                     <tr className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
@@ -423,6 +478,7 @@ export default async function BumdesUsersPage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </Card>
         </>

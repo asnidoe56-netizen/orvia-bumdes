@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 
@@ -175,6 +176,80 @@ async function openAuditAccessAction(formData: FormData) {
   });
 
   revalidatePath("/pengawas/dashboard/transparansi-transaksi");
+}
+
+function AuditAccessAction({
+  note,
+  access,
+}: {
+  note: TransparencyNoteRow;
+  access: AuditAccessRow | undefined;
+}) {
+  return (
+    <>
+      {access ? (
+                            <div className="space-y-3">
+                              <BadgeText
+                                label={
+                                  accessStatusLabels[access.status] ??
+                                  access.status
+                                }
+                                className={
+                                  accessStatusStyles[access.status] ??
+                                  "border-slate-200 bg-slate-50 text-slate-700"
+                                }
+                              />
+
+                              <p className="text-xs leading-5 text-slate-500">
+                                Alasan audit: {access.request_reason}
+                              </p>
+
+                              {access.status === "approved" ? (
+                                <form action={openAuditAccessAction}>
+                                  <input
+                                    type="hidden"
+                                    name="request_id"
+                                    value={access.id}
+                                  />
+                                  <button
+                                    type="submit"
+                                    className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
+                                  >
+                                    Catat pembukaan akses
+                                  </button>
+                                </form>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <form
+                              action={requestAuditAccessAction}
+                              className="space-y-2"
+                            >
+                              <input
+                                type="hidden"
+                                name="note_id"
+                                value={note.id}
+                              />
+
+                              <textarea
+                                name="request_reason"
+                                rows={2}
+                                placeholder="Alasan audit investigatif"
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-400"
+                                required
+                              />
+
+                              <button
+                                type="submit"
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                              >
+                                <FileSearch className="h-4 w-4" />
+                                Minta Akses Audit
+                              </button>
+                            </form>
+                          )}
+    </>
+  );
 }
 
 export default async function TransparansiTransaksiPage() {
@@ -342,8 +417,84 @@ export default async function TransparansiTransaksiPage() {
             </p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-sm">
+          <div className="space-y-3 p-5 xl:hidden">
+            {notes.length > 0 ? (
+              notes.map((note) => {
+                const access = latestAccessByNoteId.get(note.id);
+
+                return (
+                  <MobileRecordCard
+                    key={note.id}
+                    title={
+                      note.unit_id
+                        ? unitNameById.get(note.unit_id) ?? note.unit_id
+                        : "Tenant"
+                    }
+                    subtitle={sourceLabels[note.source_type] ?? note.source_type}
+                    badge={
+                      <BadgeText
+                        label={severityLabels[note.severity] ?? note.severity}
+                        className={
+                          severityStyles[note.severity] ??
+                          "border-slate-200 bg-slate-50 text-slate-700"
+                        }
+                      />
+                    }
+                    rows={[
+                      {
+                        label: "Tanggal Transaksi",
+                        value: formatDate(note.transaction_date),
+                      },
+                      {
+                        label: "Tanggal Input",
+                        value: formatDateTime(note.recorded_at),
+                      },
+                      {
+                        label: "Selisih",
+                        value: `${note.days_difference} hari`,
+                      },
+                      {
+                        label: "Status Review",
+                        value: (
+                          <BadgeText
+                            label={
+                              statusLabels[note.review_status] ??
+                              note.review_status
+                            }
+                            className={
+                              statusStyles[note.review_status] ??
+                              "border-slate-200 bg-slate-50 text-slate-700"
+                            }
+                          />
+                        ),
+                      },
+                      {
+                        label: "Alasan Operator",
+                        value: note.operator_reason || "-",
+                        fullWidth: true,
+                      },
+                      {
+                        label: "Akses Audit",
+                        value: (
+                          <div className="mt-1">
+                            <AuditAccessAction note={note} access={access} />
+                          </div>
+                        ),
+                        fullWidth: true,
+                      },
+                    ]}
+                  />
+                );
+              })
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                Belum ada catatan transparansi transaksi dalam scope pengawas.
+              </div>
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="min-w-[1280px] w-full divide-y divide-slate-100 text-sm">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Unit</th>
@@ -415,67 +566,7 @@ export default async function TransparansiTransaksiPage() {
                         </td>
 
                         <td className="min-w-[300px] px-5 py-4">
-                          {access ? (
-                            <div className="space-y-3">
-                              <BadgeText
-                                label={
-                                  accessStatusLabels[access.status] ??
-                                  access.status
-                                }
-                                className={
-                                  accessStatusStyles[access.status] ??
-                                  "border-slate-200 bg-slate-50 text-slate-700"
-                                }
-                              />
-
-                              <p className="text-xs leading-5 text-slate-500">
-                                Alasan audit: {access.request_reason}
-                              </p>
-
-                              {access.status === "approved" ? (
-                                <form action={openAuditAccessAction}>
-                                  <input
-                                    type="hidden"
-                                    name="request_id"
-                                    value={access.id}
-                                  />
-                                  <button
-                                    type="submit"
-                                    className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
-                                  >
-                                    Catat pembukaan akses
-                                  </button>
-                                </form>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <form
-                              action={requestAuditAccessAction}
-                              className="space-y-2"
-                            >
-                              <input
-                                type="hidden"
-                                name="note_id"
-                                value={note.id}
-                              />
-
-                              <textarea
-                                name="request_reason"
-                                rows={2}
-                                placeholder="Alasan audit investigatif"
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-400"
-                                required
-                              />
-
-                              <button
-                                type="submit"
-                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                              >
-                                <FileSearch className="h-4 w-4" />
-                                Minta Akses Audit
-                              </button>
-                            </form>
-                          )}
+                          <AuditAccessAction note={note} access={access} />
                         </td>
                       </tr>
                     );

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Building2, CalendarClock, MapPin, UsersRound, Store, ShieldCheck } from "lucide-react";
 import { redirect } from "next/navigation";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
+import { ResponsiveRecordList } from "@/components/ui/responsive-record-list";
 import { createClient } from "@/lib/supabase/server";
 import { getLoginContext } from "@/lib/auth/get-login-context";
 
@@ -203,8 +205,35 @@ export default async function BumdesDashboardPage() {
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <ResponsiveRecordList
+          items={unitList}
+          getKey={(unit) => unit.id}
+          emptyState={
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+              Belum ada unit usaha. Direktur BUMDes dapat membuat unit pada menu Unit Usaha.
+            </div>
+          }
+          renderMobileCard={(unit) => (
+            <MobileRecordCard
+              title={unit.nama_unit}
+              subtitle={unit.kode_unit}
+              badge={
+                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                  {unit.status}
+                </span>
+              }
+              rows={[
+                {
+                  label: "Jenis Unit",
+                  value: unit.jenis_unit,
+                  fullWidth: true,
+                },
+              ]}
+            />
+          )}
+          renderDesktopTable={() => (
+        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="min-w-[560px] w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -254,6 +283,8 @@ export default async function BumdesDashboardPage() {
             </tbody>
           </table>
         </div>
+          )}
+        />
       </section>
     </div>
   );

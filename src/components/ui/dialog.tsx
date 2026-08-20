@@ -20,8 +20,8 @@ export function Dialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm">
-      <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+      <section className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
         <header className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
           <div>
             <h2 className="text-lg font-bold text-slate-950">{title}</h2>

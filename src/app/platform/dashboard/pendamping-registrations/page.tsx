@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { CheckCircle2, Clock, UserRoundCheck, XCircle } from "lucide-react";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { createClient } from "@/lib/supabase/server";
 import {
   approvePendampingRegistration,
@@ -44,6 +45,45 @@ function StatusBadge({ status }: { status: PendampingRegistration["status"] }) {
       <Clock className="h-3.5 w-3.5" />
       Pending
     </span>
+  );
+}
+
+function RegistrationAction({ item }: { item: PendampingRegistration }) {
+  return (
+    <>
+      {item.status === "pending" ? (
+                          <div className="flex min-w-72 flex-col gap-2">
+                            <form action={approvePendampingRegistration}>
+                              <input type="hidden" name="registration_id" value={item.id} />
+                              <button
+                                type="submit"
+                                className="w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+                              >
+                                Setujui
+                              </button>
+                            </form>
+
+                            <form action={rejectPendampingRegistration} className="flex gap-2">
+                              <input type="hidden" name="registration_id" value={item.id} />
+                              <input
+                                name="rejection_reason"
+                                placeholder="Alasan tolak"
+                                className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                              />
+                              <button
+                                type="submit"
+                                className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100"
+                              >
+                                Tolak
+                              </button>
+                            </form>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-400">
+                            Sudah diproses
+                          </span>
+                        )}
+    </>
   );
 }
 
@@ -121,9 +161,54 @@ export default async function PlatformPendampingRegistrationsPage() {
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
+        <div className="space-y-3 xl:hidden">
+          {registrations.length > 0 ? (
+            registrations.map((item) => (
+              <MobileRecordCard
+                key={item.id}
+                title={item.full_name}
+                subtitle={item.email}
+                badge={<StatusBadge status={item.status} />}
+                rows={[
+                  {
+                    label: "Kecamatan",
+                    value: item.nama_kecamatan,
+                  },
+                  {
+                    label: "Tanggal",
+                    value: new Date(item.created_at).toLocaleDateString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    }),
+                  },
+                  {
+                    label: "Instansi/Catatan",
+                    value: `${item.instansi || "-"} · ${item.notes || item.rejection_reason || "-"}`,
+                    fullWidth: true,
+                  },
+                  {
+                    label: "Aksi",
+                    value: (
+                      <div className="mt-1">
+                        <RegistrationAction item={item} />
+                      </div>
+                    ),
+                    fullWidth: true,
+                  },
+                ]}
+              />
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+              Belum ada pengajuan registrasi pendamping.
+            </div>
+          )}
+        </div>
+
+        <div className="hidden overflow-hidden rounded-2xl border border-slate-200 xl:block">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <table className="min-w-[1000px] w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">Pendamping</th>
@@ -171,38 +256,7 @@ export default async function PlatformPendampingRegistrationsPage() {
                       </td>
 
                       <td className="px-4 py-4">
-                        {item.status === "pending" ? (
-                          <div className="flex min-w-72 flex-col gap-2">
-                            <form action={approvePendampingRegistration}>
-                              <input type="hidden" name="registration_id" value={item.id} />
-                              <button
-                                type="submit"
-                                className="w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
-                              >
-                                Setujui
-                              </button>
-                            </form>
-
-                            <form action={rejectPendampingRegistration} className="flex gap-2">
-                              <input type="hidden" name="registration_id" value={item.id} />
-                              <input
-                                name="rejection_reason"
-                                placeholder="Alasan tolak"
-                                className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                              />
-                              <button
-                                type="submit"
-                                className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100"
-                              >
-                                Tolak
-                              </button>
-                            </form>
-                          </div>
-                        ) : (
-                          <span className="text-xs font-semibold text-slate-400">
-                            Sudah diproses
-                          </span>
-                        )}
+                        <RegistrationAction item={item} />
                       </td>
                     </tr>
                   ))

@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { ArrowLeft, CalendarClock, Clock, LockKeyhole, RotateCcw } from "lucide-react";
 
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 
@@ -223,8 +224,52 @@ export default async function PeriodeAkuntansiPage({ searchParams }: PageProps) 
           {rows.length === 0 ? (
             <div className="p-5 text-sm text-slate-600">Belum ada unit aktif pada tenant BUMDes ini.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-100 text-sm">
+            <>
+            <div className="space-y-3 p-5 xl:hidden">
+              {rows.map((row) => (
+                <MobileRecordCard
+                  key={row.unit.id}
+                  title={row.unit.nama_unit || "Unit tanpa nama"}
+                  subtitle={`${row.unit.kode_unit || "-"} · ${row.unit.jenis_unit || "-"}`}
+                  badge={
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${row.pending > 0 ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-500"}`}>
+                      Pending {row.pending}
+                    </span>
+                  }
+                  rows={[
+                    {
+                      label: "Open",
+                      value: (
+                        <span className="text-emerald-700">{row.open}</span>
+                      ),
+                    },
+                    {
+                      label: "Closed",
+                      value: <span className="text-amber-700">{row.closed}</span>,
+                    },
+                    {
+                      label: "Reopened",
+                      value: <span className="text-sky-700">{row.reopened}</span>,
+                    },
+                    {
+                      label: "Locked",
+                      value: <span className="text-slate-700">{row.locked}</span>,
+                    },
+                  ]}
+                  footer={
+                    <Link
+                      href={`/bumdes/dashboard/periode-akuntansi/${row.unit.id}`}
+                      className="inline-flex rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      Detail
+                    </Link>
+                  }
+                />
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto xl:block">
+              <table className="min-w-[880px] w-full divide-y divide-slate-100 text-sm">
                 <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="px-5 py-3">Unit</th>
@@ -267,6 +312,7 @@ export default async function PeriodeAkuntansiPage({ searchParams }: PageProps) 
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </section>
       </div>

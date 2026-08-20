@@ -2,6 +2,7 @@
 import { RotateCcw, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
+import { MobileRecordCard } from "@/components/ui/mobile-record-card";
 import { PageBackButton } from "@/components/ui/page-back-button";
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
@@ -109,6 +110,46 @@ function periodStatusLabel(status: string) {
   };
 
   return labels[status] ?? status;
+}
+
+function ReopenAction({
+  periodId,
+  canRequest,
+  isLocked,
+}: {
+  periodId: string;
+  canRequest: boolean;
+  isLocked: boolean;
+}) {
+  return (
+    <>
+      {canRequest ? (
+                          <form action={requestAccountingPeriodReopen} className="space-y-3">
+                            <input type="hidden" name="period_id" value={periodId} />
+                            <textarea
+                              name="reason"
+                              required
+                              minLength={10}
+                              rows={3}
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                              placeholder="Contoh: Ada koreksi transaksi bulan ini yang perlu diposting kembali."
+                            />
+                            <button
+                              type="submit"
+                              className="inline-flex rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+                            >
+                              Ajukan ke Direktur
+                            </button>
+                          </form>
+                        ) : (
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
+                            {isLocked
+                              ? "Periode locked tidak dapat dibuka lewat alur normal."
+                              : "Permintaan aktif sudah ada untuk periode ini."}
+                          </div>
+                        )}
+    </>
+  );
 }
 
 export default async function UnitBukaPeriodePage({ searchParams }: PageProps) {
@@ -232,8 +273,57 @@ export default async function UnitBukaPeriodePage({ searchParams }: PageProps) {
             Belum ada periode closed atau locked untuk unit ini.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <>
+          <div className="space-y-3 p-5 xl:hidden">
+            {periods.map((period) => {
+              const activeRequest = activeRequestsByPeriod.get(period.id);
+              const isLocked = period.status === "locked";
+              const canRequest = period.status === "closed" && !activeRequest;
+
+              return (
+                <MobileRecordCard
+                  key={period.id}
+                  title={formatPeriod(period.period_year, period.period_month)}
+                  subtitle={`${formatDate(period.period_start)} - ${formatDate(period.period_end)}`}
+                  badge={
+                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${periodStatusStyles[period.status] || "border-slate-200 bg-slate-50 text-slate-600"}`}>
+                      {periodStatusLabel(period.status)}
+                    </span>
+                  }
+                  rows={[
+                    {
+                      label: "Permintaan Aktif",
+                      value: activeRequest ? (
+                        <div className="space-y-1">
+                          <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${requestStatusStyles[activeRequest.status] || "border-slate-200 bg-slate-50 text-slate-600"}`}>
+                            {requestStatusLabel(activeRequest.status)}
+                          </span>
+                          <p className="text-xs text-slate-500">
+                            Dibuat: {formatDateTime(activeRequest.created_at)}
+                          </p>
+                        </div>
+                      ) : (
+                        "Belum ada"
+                      ),
+                      fullWidth: true,
+                    },
+                    {
+                      label: "Ajukan",
+                      value: (
+                        <div className="mt-1">
+                          <ReopenAction periodId={period.id} canRequest={canRequest} isLocked={isLocked} />
+                        </div>
+                      ),
+                      fullWidth: true,
+                    },
+                  ]}
+                />
+              );
+            })}
+          </div>
+
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="min-w-[980px] w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Periode</th>
@@ -277,31 +367,7 @@ export default async function UnitBukaPeriodePage({ searchParams }: PageProps) {
                         )}
                       </td>
                       <td className="min-w-[320px] px-5 py-4">
-                        {canRequest ? (
-                          <form action={requestAccountingPeriodReopen} className="space-y-3">
-                            <input type="hidden" name="period_id" value={period.id} />
-                            <textarea
-                              name="reason"
-                              required
-                              minLength={10}
-                              rows={3}
-                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                              placeholder="Contoh: Ada koreksi transaksi bulan ini yang perlu diposting kembali."
-                            />
-                            <button
-                              type="submit"
-                              className="inline-flex rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
-                            >
-                              Ajukan ke Direktur
-                            </button>
-                          </form>
-                        ) : (
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
-                            {isLocked
-                              ? "Periode locked tidak dapat dibuka lewat alur normal."
-                              : "Permintaan aktif sudah ada untuk periode ini."}
-                          </div>
-                        )}
+                        <ReopenAction periodId={period.id} canRequest={canRequest} isLocked={isLocked} />
                       </td>
                     </tr>
                   );
@@ -309,6 +375,7 @@ export default async function UnitBukaPeriodePage({ searchParams }: PageProps) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 
@@ -325,8 +392,35 @@ export default async function UnitBukaPeriodePage({ searchParams }: PageProps) {
             Belum ada riwayat permintaan buka periode.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <>
+          <div className="space-y-3 p-5 xl:hidden">
+            {requests.map((request) => (
+              <MobileRecordCard
+                key={request.id}
+                title={formatDateTime(request.created_at)}
+                badge={
+                  <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${requestStatusStyles[request.status] || "border-slate-200 bg-slate-50 text-slate-600"}`}>
+                    {requestStatusLabel(request.status)}
+                  </span>
+                }
+                rows={[
+                  {
+                    label: "Alasan",
+                    value: request.reason,
+                    fullWidth: true,
+                  },
+                  {
+                    label: "Catatan",
+                    value: request.notes ?? "-",
+                    fullWidth: true,
+                  },
+                ]}
+              />
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="min-w-[760px] w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Waktu</th>
@@ -353,6 +447,7 @@ export default async function UnitBukaPeriodePage({ searchParams }: PageProps) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
     </div>
